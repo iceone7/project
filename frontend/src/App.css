@@ -1,0 +1,72 @@
+.logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    width: 100%;
+}
+
+.nav-link {
+    background-color: #017cbf;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow:
+    0 4px 6px -1px #0173b1,
+    0 2px 4px -1px #0173b1;
+}
+
+.fade-in {
+    animation: fadeIn 0.7s ease-in-out;
+}
+
+.left-fade-in {
+    animation: leftFadeIn 0.7s ease-in-out;
+}
+
+.bottom-fade-in {
+    animation: bottomFadeIn 0.7s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes leftFadeIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes bottomFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.buttons {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.create {
+    display: flex;
+    gap: 10px;
+}

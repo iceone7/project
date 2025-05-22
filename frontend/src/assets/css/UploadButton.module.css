@@ -1,0 +1,122 @@
+/* From Uiverse.io by SpatexDEV */ 
+.button {
+  border: none;
+  display: flex;
+  padding: 0.75rem 1.5rem;
+  background-color: #0173b1;
+  color: #ffffff;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 700;
+  text-align: center;
+  cursor: pointer;
+  text-transform: uppercase;
+  vertical-align: middle;
+  align-items: center;
+  border-radius: 0.5rem;
+  user-select: none;
+  gap: 0.75rem;
+  box-shadow:
+    0 4px 6px -1px #0173b1,
+    0 2px 4px -1px #0173b1;
+  transition: all 0.6s ease;
+  margin-top: 20px;
+  height: 50px;
+}
+
+.button svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+
+/* From Uiverse.io by vinodjangid07 */ 
+.DownloadButton {
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  font-family: inherit;
+  height: 50px;
+  font-weight: 700;
+  font-size: 0.75rem;
+  padding: 0.75rem 1.5rem;
+  color: white;
+  background: #0173b1;
+  border: none;
+  box-shadow:
+    0 4px 6px -1px #0173b1,
+    0 2px 4px -1px #0173b1;  letter-spacing: 0.05em;
+  border-radius: 8px;
+  cursor: pointer;
+  position: relative;
+}
+
+.DownloadButton svg {
+  margin-right: 8px;
+  width: 25px;
+}
+
+.DownloadButton:hover {
+  box-shadow:
+    0 4px 6px -1px #0173b1,
+    0 2px 4px -1px #0173b1;  letter-spacing: 0.05em;
+}
+
+.DownloadButton:active {
+  box-shadow:
+    0 4px 6px -1px #0173b1,
+    0 2px 4px -1px #0173b1;  letter-spacing: 0.05em;
+}
+
+.DownloadButton::before {
+  content: "";
+  width: 4px;
+  height: 40%;
+  background-color: white;
+  position: absolute;
+  border-top-right-radius: 5px;
+  border-bottom-right-radius: 5px;
+  left: 0;
+  transition: all 0.2s;
+}
+
+.DownloadButton::after {
+  content: "";
+  width: 4px;
+  height: 40%;
+  background-color: white;
+  position: absolute;
+  border-top-left-radius: 5px;
+  border-bottom-left-radius: 5px;
+  right: 0;
+  transition: all 0.2s;
+}
+
+.DownloadButton:hover::before,
+.DownloadButton:hover::after {
+  height: 60%;
+}
+
+/* From Uiverse.io by vinodjangid07 */ 
+.filter {
+  width: 50px;
+  height: 50px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  background-color: #0173b1;
+  box-shadow: 0 4px 6px -1px #0173b1,
+  0 2px 4px -1px #0173b1;  letter-spacing: 0.05em;
+  transition: all 0.3s;
+  margin-top: 20px;
+}
+
+.filter svg {
+  height: 16px;
+  fill: rgb(255, 255, 255);
+  transition: all 0.3s;
+}
+
