@@ -60,7 +60,7 @@ function AddCallerModal({ onClose, onSave }) {
   };
 
   const handleSubmit = () => {
-    fetch(`${import.meta.env.VITE_API_URL}/companies`, {
+    fetch(`${import.meta.env.VITE_API_BASE_URL}/companies`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

@@ -32,7 +32,7 @@ function AddCompanyModal({ onClose, onSave }) {
     setIsSaving(true);
     console.log('Sending data:', formData);
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/companies', {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/companies`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
