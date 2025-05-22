@@ -145,7 +145,7 @@ function App() {
 
   // Update call
   const handleUpdateCaller = (data) => {
-    axios.put(`http://localhost/caller-app/update_caller.php?id=${editingItem.id}`, data)
+    axios.put(`${import.meta.env.VITE_API_BASE_URL}/update_caller.php?id=${editingItem.id}`, data)
       .then(response => {
         if (response.data.success) {
           setCalls(calls.map(call => 
@@ -282,7 +282,7 @@ function App() {
       status: 'InTransit'
     };
 
-    axios.post('http://localhost/caller-app/save_caller.php', newCaller)
+    axios.post(`${import.meta.env.VITE_API_BASE_URL}/save_caller.php`, newCaller)
       .then(response => {
         if (response.data.success) {
           setCalls(prev => [...prev, { ...newCaller, id: counter }]);
@@ -315,7 +315,7 @@ function App() {
       tel3: data.tel3 || 'Null',
     };
 
-    axios.post('http://localhost/caller-app/save_company.php', newCompany)
+    axios.post(`${import.meta.env.VITE_API_BASE_URL}/save_company.php`, newCompany)
       .then(response => {
         if (response.data.success) {
           setShowCompanyModal(false);
