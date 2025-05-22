@@ -11,7 +11,7 @@ const UploadExcel = ({ onUploadSuccess, excelData }) => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/get-imported-companies');
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/get-imported-companies`);
         if (!response.ok) {
           throw new Error(`Failed to fetch data: ${response.status} ${response.statusText}`);
         }
@@ -105,7 +105,7 @@ const UploadExcel = ({ onUploadSuccess, excelData }) => {
 
   const uploadToServer = async (data) => {
     try {
-      const response = await fetch('http://localhost:8000/api/import-company', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/import-company`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ data }),

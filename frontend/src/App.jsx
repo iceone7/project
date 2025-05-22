@@ -42,7 +42,7 @@ function App() {
   // Load companies
   useEffect(() => {
     if (activeDashboard === 'company') {
-      axios.get('http://localhost:8000/api/companies')
+      axios.get(`${import.meta.env.VITE_API_URL}/companies`)
         .then(response => {
           if (response.data.data) {
             setCompanies(response.data.data);
@@ -60,7 +60,7 @@ function App() {
 
   // Load calls and initialize excelData
   useEffect(() => {
-    axios.get('http://localhost:8000/api/get-imported-companies')
+    axios.get(`${import.meta.env.VITE_API_URL}/get-imported-companies`)
       .then(response => {
         console.log('Server response:', response.data);
         const normalizedData = response.data.data.map(item => ({
@@ -92,7 +92,7 @@ function App() {
   // Delete company
   const handleDeleteCompany = (id) => {
     if (window.confirm('Are you sure you want to delete this company?')) {
-      axios.delete(`http://localhost:8000/api/companies/${id}`)
+      axios.delete(`${import.meta.env.VITE_API_URL}/companies/${id}`)
         .then(response => {
           if (response.data.success) {
             setCompanies(companies.filter(company => company.id !== id));
@@ -120,7 +120,7 @@ function App() {
 
   // Update company
   const handleUpdateCompany = (data) => {
-    axios.put(`http://localhost:8000/api/companies/${editingItem.id}`, data)
+    axios.put(`${import.meta.env.VITE_API_URL}/companies/${editingItem.id}`, data)
       .then(response => {
         if (response.data.success) {
           setCompanies(companies.map(company => 

@@ -60,7 +60,7 @@ function AddCallerModal({ onClose, onSave }) {
   };
 
   const handleSubmit = () => {
-    fetch('http://localhost:8000/api/companies', {
+    fetch(`${import.meta.env.VITE_API_URL}/companies`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
