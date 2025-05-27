@@ -2,6 +2,7 @@
   "dependencies": {
     "exceljs": "^4.4.0",
     "file-saver": "^2.0.5",
+    "react-router-dom": "^7.6.0",
     "sheetjs-style": "^0.15.8"
   }
 }

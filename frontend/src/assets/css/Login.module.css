@@ -1,0 +1,80 @@
+.container{
+	margin: 0;
+	padding: 0;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	min-height: 100vh;
+	font-family: 'Jost', sans-serif;
+	background: #003566;
+}
+
+.mainContainer {
+  display: flex;
+  width: 70%;
+  height: 70vh;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+}
+
+/* Левая половина */
+.leftContainer {
+  width: 50%;
+  background: #b3cce3;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.leftContainer img {
+  max-width: 80%;
+  height: auto;
+}
+
+/* Правая половина */
+.rightContainer {
+  width: 50%;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: #fff;
+}
+
+.rightContainer form {
+  display: flex;
+  flex-direction: column;
+}
+
+.rightContainer b {
+  font-size: 20px;
+  margin-bottom: 5px;
+  color: #000;
+}
+
+.rightContainer input {
+  padding: 16px;
+  margin-bottom: 15px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 16px;
+}
+
+.rightContainer button {
+  padding: 16px;
+  background-color: #003566;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.3s;
+  margin-top: 20px;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.rightContainer button:hover {
+  background-color: #002d57;
+}

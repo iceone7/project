@@ -204,7 +204,7 @@ const FilterForm = ({ data, onFilterApply, showFilters, onToggleFilters, onlyBut
 
   if (onlyForm) {
     return showFilters ? (
-      <div className={filterStyles.filterContainer}>
+      <div className={filterStyles.filterContainer} style={{ marginBottom: '20px' }}>
         <h3 className={filterStyles.filterTitle}>
             {dashboardType === 'caller' ? 'ზარების ფილტრი' : 'კომპანიის ფილტრი'}
         </h3>

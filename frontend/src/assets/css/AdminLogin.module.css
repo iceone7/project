@@ -1,0 +1,101 @@
+.form {
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box;
+  padding: 40px;
+  width: 100%;
+  max-width: 400px;
+  margin: 100px auto;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 30px;
+  color: #333;
+}
+
+.inputContainer {
+  position: relative;
+  margin-bottom: 25px;
+}
+
+.input {
+  background: none;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 14px 16px;
+  width: 100%;
+  font-size: 16px;
+  outline: none;
+  transition: border 0.3s ease;
+}
+
+.input:focus {
+  border-color: #4a90e2;
+}
+
+.iLabel {
+  position: absolute;
+  left: 16px;
+  top: 14px;
+  background-color: #ffffff;
+  padding: 0 5px;
+  color: #888;
+  font-size: 14px;
+  pointer-events: none;
+  transition: 0.3s ease;
+}
+
+.input:focus + .cut + .iLabel,
+.input:not(:placeholder-shown) + .cut + .iLabel {
+  top: -10px;
+  font-size: 12px;
+  color: #4a90e2;
+}
+
+.cut {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: #4a90e2;
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+.input:focus + .cut {
+  transform: scaleX(1);
+}
+
+.cutShort {
+  width: 60px;
+}
+
+.submit {
+  background-color: #4a90e2;
+  color: #ffffff;
+  padding: 14px;
+  font-size: 16px;
+  font-weight: 500;
+  width: 100%;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.submit:hover {
+  background-color: #357ab8;
+}
+
+.error {
+  color: red;
+  font-size: 14px;
+  margin-bottom: 15px;
+  text-align: center;
+}

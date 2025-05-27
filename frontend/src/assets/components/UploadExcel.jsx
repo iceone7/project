@@ -11,12 +11,26 @@ const UploadExcel = ({ onUploadSuccess, excelData }) => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/get-imported-companies');
-        if (!response.ok) {
-          throw new Error(`Failed to fetch data: ${response.status} ${response.statusText}`);
+        const token = localStorage.getItem('token'); // Получаем токен из localStorage
+        const headers = {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        };
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
         }
-        const json = await response.json();
-        console.log('Fetched data from server:', json);
+
+        const response = await fetch('http://localhost:8000/api/get-imported-companies', {
+          headers,
+        });
+        const responseBody = await response.text();
+        console.log('Ответ сервера (get-imported-companies):', response.status, responseBody);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch data: ${response.status} ${responseBody}`);
+        }
+        const json = JSON.parse(responseBody);
+        console.log('Parsed JSON:', json);
+
         const normalizedData = json.data.map(item => ({
           id: item.id || Date.now() + Math.random(),
           companyName: item.company_name || item.companyName || '',
@@ -38,7 +52,7 @@ const UploadExcel = ({ onUploadSuccess, excelData }) => {
         console.log('Normalized server data:', normalizedData);
         onUploadSuccess(normalizedData);
       } catch (error) {
-        console.error('Error fetching data from the server: ', error);
+        console.error('Error fetching data from the server:', error);
         setError('Error fetching data from the server: ' + error.message);
       }
     };
@@ -61,26 +75,34 @@ const UploadExcel = ({ onUploadSuccess, excelData }) => {
         const worksheet = workbook.Sheets[workbook.SheetNames[0]];
         const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
-        const newFormattedData = jsonData.map((row, index) => ({
-          id: index + 1,
-          companyName: row['Company Name'] || '',
-          identificationCode: row['Identification Code or ID'] || '',
-          contactPerson1: row['Contact Person #1'] || '',
-          tel1: row['Tel'] || '',
-          contactPerson2: row['Contact Person #2'] || '',
-          tel2: row['Tel #2'] || '',
-          contactPerson3: row['Contact Person #3'] || '',
-          tel3: row['Tel #3'] || '',
-          callerName: row['Caller Name'] || '',
-          callerNumber: row['Caller Number'] || '',
-          receiverNumber: row['Receiver Number'] || '',
-          callCount: row['Call Count'] || 0,
-          callDate: formatExcelDate(row['Call Date']),
-          callDuration: row['Call Duration'] || '',
-          callStatus: row['Call Status (Answered, No Answer, Busy, Failed)'] || '',
-        }));
+        const newFormattedData = jsonData.map((row, index) => {
+          const ensureString = (value) => (value != null ? String(value) : '');
+          const validCallStatus = (status) => {
+            const validStatuses = ['Answered', 'No Answer', 'Busy', 'Failed'];
+            return status != null && validStatuses.includes(String(status)) ? String(status) : '';
+          };
 
-        console.log('Formatted data from file:', newFormattedData);
+          return {
+            id: index + 1,
+            companyName: ensureString(row['Company Name']) || 'Unknown',
+            identificationCode: ensureString(row['Identification Code or ID']) || '',
+            contactPerson1: ensureString(row['Contact Person #1']) || '',
+            tel1: ensureString(row['Tel']) || '',
+            contactPerson2: ensureString(row['Contact Person #2']) || '',
+            tel2: ensureString(row['Tel #2']) || '',
+            contactPerson3: ensureString(row['Contact Person #3']) || '',
+            tel3: ensureString(row['Tel #3']) || '',
+            callerName: ensureString(row['Caller Name']) || '',
+            callerNumber: ensureString(row['Caller Number']) || '',
+            receiverNumber: ensureString(row['Receiver Number']) || '',
+            callCount: row['Call Count'] != null ? parseInt(row['Call Count'], 10) : 0,
+            callDate: formatExcelDate(row['Call Date']) || '',
+            callDuration: ensureString(row['Call Duration']) || '',
+            callStatus: validCallStatus(row['Call Status (Answered, No Answer, Busy, Failed)']) || '',
+          };
+        });
+
+        console.log('Formatted data from file:', JSON.stringify(newFormattedData, null, 2));
         await uploadToServer(newFormattedData);
         onUploadSuccess(newFormattedData);
       } catch (err) {
@@ -98,24 +120,41 @@ const UploadExcel = ({ onUploadSuccess, excelData }) => {
     if (!excelDate) return '';
     if (typeof excelDate === 'number') {
       const date = new Date((excelDate - (25567 + 2)) * 86400 * 1000);
-      return date.toISOString().split('T')[0];
+      return date.toISOString().replace('T', ' ').split('.')[0];
     }
-    return excelDate;
+    const dateRegex = /^\d{4}-\d{2}-\d{2}( \d{2}:\d{2}:\d{2})?$/;
+    if (typeof excelDate === 'string' && dateRegex.test(excelDate)) {
+      return excelDate.includes(' ') ? excelDate : `${excelDate} 00:00:00`;
+    }
+    return '';
   };
 
   const uploadToServer = async (data) => {
     try {
+      const token = localStorage.getItem('token');
+      const headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      console.log('Данные, отправляемые на сервер:', JSON.stringify({ data }, null, 2));
       const response = await fetch('http://localhost:8000/api/import-company', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ data }),
       });
-
-      if (!response.ok) throw new Error('Error uploading data to server');
-      console.log('Data uploaded to server successfully');
+      const responseBody = await response.text();
+      console.log('Ответ сервера (import-company):', response.status, responseBody);
+      if (!response.ok) {
+        throw new Error(`Ошибка загрузки данных на сервер: ${response.status} ${responseBody}`);
+      }
+      console.log('Данные успешно загружены на сервер');
     } catch (err) {
-      console.error('Upload error:', err);
-      setError('Error uploading data to server: ' + err.message);
+      console.error('Ошибка загрузки:', err);
+      setError('Ошибка загрузки данных на сервер: ' + err.message);
       throw err;
     }
   };
