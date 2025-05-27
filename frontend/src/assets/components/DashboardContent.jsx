@@ -1,4 +1,3 @@
-import React from 'react';
 import Header from './Header';
 import AddCallerModal from './AddCallerModal';
 import AddCompanyModal from './AddCompanyModal';
@@ -19,7 +18,7 @@ const DashboardContent = ({
   handleDeleteCompany,
   handleEdit,
   edit_delete,
-  companyDetails,  // <-- добавлено
+  companyDetails, 
   companies
 }) => {
   return (
@@ -176,7 +175,6 @@ const DashboardContent = ({
                   </div>
                 </div>
               </div>
-
             </div>
           </div>
         </div>

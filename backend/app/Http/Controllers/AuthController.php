@@ -3,37 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Admin; // Импорт модели Admin
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException; // Правильный импорт
 
 class AuthController extends Controller
 {
-    // public function login(Request $request)
-    // {
-    //     $request->validate([
-    //         'email' => 'required|email',
-    //         'password' => 'required'
-    //     ]);
-
-    //     $user = User::where('email', $request->email)->first();
-        
-    //     if (!$user || !Hash::check($request->password, $user->password)) {
-    //         return response()->json(['message' => 'Invalid credentials'], 401);
-    //     }
-
-    //     return response()->json(['message' => 'Login successful'], 200);
-    // }
-
     public function register(Request $request)
     {
         $request->validate([
-            // 'name' => 'required',
             'email' => 'required|email|unique:users',
             'password' => 'required|confirmed|min:6',
         ]);
 
         $user = User::create([
-            // 'name' => $request->name,
             'email' => $request->email,
             'password' => bcrypt($request->password),
         ]);
@@ -45,28 +29,28 @@ class AuthController extends Controller
     {
         $request->validate([
             'email' => 'required|email',
-            'password' => 'required'
+            'password' => 'required',
         ]);
 
+        // Проверка в таблице users
         $user = User::where('email', $request->email)->first();
-
-        if (! $user || ! Hash::check($request->password, $user->password)) {
-            throw ValidationException::withMessages([
-                'email' => ['Incorrect credentials'],
+        if ($user && Hash::check($request->password, $user->password)) {
+            return response()->json([
+                'token' => $user->createToken('api-token')->plainTextToken,
+                // 'isGorgiaAdmin' => false, // Обычные пользователи не админы
+                'user' => $user,
             ]);
         }
 
-        return response()->json([
-            'token' => $user->createToken('api-token')->plainTextToken
+        // Если ни один пользователь не найден
+        throw ValidationException::withMessages([
+            'email' => ['Неверные учетные данные'],
         ]);
     }
 
     public function logout(Request $request)
     {
-        // Revoke the token that was used to authenticate the current request
         $request->user()->currentAccessToken()->delete();
-
-        return response()->json(['message' => 'Logged out successfully']);
+        return response()->json(['message' => 'Выход выполнен успешно']);
     }
 }
-

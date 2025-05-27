@@ -7,58 +7,73 @@ const UploadExcel = ({ onUploadSuccess, excelData }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
+  const isAdmin = localStorage.getItem('role') === 'admin';
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const token = localStorage.getItem('token'); // Получаем токен из localStorage
-        const headers = {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        };
-        if (token) {
-          headers['Authorization'] = `Bearer ${token}`;
-        }
+    // const fetchData = async () => {
+    //   try {
+    //     const token = localStorage.getItem('token'); // Получаем токен из localStorage
+    //     const headers = {
+    //       'Accept': 'application/json',
+    //       'Content-Type': 'application/json',
+    //     };
+    //     if (token) {
+    //       headers['Authorization'] = `Bearer ${token}`;
+    //     }
 
-        const response = await fetch('http://localhost:8000/api/get-imported-companies', {
-          headers,
-        });
-        const responseBody = await response.text();
-        console.log('Ответ сервера (get-imported-companies):', response.status, responseBody);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch data: ${response.status} ${responseBody}`);
-        }
-        const json = JSON.parse(responseBody);
-        console.log('Parsed JSON:', json);
+    //     const response = await fetch('http://localhost:8000/api/get-imported-companies', {
+    //       headers,
+    //     });
+    //     const responseBody = await response.text();
+    //     console.log('Ответ сервера (get-imported-companies):', response.status, responseBody);
+    //     if (!response.ok) {
+    //       throw new Error(`Failed to fetch data: ${response.status} ${responseBody}`);
+    //     }
+    //     const json = JSON.parse(responseBody);
+    //     console.log('Parsed JSON:', json);
 
-        const normalizedData = json.data.map(item => ({
-          id: item.id || Date.now() + Math.random(),
-          companyName: item.company_name || item.companyName || '',
-          identificationCode: item.identification_code || item.identificationCode || '',
-          contactPerson1: item.contact_person1 || item.contactPerson1 || '',
-          tel1: item.tel1 || item.contactTel1 || '',
-          contactPerson2: item.contact_person2 || item.contactPerson2 || '',
-          tel2: item.tel2 || item.contactTel2 || '',
-          contactPerson3: item.contact_person3 || item.contactPerson3 || '',
-          tel3: item.tel3 || item.contactTel3 || '',
-          callerName: item.caller_name || item.callerName || '',
-          callerNumber: item.caller_number || item.callerNumber || '',
-          receiverNumber: item.receiver_number || item.receiverNumber || '',
-          callCount: item.call_count || item.callCount || 0,
-          callDate: item.call_date || item.callDate || '',
-          callDuration: item.call_duration || item.callDuration || '',
-          callStatus: item.call_status || item.callStatus || '',
-        }));
-        console.log('Normalized server data:', normalizedData);
-        onUploadSuccess(normalizedData);
-      } catch (error) {
-        console.error('Error fetching data from the server:', error);
-        setError('Error fetching data from the server: ' + error.message);
-      }
-    };
+    //     const normalizedData = json.data.map(item => ({
+    //       id: item.id || Date.now() + Math.random(),
+    //       companyName: item.company_name || item.companyName || '',
+    //       identificationCode: item.identification_code || item.identificationCode || '',
+    //       contactPerson1: item.contact_person1 || item.contactPerson1 || '',
+    //       tel1: item.tel1 || item.contactTel1 || '',
+    //       contactPerson2: item.contact_person2 || item.contactPerson2 || '',
+    //       tel2: item.tel2 || item.contactTel2 || '',
+    //       contactPerson3: item.contact_person3 || item.contactPerson3 || '',
+    //       tel3: item.tel3 || item.contactTel3 || '',
+    //       callerName: item.caller_name || item.callerName || '',
+    //       callerNumber: item.caller_number || item.callerNumber || '',
+    //       receiverNumber: item.receiver_number || item.receiverNumber || '',
+    //       callCount: item.call_count || item.callCount || 0,
+    //       callDate: item.call_date || item.callDate || '',
+    //       callDuration: item.call_duration || item.callDuration || '',
+    //       callStatus: item.call_status || item.callStatus || '',
+    //     }));
+    //     console.log('Normalized server data:', normalizedData);
+    //     onUploadSuccess(normalizedData);
+    //   } catch (error) {
+    //     console.error('Error fetching data from the server:', error);
+    //     setError('Error fetching data from the server: ' + error.message);
+    //   }
+    // };
 
-    fetchData();
+    // fetchData();
   }, [onUploadSuccess]);
+
+  // Converts Excel time decimal to HH:MM:SS string
+  const excelTimeToHMS = (excelTime) => {
+    if (typeof excelTime === 'number' && !isNaN(excelTime)) {
+      const totalSeconds = Math.round(excelTime * 86400);
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      return [hours, minutes, seconds]
+        .map(v => String(v).padStart(2, '0'))
+        .join(':');
+    }
+    return '';
+  };
 
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
@@ -82,6 +97,17 @@ const UploadExcel = ({ onUploadSuccess, excelData }) => {
             return status != null && validStatuses.includes(String(status)) ? String(status) : '';
           };
 
+          // Format callDuration: if it's a number, convert to HH:MM:SS
+          let callDurationRaw = row['Call Duration'];
+          let callDuration = '';
+          if (typeof callDurationRaw === 'number') {
+            callDuration = excelTimeToHMS(callDurationRaw);
+          } else if (typeof callDurationRaw === 'string' && /^\d+:\d{2}(:\d{2})?$/.test(callDurationRaw)) {
+            callDuration = callDurationRaw.length === 5 ? '00:' + callDurationRaw : callDurationRaw;
+          } else {
+            callDuration = ensureString(callDurationRaw);
+          }
+
           return {
             id: index + 1,
             companyName: ensureString(row['Company Name']) || 'Unknown',
@@ -97,7 +123,7 @@ const UploadExcel = ({ onUploadSuccess, excelData }) => {
             receiverNumber: ensureString(row['Receiver Number']) || '',
             callCount: row['Call Count'] != null ? parseInt(row['Call Count'], 10) : 0,
             callDate: formatExcelDate(row['Call Date']) || '',
-            callDuration: ensureString(row['Call Duration']) || '',
+            callDuration: callDuration,
             callStatus: validCallStatus(row['Call Status (Answered, No Answer, Busy, Failed)']) || '',
           };
         });
@@ -131,7 +157,8 @@ const UploadExcel = ({ onUploadSuccess, excelData }) => {
 
   const uploadToServer = async (data) => {
     try {
-      const token = localStorage.getItem('token');
+      // Use the correct token key
+      const token = localStorage.getItem('authToken');
       const headers = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -240,7 +267,8 @@ const UploadExcel = ({ onUploadSuccess, excelData }) => {
     <div className="upload-excel">
       <div style={{ display: 'flex', gap: '10px' }}>
         <label>
-          <button
+          {isAdmin && (
+            <button
             className={styles.button}
             onClick={() => document.getElementById('excel-upload').click()}
             disabled={isLoading}
@@ -270,6 +298,7 @@ const UploadExcel = ({ onUploadSuccess, excelData }) => {
             </svg>
             Upload Excel
           </button>
+          )}
           <input
             id="excel-upload"
             type="file"

@@ -34,6 +34,8 @@ const Sidebar = () => {
     }
   };
 
+  const isAdmin = localStorage.getItem('role') === 'admin';
+
   return (
     <div className="nav-left-sidebar sidebar-dark">
       <div className="menu-list">
@@ -63,6 +65,7 @@ const Sidebar = () => {
                   <span className="badge badge-success">6</span>
                 </NavLink>
               </li>
+              {isAdmin && (
               <li className="nav-item" style={{ marginTop: '20px' }}>
                 <NavLink
                   to="/caller-dashboard"
@@ -72,6 +75,18 @@ const Sidebar = () => {
                   <span className="badge badge-success">6</span>
                 </NavLink>
               </li>
+              )}
+              {isAdmin && (
+                <li className="nav-item" style={{ marginTop: '20px' }}>
+                  <NavLink
+                    to="/admin-dahsboard"
+                    className={({ isActive }) => `fade-in nav-link ${isActive ? 'my-active' : ''}`}
+                  >
+                    <i className="fa fa-fw fa-user-circle"></i>Admin Dashboard
+                    <span className="badge badge-success">A</span>
+                  </NavLink>
+                </li>
+              )}
               <li className="nav-item fade-in" style={{ marginTop: '20px' }}>
                 <button className={styles.Btn} onClick={handleLogout}>
                   <div className={styles.sign}>

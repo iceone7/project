@@ -1,8 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import App from './App';
 import Login from './pages/Login';
-import AdminPanel from './pages/AdminPanel';
-import AdminSecretAccess from './pages/AdminSecretAccess';
+// import AdminDashboard from './assets/components/AdminDashboard';
 
 const AppRouter = () => {
   const isAuthenticated = localStorage.getItem('isLoggedIn') === 'true';
@@ -20,12 +19,8 @@ const AppRouter = () => {
           element={isAuthenticated ? <App dashboardType="caller" /> : <Navigate to="/login" />}
         />
         <Route
-          path="/admin/adminpanel"
-          element={<AdminPanel /> }
-        />
-        <Route
-          path="/adm!n4cc3ss"
-          element={<AdminSecretAccess />}
+          path="/admin-dahsboard"
+          element={isAuthenticated ? <App dashboardType="admin" /> : <Navigate to="/login" />}
         />
         <Route
           path="/*"

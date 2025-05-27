@@ -21,12 +21,16 @@ export default function Login() {
         throw new Error('No token received from server');
       }
 
-      // Save token and login flag
+      // console.log(response);
+
+      // Save token, login flag, and email
       localStorage.setItem('authToken', response.data.token);
       localStorage.setItem('isLoggedIn', 'true');
+      localStorage.setItem('userEmail', response.data.user?.email); // Сохраняем email
+      localStorage.setItem('role', response.data.user?.role); 
       console.log('Token saved:', localStorage.getItem('authToken'));
 
-      // Redirect to dashboard (force reload to pick up auth state)
+      // Redirect to dashboard
       window.location.replace('/dashboard');
     } catch (err) {
       console.error('Login error:', err.response?.data || err.message);

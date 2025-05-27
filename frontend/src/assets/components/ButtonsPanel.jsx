@@ -2,6 +2,7 @@ import styles from '../css/CreateButton.module.css';
 import download_button from '../css/UploadButton.module.css';
 import FilterForm from './FilterForm';
 import UploadExcel from './UploadExcel';
+import UploadCompanyExcel from './UploadCompanyExcel';
 
 const ButtonsPanel = ({
   activeDashboard,
@@ -12,6 +13,9 @@ const ButtonsPanel = ({
   showFilters,
   onUploadSuccess,
   excelData,
+  onCompanyUploadSuccess,
+  // companyExcelData,
+  // setCompanyExcelData,
 }) => {
   return (
     <div className="buttons" style={{ marginBottom: '20px' }}>
@@ -50,6 +54,7 @@ const ButtonsPanel = ({
             onlyButton={true}
             onToggleFilters={() => setShowFilters(!showFilters)}
           />
+          <UploadCompanyExcel onPreviewSuccess={onCompanyUploadSuccess} />
         </div>
       )}
       {activeDashboard === 'caller' && (

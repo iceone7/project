@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import styles from '../css/Modal.module.css';
 import defaultInstance from '../../api/defaultInstance';
 
-function AddCompanyModal({ onClose, editingItem, editMode }) {
+function EditModal({ isOpen, onClose, onSave, editData }) {
   const [activeTab, setActiveTab] = useState(1);
   const [formData, setFormData] = useState({
     tenderNumber: '',
@@ -22,32 +22,31 @@ function AddCompanyModal({ onClose, editingItem, editMode }) {
     manager: '',
     status: '',
   });
+  const [isSaving, setIsSaving] = useState(false);
 
   // Populate form when editing
   useEffect(() => {
-    if (editMode && editingItem) {
+    if (editData) {
       setFormData({
-        tenderNumber: editingItem.tenderNumber || '',
-        buyer: editingItem.buyer || '',
-        contact1: editingItem.contact1 || '',
-        phone1: editingItem.phone1 || '',
-        contact2: editingItem.contact2 || '',
-        phone2: editingItem.phone2 || '',
-        email: editingItem.email || '',
-        executor: editingItem.executor || '',
-        idCode: editingItem.idCode || '',
-        contractValue: editingItem.contractValue || '',
-        totalValueGorgia: editingItem.totalValueGorgia || '',
-        lastPurchaseDateGorgia: editingItem.lastPurchaseDateGorgia || '',
-        contractEndDate: editingItem.contractEndDate || '',
-        foundationDate: editingItem.foundationDate || '',
-        manager: editingItem.manager || '',
-        status: editingItem.status || '',
+        tenderNumber: editData.tenderNumber || '',
+        buyer: editData.buyer || '',
+        contact1: editData.contact1 || '',
+        phone1: editData.phone1 || '',
+        contact2: editData.contact2 || '',
+        phone2: editData.phone2 || '',
+        email: editData.email || '',
+        executor: editData.executor || '',
+        idCode: editData.idCode || '',
+        contractValue: editData.contractValue || '',
+        totalValueGorgia: editData.totalValueGorgia || '',
+        lastPurchaseDateGorgia: editData.lastPurchaseDateGorgia || '',
+        contractEndDate: editData.contractEndDate || '',
+        foundationDate: editData.foundationDate || '',
+        manager: editData.manager || '',
+        status: editData.status || '',
       });
     }
-  }, [editMode, editingItem]);
-
-  const [isSaving, setIsSaving] = useState(false);
+  }, [editData]);
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -56,46 +55,31 @@ function AddCompanyModal({ onClose, editingItem, editMode }) {
   const handleSubmit = async () => {
     setIsSaving(true);
     try {
-      if (editMode && editingItem) {
-        // Update existing company
-        const res = await defaultInstance.put(`/company-excel-uploads/${editingItem.id}`, formData);
-        const response = res.data;
-        if (response.success || response.status === 'success' || response.message) {
-          alert('Company updated successfully!');
-          onClose();
-        } else {
-          alert('Error: ' + JSON.stringify(response.message || response));
-        }
-      } else {
-        // Add new company
-        const res = await defaultInstance.post('/company-excel-uploads', { data: [formData] });
-        const response = res.data;
-        if (response.status === 'success' || response.success || response.message) {
-          alert('Company saved successfully!');
-          onClose();
-        } else {
-          alert('Error: ' + JSON.stringify(response.message || response));
-        }
-      }
+      await defaultInstance.put(`/company-excel-uploads/${editData.id}`, formData);
+      onSave(formData); // Передаем обновленные данные в DataTable
+      alert('Company updated successfully!');
+      onClose();
     } catch (error) {
-      let msg = error?.response?.data?.message || error.message;
-      alert('Fetch failed: ' + msg);
+      let msg = error?.response?.data?.error || error.message;
+      alert('Failed to update company: ' + msg);
     } finally {
       setIsSaving(false);
     }
   };
 
+  if (!isOpen) return null;
+
   return (
     <div className={styles.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
       <div className={styles.modal} onClick={e => e.stopPropagation()}>
-        <h3 className={styles.title}>Add Company</h3>
+        <h3 className={styles.title}>Edit Company</h3>
 
         <div className={styles.tabButtons}>
           {[1, 2, 3].map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={activeTab === tab ? styles.activeTab : ''}
+              className={`${activeTab === tab ? styles.activeTab : ''}`}
               disabled={isSaving}
             >
               {tab === 1 && 'ძირითადი'}
@@ -146,11 +130,19 @@ function AddCompanyModal({ onClose, editingItem, editMode }) {
               Next
             </button>
           ) : (
-            <button onClick={handleSubmit} className={styles.saveBtn} disabled={isSaving}>
+            <button
+              onClick={handleSubmit}
+              className={styles.saveBtn}
+              disabled={isSaving}
+            >
               {isSaving ? 'Saving...' : 'Save'}
             </button>
           )}
-          <button onClick={onClose} className={styles.cancelBtn} disabled={isSaving}>
+          <button
+            onClick={onClose}
+            className={styles.cancelBtn}
+            disabled={isSaving}
+          >
             Cancel
           </button>
         </div>
@@ -173,4 +165,4 @@ function Input({ label, value, onChange, type = 'text' }) {
   );
 }
 
-export default AddCompanyModal;
+export default EditModal;

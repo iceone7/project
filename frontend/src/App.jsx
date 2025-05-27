@@ -1,6 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
-import axios from 'axios';
 import * as XLSX from 'xlsx';
 
 // components
@@ -12,47 +11,47 @@ import Header from './assets/components/Header';
 import ButtonsPanel from './assets/components/ButtonsPanel';
 import DataTable from './assets/components/DataTable';
 import defaultInstance from './api/defaultInstance';
+import AdminDashboard from './assets/components/AdminDashboard';
 
 function App({ dashboardType = 'company' }) {
   const [showCallerModal, setShowCallerModal] = useState(false);
   const [showCompanyModal, setShowCompanyModal] = useState(false);
   const [companies, setCompanies] = useState([]);
   const [filteredCompanies, setFilteredCompanies] = useState([]);
-  const [calls, setCalls] = useState([]);
+  // eslint-disable-next-line 
   const [companyDetails, setCompanyDetails] = useState([]);
   const [excelData, setExcelData] = useState([]);
-  const [counter, setCounter] = useState(1);
   const [editingItem, setEditingItem] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  // eslint-disable-next-line 
+  const [importedCompanies, setImportedCompanies] = useState([]);
+  const [companyExcelData, setCompanyExcelData] = useState([]);
+  const [previewData, setPreviewData] = useState([]);
 
-  // Load companies
   useEffect(() => {
     if (dashboardType === 'company') {
-      defaultInstance.get('/companies')
-      // axios.get('http://localhost:8000/api/companies')
-        .then(response => {
-          if (response.data.data) {
-            setCompanies(response.data.data);
-            setFilteredCompanies(response.data.data);
-          } else {
-            setCompanies(response.data);
-            setFilteredCompanies(response.data);
-          }
+      defaultInstance
+        .get('/company-excel-uploads')
+        .then((response) => {
+          const data = response.data.data || [];
+          setCompanies(data);
+          setFilteredCompanies(data);
+          setCompanyExcelData([]);
         })
-        .catch(error => {
+        .catch((error) => {
           console.error('Error loading companies:', error);
         });
     }
   }, [dashboardType]);
 
-  // Load calls and initialize excelData
   useEffect(() => {
     if (dashboardType === 'caller') {
-      axios.get('http://localhost:8000/api/get-imported-companies')
-        .then(response => {
+      defaultInstance
+        .get('http://localhost:8000/api/get-imported-companies')
+        .then((response) => {
           console.log('Server response:', response.data);
-          const normalizedData = response.data.data.map(item => ({
+          const normalizedData = response.data.data.map((item) => ({
             id: item.id || Date.now() + Math.random(),
             companyName: item.company_name || item.companyName || '',
             identificationCode: item.identification_code || item.identificationCode || '',
@@ -73,166 +72,167 @@ function App({ dashboardType = 'company' }) {
           setCompanyDetails(normalizedData);
           setExcelData(normalizedData);
         })
-        .catch(error => {
+        .catch((error) => {
           console.error('Error loading calls:', error);
         });
     }
   }, [dashboardType]);
 
-  // Delete company
-  const handleDeleteCompany = (id) => {
-    if (window.confirm('Are you sure you want to delete this company?')) {
-      axios.delete(`http://localhost:8000/api/companies/${id}`)
-        .then(response => {
-          if (response.data.success) {
-            setCompanies(companies.filter(company => company.id !== id));
-            setFilteredCompanies(filteredCompanies.filter(company => company.id !== id));
-          } else {
-            alert('Error deleting company');
-          }
-        })
-        .catch(error => {
-          console.error('Error deleting company:', error);
-        });
+  // Handle upload success for company dashboard
+  const handleCompanyUploadSuccess = async (data) => {
+    const normalizedData = data.map((item, index) => ({
+      id: `preview-${index}`, // Добавляем временный id для previewData
+      tenderNumber: item.tenderNumber || '',
+      buyer: item.buyer || '',
+      contact1: item.contact1 || '',
+      phone1: item.phone1 || '',
+      contact2: item.contact2 || '',
+      phone2: item.phone2 || '',
+      email: item.email || '',
+      executor: item.executor || '',
+      idCode: item.idCode || '',
+      contractValue: item.contractValue || '',
+      totalValueGorgia: item.totalValueGorgia || '',
+      lastPurchaseDateGorgia: item.lastPurchaseDateGorgia || '',
+      contractEndDate: item.contractEndDate || '',
+      foundationDate: item.foundationDate || '',
+      manager: item.manager || '',
+      status: item.status || '',
+    }));
+    setPreviewData(normalizedData); 
+    try {
+      await defaultInstance.post('/company-excel-uploads', { data: normalizedData });
+      // Reload from DB after save
+      const response = await defaultInstance.get('/company-excel-uploads');
+      const dbData = response.data.data || [];
+      setCompanies(dbData);
+      setFilteredCompanies(dbData);
+      setCompanyExcelData([]);
+      setPreviewData([]); 
+    } catch (err) {
+      alert('Failed to save data: ' + (err?.response?.data?.error || err.message));
     }
   };
 
-  // Edit item
-  const handleEdit = (item) => {
+  // Edit company (inline or modal)
+  const handleEdit = async (item) => {
     setEditingItem(item);
     setEditMode(true);
-    if (dashboardType === 'caller') {
-      setShowCallerModal(true);
-    } else {
-      setShowCompanyModal(true);
+    setShowCompanyModal(true);
+  };
+
+  // Save edited company
+  const handleSaveEdit = async (updatedData) => {
+    try {
+      await defaultInstance.put(`/company-excel-uploads/${editingItem.id}`, updatedData);
+      const response = await defaultInstance.get('/company-excel-uploads');
+      const dbData = response.data.data || [];
+      setCompanies(dbData);
+      setFilteredCompanies(dbData);
+      setShowCompanyModal(false);
+      setEditMode(false);
+      setEditingItem(null);
+      alert('Company updated!');
+    } catch (err) {
+      alert('Failed to update company: ' + (err?.response?.data?.error || err.message));
     }
   };
 
-  // Update company
-  const handleUpdateCompany = (data) => {
-    axios.put(`http://localhost:8000/api/companies/${editingItem.id}`, data)
-      .then(response => {
-        if (response.data.success) {
-          setCompanies(companies.map(company => 
-            company.id === editingItem.id ? response.data.data : company
-          ));
-          setFilteredCompanies(filteredCompanies.map(company => 
-            company.id === editingItem.id ? response.data.data : company
-          ));
-          setShowCompanyModal(false);
-          setEditMode(false);
-          setEditingItem(null);
-        } else {
-          alert('Error updating company');
-        }
-      })
-      .catch(error => {
-        console.error('Error updating company:', error);
-      });
-  };
-
-  // Update call
-  const handleUpdateCaller = (data) => {
-    axios.put(`http://localhost/caller-app/update_caller.php?id=${editingItem.id}`, data)
-      .then(response => {
-        if (response.data.success) {
-          setCalls(calls.map(call => 
-            call.id === editingItem.id ? { ...call, ...data } : call
-          ));
-          setShowCallerModal(false);
-          setEditMode(false);
-          setEditingItem(null);
-        } else {
-          alert('Error updating call');
-        }
-      })
-      .catch(error => {
-        console.error('Error updating call:', error);
-      });
-  };
-
-  // Open modal based on dashboard type
-  const handleOpenModal = () => {
-    if (dashboardType === 'caller') {
-      setShowCallerModal(true);
-    } else if (dashboardType === 'company') {
-      setShowCompanyModal(true);
+  // Delete company
+  const handleDeleteCompany = async (id) => {
+    if (window.confirm('Are you sure you want to delete this company?')) {
+      try {
+        await defaultInstance.delete(`/company-excel-uploads/${id}`);
+        const response = await defaultInstance.get('/company-excel-uploads');
+        const dbData = response.data.data || [];
+        setCompanies(dbData);
+        setFilteredCompanies(dbData);
+      } catch (error) {
+        alert('Error deleting company: ' + (error?.response?.data?.error || error.message));
+      }
     }
   };
-
-  // Handle filter application
-  const handleFilterApply = useCallback((filteredData) => {
-    console.log('handleFilterApply called with data:', filteredData);
-    setFilteredCompanies(filteredData);
-  }, []);
-
-  // useCallback
-  const onUploadSuccess = useCallback((data) => {
-    console.log('onUploadSuccess called with data:', data);
-    setExcelData(data);
-  }, []);
 
   // Download Excel for Company Dashboard
-  const handleDownloadExcel = () => {
-    console.log('handleDownloadExcel triggered, filteredCompanies:', filteredCompanies);
-    if (!filteredCompanies || !filteredCompanies.length) {
-      alert('No data to download');
-      return;
-    }
-
+  const handleDownloadExcel = async () => {
     try {
+      // Always fetch the latest data from the backend for download
+      const response = await defaultInstance.get('/company-excel-uploads');
+      const dbData = response.data.data || [];
+      if (!dbData.length) {
+        alert('No data to download');
+        return;
+      }
+
+      // Normalize keys for export
+      const exportRows = dbData.map(row => ({
+        tenderNumber: row.tenderNumber ?? row.tender_number ?? '',
+        buyer: row.buyer ?? '',
+        contact1: row.contact1 ?? '',
+        phone1: row.phone1 ?? '',
+        contact2: row.contact2 ?? '',
+        phone2: row.phone2 ?? '',
+        email: row.email ?? '',
+        executor: row.executor ?? '',
+        idCode: row.idCode ?? row.id_code ?? '',
+        contractValue: row.contractValue ?? row.contract_value ?? '',
+        totalValueGorgia: row.totalValueGorgia ?? row.total_value_gorgia ?? '',
+        lastPurchaseDateGorgia: row.lastPurchaseDateGorgia ?? row.last_purchase_date_gorgia ?? '',
+        contractEndDate: row.contractEndDate ?? row.contract_end_date ?? '',
+        foundationDate: row.foundationDate ?? row.foundation_date ?? '',
+        manager: row.manager ?? '',
+        status: row.status ?? '',
+      }));
+
+      // Define headers and order
       const headers = [
-        'Tender Number',
-        'Buyer',
-        'Contact Person #1',
-        'Phone #1',
-        'Contact Person #2',
-        'Phone #2',
-        'Email',
-        'Executor',
-        'ID Code',
-        'Contract Value',
-        'Total Value Gorgia',
-        'Last Purchase Date Gorgia',
-        'Contract End Date',
-        'Foundation Date',
-        'Manager',
-        'Status',
+        'ტენდერის N',
+        'შემსყიდველი',
+        'საკ. პირი #1',
+        'ტელ #1',
+        'საკ. პირი #2',
+        'ტელ #2',
+        'ელ-ფოსტა',
+        'შემსრულებელი',
+        'ს/კ -ID',
+        'ხელშ. ღირებ.',
+        'გორგიაში შესყ. ჯამურ. ღირ',
+        'გორგიაში ბოლო შესყ. თარ.',
+        'დაკონტ. საორ. თარიღი',
+        'დაფუძ. თარიღი',
+        'მენეჯერი',
+        'სტატუსი',
       ];
 
-      const exportData = filteredCompanies.map(row => [
-        row.tenderNumber || 'N/A',
-        row.buyer || 'N/A',
-        row.contact1 || 'N/A',
-        row.phone1 || 'N/A',
-        row.contact2 || 'N/A',
-        row.phone2 || 'N/A',
-        row.email || 'N/A',
-        row.executor || 'N/A',
-        row.idCode || 'N/A',
-        row.contractValue || 'N/A',
-        row.totalValueGorgia || 'N/A',
-        row.lastPurchaseDateGorgia || 'N/A',
-        row.contractEndDate || 'N/A',
-        row.foundationDate || 'N/A',
-        row.manager || 'N/A',
-        row.status || 'N/A',
-      ]);
+      const keys = [
+        'tenderNumber',
+        'buyer',
+        'contact1',
+        'phone1',
+        'contact2',
+        'phone2',
+        'email',
+        'executor',
+        'idCode',
+        'contractValue',
+        'totalValueGorgia',
+        'lastPurchaseDateGorgia',
+        'contractEndDate',
+        'foundationDate',
+        'manager',
+        'status',
+      ];
 
-      console.log('Export data prepared:', exportData);
+      // Prepare data for export
+      const exportData = exportRows.map(row => keys.map(k => row[k] || ''));
       const worksheet = XLSX.utils.aoa_to_sheet([headers, ...exportData]);
-
-      console.log('Setting column widths...');
-      const colWidths = headers.map((h, colIndex) => {
-        const maxLength = Math.max(
+      worksheet['!cols'] = headers.map((h, i) => ({
+        wch: Math.max(
           h.length,
-          ...exportData.map(row => (row[colIndex] ? row[colIndex].toString().length : 0))
-        );
-        return { wch: maxLength + 2 };
-      });
-      worksheet['!cols'] = colWidths;
+          ...exportData.map(row => (row[i] ? row[i].toString().length : 0))
+        ) + 2,
+      }));
 
-      console.log('Creating workbook...');
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Companies');
 
@@ -241,80 +241,18 @@ function App({ dashboardType = 'company' }) {
       const mm = String(today.getMonth() + 1).padStart(2, '0');
       const dd = String(today.getDate()).padStart(2, '0');
       const dateStr = `${dd}-${mm}-${yyyy}`;
-
       const fileName = `company_data_${dateStr}.xlsx`;
-      console.log('Writing file:', fileName);
+
       XLSX.writeFile(workbook, fileName);
-      console.log('File downloaded successfully');
     } catch (err) {
-      console.error('Error downloading file:', err);
-      alert('Error downloading file: ' + err.message);
+      alert('Error downloading file: ' + (err?.message || 'Unknown error'));
     }
   };
 
-  // Add call
-  const handleAddCaller = (data) => {
-    if (editMode) {
-      handleUpdateCaller(data);
-      return;
-    }
-    
-    const newCaller = {
-      callerName: data.callerName || 'Null',
-      callerNumber: data.callerNumber || 'Null',
-      receiverNumber: data.receiverNumber || 'Null',
-      callCount: 0,
-      companyName: 'Null',
-      data: 'Null',
-      duration: 'Null',
-      status: 'InTransit'
-    };
-
-    axios.post('http://localhost/caller-app/save_caller.php', newCaller)
-      .then(response => {
-        if (response.data.success) {
-          setCalls(prev => [...prev, { ...newCaller, id: counter }]);
-          setCounter(prev => prev + 1);
-          setShowCallerModal(false);
-        } else {
-          alert('Error saving call');
-        }
-      })
-      .catch(error => {
-        console.error('Error saving call:', error);
-      });
-  };
-
-  // Add company
-  const handleAddCompany = (data) => {
-    if (editMode) {
-      handleUpdateCompany(data);
-      return;
-    }
-    
-    const newCompany = {
-      companyName: data.companyName || 'Null',
-      identificationCode: data.identificationCode || 'Null',
-      contactPerson1: data.contactPerson1 || 'Null',
-      tel1: data.tel1 || 'Null',
-      contactPerson2: data.contactPerson2 || 'Null',
-      tel2: data.tel2 || 'Null',
-      contactPerson3: data.contactPerson3 || 'Null',
-      tel3: data.tel3 || 'Null',
-    };
-
-    axios.post('http://localhost/caller-app/save_company.php', newCompany)
-      .then(response => {
-        if (response.data.success) {
-          setShowCompanyModal(false);
-        } else {
-          alert('Error saving company');
-        }
-      })
-      .catch(error => {
-        console.error('Error saving company:', error);
-      });
-  };
+  // Render AdminDashboard if dashboardType is 'admin'
+  if (dashboardType === 'admin') {
+    return <AdminDashboard />;
+  }
 
   return (
     <div className="dashboard-main-wrapper">
@@ -327,18 +265,20 @@ function App({ dashboardType = 'company' }) {
                 <Header activeDashboard={dashboardType} />
                 <ButtonsPanel
                   activeDashboard={dashboardType}
-                  handleOpenModal={handleOpenModal}
+                  handleOpenModal={() => setShowCompanyModal(true)}
                   handleDownloadExcel={handleDownloadExcel}
                   filteredCompanies={filteredCompanies}
                   setShowFilters={setShowFilters}
                   showFilters={showFilters}
-                  onUploadSuccess={onUploadSuccess}
+                  onUploadSuccess={() => {}} // Placeholder for caller dashboard
                   excelData={excelData}
+                  onCompanyUploadSuccess={handleCompanyUploadSuccess}
+                  companyExcelData={companyExcelData}
+                  setCompanyExcelData={setCompanyExcelData}
                 />
                 {showCallerModal && (
                   <AddCallerModal
                     onClose={() => setShowCallerModal(false)}
-                    onSave={handleAddCaller}
                     editingItem={editingItem}
                     editMode={editMode}
                   />
@@ -346,28 +286,42 @@ function App({ dashboardType = 'company' }) {
                 {showCompanyModal && (
                   <AddCompanyModal
                     onClose={() => setShowCompanyModal(false)}
-                    onSave={handleAddCompany}
                     editingItem={editingItem}
                     editMode={editMode}
+                    onSave={handleSaveEdit}
                   />
                 )}
                 {dashboardType === 'company' && (
                   <FilterForm
                     data={companies}
-                    onFilterApply={handleFilterApply}
+                    onFilterApply={setFilteredCompanies}
                     showFilters={showFilters}
                     onToggleFilters={() => setShowFilters(!showFilters)}
                     onlyForm={true}
                     dashboardType="company"
                   />
                 )}
-                <DataTable
-                  activeDashboard={dashboardType}
-                  excelData={excelData}
-                  filteredCompanies={filteredCompanies}
-                  handleDeleteCompany={handleDeleteCompany}
-                  handleEdit={handleEdit}
-                />
+                {dashboardType === 'caller' && (
+                  <DataTable
+                    activeDashboard={dashboardType}
+                    excelData={excelData}
+                    filteredCompanies={filteredCompanies}
+                    handleDeleteCompany={handleDeleteCompany}
+                    handleEdit={handleEdit}
+                    importedCompanies={importedCompanies}
+                    companyExcelData={companyExcelData}
+                  />
+                )}
+                {dashboardType === 'company' && (
+                  <DataTable
+                    activeDashboard={dashboardType}
+                    excelData={[]}
+                    filteredCompanies={filteredCompanies}
+                    previewData={previewData} // Передаем previewData
+                    handleDeleteCompany={handleDeleteCompany}
+                    handleEdit={handleEdit}
+                  />
+                )}
               </div>
             </div>
           </div>
