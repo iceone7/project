@@ -42,8 +42,6 @@ function App() {
   // Load companies
   useEffect(() => {
     if (activeDashboard === 'company') {
-  console.log('API URL:', import.meta.env.VITE_API_BASE_URL);
-
       axios.get(`${import.meta.env.VITE_API_BASE_URL}/companies`)
         .then(response => {
           if (response.data.data) {
