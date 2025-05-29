@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import logo from '../images/logo.png';
 import styles from '../css/Logout.module.css';
-import '/xampp/htdocs/Project-1/frontend/src/App.css';
+import '../../App.css';
 import defaultInstance from '../../api/defaultInstance';
 
 const Sidebar = () => {
