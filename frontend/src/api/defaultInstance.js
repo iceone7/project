@@ -2,7 +2,15 @@ import axios from 'axios';
 
 const defaultInstance = axios.create({
   baseURL: `${import.meta.env.VITE_API_BASE_URL}`,
-  withCredentials: true,
+  headers: {
+    Accept: "application/json",
+    "Content-Type": "application/json",
+    "X-Requested-With": "XMLHttpRequest",
+  },
+  withCredentials: false,
+  xsrfCookieName: "XSRF-TOKEN",
+  xsrfHeaderName: "X-XSRF-TOKEN",
+  credentials: "include"
 });
 
 defaultInstance.interceptors.request.use(
