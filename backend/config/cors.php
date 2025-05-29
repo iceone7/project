@@ -19,7 +19,7 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['https://vip.gorgia.ge/','https://10.150.20.169/api/*'],
+    'allowed_origins' => ['vip.gorgia.ge', '10.150.20.169'],
 
     'allowed_origins_patterns' => [],
 
