@@ -7,7 +7,7 @@ const defaultInstance = axios.create({
     "Content-Type": "application/json",
     "X-Requested-With": "XMLHttpRequest",
   },
-  withCredentials: false,
+  withCredentials: true,
   xsrfCookieName: "XSRF-TOKEN",
   xsrfHeaderName: "X-XSRF-TOKEN",
   credentials: "include"
