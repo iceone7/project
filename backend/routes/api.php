@@ -51,6 +51,4 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/company-excel-uploads/{id}', [CompanyExcelUploadController::class, 'destroy']);
     Route::post('/company-excel-preview', [CompanyExcelUploadController::class, 'preview']);
 
-    // --- Company Excel Preview route ---
-    Route::post('/company-excel-preview', [CompanyExcelUploadController::class, 'preview']);
 });
