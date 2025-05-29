@@ -19,8 +19,12 @@ return [
 
     'allowed_methods' => ['*'],
 
+<<<<<<< HEAD
     'allowed_origins' => ['*'],
 
+=======
+    'allowed_origins' => ['http://localhost:3000', 'http://localhost:3000', 'http://127.0.0.1:3000', 'http://127.0.0.1:8000', 'http://localhost:5173', 'http://localhost:5173/react/'],
+>>>>>>> ec394b2566a85d53221049b2b9cc553606757cb9
     'allowed_origins_patterns' => [],
 
     'allowed_headers' => ['*'],
@@ -29,6 +33,6 @@ return [
 
     'max_age' => 0,
 
-    'supports_credentials' => false,
+    'supports_credentials' => true,
 
 ];

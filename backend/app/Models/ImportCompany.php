@@ -23,6 +23,4 @@ class ImportCompany extends Model
         'call_duration',
         'call_status',
     ];
-    
 }
-

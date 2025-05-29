@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import styles from '../css/Modal.module.css';
+import defaultInstance from '../../api/defaultInstance';
 
-function AddCompanyModal({ onClose, onSave }) {
+function AddCompanyModal({ onClose, editingItem, editMode }) {
   const [activeTab, setActiveTab] = useState(1);
   const [formData, setFormData] = useState({
     tenderNumber: '',
@@ -22,6 +23,30 @@ function AddCompanyModal({ onClose, onSave }) {
     status: '',
   });
 
+  // Populate form when editing
+  useEffect(() => {
+    if (editMode && editingItem) {
+      setFormData({
+        tenderNumber: editingItem.tenderNumber || '',
+        buyer: editingItem.buyer || '',
+        contact1: editingItem.contact1 || '',
+        phone1: editingItem.phone1 || '',
+        contact2: editingItem.contact2 || '',
+        phone2: editingItem.phone2 || '',
+        email: editingItem.email || '',
+        executor: editingItem.executor || '',
+        idCode: editingItem.idCode || '',
+        contractValue: editingItem.contractValue || '',
+        totalValueGorgia: editingItem.totalValueGorgia || '',
+        lastPurchaseDateGorgia: editingItem.lastPurchaseDateGorgia || '',
+        contractEndDate: editingItem.contractEndDate || '',
+        foundationDate: editingItem.foundationDate || '',
+        manager: editingItem.manager || '',
+        status: editingItem.status || '',
+      });
+    }
+  }, [editMode, editingItem]);
+
   const [isSaving, setIsSaving] = useState(false);
 
   const handleChange = (field, value) => {
@@ -30,8 +55,8 @@ function AddCompanyModal({ onClose, onSave }) {
 
   const handleSubmit = async () => {
     setIsSaving(true);
-    console.log('Sending data:', formData);
     try {
+<<<<<<< HEAD
       const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/companies`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -43,11 +68,32 @@ function AddCompanyModal({ onClose, onSave }) {
         onSave(formData);
         alert('Company saved successfully!');
         onClose();
+=======
+      if (editMode && editingItem) {
+        // Update existing company
+        const res = await defaultInstance.put(`/company-excel-uploads/${editingItem.id}`, formData);
+        const response = res.data;
+        if (response.success || response.status === 'success' || response.message) {
+          alert('Company updated successfully!');
+          onClose();
+        } else {
+          alert('Error: ' + JSON.stringify(response.message || response));
+        }
+>>>>>>> ec394b2566a85d53221049b2b9cc553606757cb9
       } else {
-        alert('Error: ' + JSON.stringify(response.message));
+        // Add new company
+        const res = await defaultInstance.post('/company-excel-uploads', { data: [formData] });
+        const response = res.data;
+        if (response.status === 'success' || response.success || response.message) {
+          alert('Company saved successfully!');
+          onClose();
+        } else {
+          alert('Error: ' + JSON.stringify(response.message || response));
+        }
       }
     } catch (error) {
-      alert('Fetch failed: ' + error.message);
+      let msg = error?.response?.data?.message || error.message;
+      alert('Fetch failed: ' + msg);
     } finally {
       setIsSaving(false);
     }
