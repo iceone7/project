@@ -6,7 +6,7 @@ import edit_delete from '../css/edit_detele.module.css';
 import defaultInstance from '../../api/defaultInstance';
 
 
-const API_URL = 'http://localhost:8000/api';
+const API_URL = import.meta.env.VITE_API_BASE_URL;
 
 const AdminDashboard = () => {
   const [users, setUsers] = useState([]);

@@ -168,7 +168,7 @@ const UploadExcel = ({ onUploadSuccess, excelData }) => {
       }
 
       console.log('Данные, отправляемые на сервер:', JSON.stringify({ data }, null, 2));
-      const response = await fetch('http://localhost:8000/api/import-company', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/import-company`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ data }),

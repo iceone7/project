@@ -21,7 +21,7 @@ const UploadCompanyExcel = ({ onPreviewSuccess }) => {
       formData.append('file', file);
 
       const token = localStorage.getItem('authToken');
-      const response = await fetch('http://localhost:8000/api/company-excel-preview', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/company-excel-preview`, {
         method: 'POST',
         headers: token ? { 'Authorization': `Bearer ${token}` } : {},
         body: formData,

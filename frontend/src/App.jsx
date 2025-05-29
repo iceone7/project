@@ -48,7 +48,7 @@ function App({ dashboardType = 'company' }) {
   useEffect(() => {
     if (dashboardType === 'caller') {
       defaultInstance
-        .get('http://localhost:8000/api/get-imported-companies')
+        .get(`${import.meta.env.VITE_API_BASE_URL}/get-imported-companies`)
         .then((response) => {
           console.log('Server response:', response.data);
           const normalizedData = response.data.data.map((item) => ({
