@@ -148,6 +148,7 @@ const FilterForm = ({
     });
   };
 
+  // Filtering only happens when Apply Filters is clicked
   const handleApplyFilters = () => {
     const filteredData = applyFilters(data);
     onFilterApply(filteredData);

@@ -5,7 +5,7 @@ import EditModal from './EditModal';
 
 const isAdmin = localStorage.getItem('role') === 'admin';
 
-const DataTable = ({ activeDashboard, excelData, handleDeleteCompany }) => {
+const DataTable = ({ activeDashboard, excelData, filteredCompanies = [], handleDeleteCompany }) => {
   const [editRowId, setEditRowId] = useState(null);
   const [editRowData, setEditRowData] = useState({});
   const [companyRows, setCompanyRows] = useState([]);

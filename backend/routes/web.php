@@ -2,12 +2,12 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::get('/react/{any}', function () {
-    return response()->file(public_path('react/index.html'));
+Route::get('/{any}', function () {
+    return response()->file(public_path('index.html'));
 })->where('any', '.*');
 
-Route::get('/react', function () {
-    return response()->file(public_path('react/index.html'));
+Route::get('/', function () {
+    return response()->file(public_path('index.html'));
 });
 
 
