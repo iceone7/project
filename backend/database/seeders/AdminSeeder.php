@@ -10,10 +10,6 @@ class AdminSeeder extends Seeder
 {
     public function run()
     {
-        // Удаляем старого админа, чтобы избежать дубликатов
-        User::where('email', 'admin@example.com')->delete();
-
-        // Создаём нового админа
         User::create([
             'name' => 'Admin',
             'role' => 'admin',
