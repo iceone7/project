@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import styles from '../css/Modal.module.css';
 
-function AddCallerModal({ onClose, onSave }) {
+function AddCallerModal({ onClose }) {
   const [activeTab, setActiveTab] = useState(1);
   const [formData, setFormData] = useState({
     companyName: '',
@@ -70,7 +70,6 @@ function AddCallerModal({ onClose, onSave }) {
       .then(res => res.json())
       .then(response => {
         if (response.status === 'success') {
-          onSave(formData);
           alert("Call saved successfully!");
         } else {
           alert("Error: " + response.message);
