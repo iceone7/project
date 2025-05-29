@@ -10,41 +10,6 @@ const UploadExcel = ({ onUploadSuccess, excelData }) => {
   const isAdmin = localStorage.getItem('role') === 'admin';
 
   useEffect(() => {
-<<<<<<< HEAD
-    const fetchData = async () => {
-      try {
-        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/get-imported-companies`);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch data: ${response.status} ${response.statusText}`);
-        }
-        const json = await response.json();
-        console.log('Fetched data from server:', json);
-        const normalizedData = json.data.map(item => ({
-          id: item.id || Date.now() + Math.random(),
-          companyName: item.company_name || item.companyName || '',
-          identificationCode: item.identification_code || item.identificationCode || '',
-          contactPerson1: item.contact_person1 || item.contactPerson1 || '',
-          tel1: item.tel1 || item.contactTel1 || '',
-          contactPerson2: item.contact_person2 || item.contactPerson2 || '',
-          tel2: item.tel2 || item.contactTel2 || '',
-          contactPerson3: item.contact_person3 || item.contactPerson3 || '',
-          tel3: item.tel3 || item.contactTel3 || '',
-          callerName: item.caller_name || item.callerName || '',
-          callerNumber: item.caller_number || item.callerNumber || '',
-          receiverNumber: item.receiver_number || item.receiverNumber || '',
-          callCount: item.call_count || item.callCount || 0,
-          callDate: item.call_date || item.callDate || '',
-          callDuration: item.call_duration || item.callDuration || '',
-          callStatus: item.call_status || item.callStatus || '',
-        }));
-        console.log('Normalized server data:', normalizedData);
-        onUploadSuccess(normalizedData);
-      } catch (error) {
-        console.error('Error fetching data from the server: ', error);
-        setError('Error fetching data from the server: ' + error.message);
-      }
-    };
-=======
     // const fetchData = async () => {
     //   try {
     //     const token = localStorage.getItem('token'); // Получаем токен из localStorage
@@ -55,7 +20,6 @@ const UploadExcel = ({ onUploadSuccess, excelData }) => {
     //     if (token) {
     //       headers['Authorization'] = `Bearer ${token}`;
     //     }
->>>>>>> ec394b2566a85d53221049b2b9cc553606757cb9
 
     //     const response = await fetch('http://localhost:8000/api/get-imported-companies', {
     //       headers,
@@ -193,9 +157,6 @@ const UploadExcel = ({ onUploadSuccess, excelData }) => {
 
   const uploadToServer = async (data) => {
     try {
-<<<<<<< HEAD
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/import-company`, {
-=======
       // Use the correct token key
       const token = localStorage.getItem('authToken');
       const headers = {
@@ -208,7 +169,6 @@ const UploadExcel = ({ onUploadSuccess, excelData }) => {
 
       console.log('Данные, отправляемые на сервер:', JSON.stringify({ data }, null, 2));
       const response = await fetch('http://localhost:8000/api/import-company', {
->>>>>>> ec394b2566a85d53221049b2b9cc553606757cb9
         method: 'POST',
         headers,
         body: JSON.stringify({ data }),

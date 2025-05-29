@@ -56,19 +56,6 @@ function AddCompanyModal({ onClose, editingItem, editMode }) {
   const handleSubmit = async () => {
     setIsSaving(true);
     try {
-<<<<<<< HEAD
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/companies`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-      const response = await res.json();
-
-      if (response.status === 'success') {
-        onSave(formData);
-        alert('Company saved successfully!');
-        onClose();
-=======
       if (editMode && editingItem) {
         // Update existing company
         const res = await defaultInstance.put(`/company-excel-uploads/${editingItem.id}`, formData);
@@ -79,7 +66,6 @@ function AddCompanyModal({ onClose, editingItem, editMode }) {
         } else {
           alert('Error: ' + JSON.stringify(response.message || response));
         }
->>>>>>> ec394b2566a85d53221049b2b9cc553606757cb9
       } else {
         // Add new company
         const res = await defaultInstance.post('/company-excel-uploads', { data: [formData] });

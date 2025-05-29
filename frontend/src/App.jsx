@@ -30,23 +30,6 @@ function App({ dashboardType = 'company' }) {
   const [previewData, setPreviewData] = useState([]);
 
   useEffect(() => {
-<<<<<<< HEAD
-    localStorage.setItem('activeDashboard', activeDashboard);
-  }, [activeDashboard]);
-
-  // Load companies
-  useEffect(() => {
-    if (activeDashboard === 'company') {
-      axios.get(`${import.meta.env.VITE_API_BASE_URL}/companies`)
-        .then(response => {
-          if (response.data.data) {
-            setCompanies(response.data.data);
-            setFilteredCompanies(response.data.data);
-          } else {
-            setCompanies(response.data);
-            setFilteredCompanies(response.data);
-          }
-=======
     if (dashboardType === 'company') {
       defaultInstance
         .get('/company-excel-uploads')
@@ -55,7 +38,6 @@ function App({ dashboardType = 'company' }) {
           setCompanies(data);
           setFilteredCompanies(data);
           setCompanyExcelData([]);
->>>>>>> ec394b2566a85d53221049b2b9cc553606757cb9
         })
         .catch((error) => {
           console.error('Error loading companies:', error);
@@ -64,48 +46,6 @@ function App({ dashboardType = 'company' }) {
   }, [dashboardType]);
 
   useEffect(() => {
-<<<<<<< HEAD
-    axios.get(`${import.meta.env.VITE_API_BASE_URL}/get-imported-companies`)
-      .then(response => {
-        console.log('Server response:', response.data);
-        const normalizedData = response.data.data.map(item => ({
-          id: item.id || Date.now() + Math.random(),
-          companyName: item.company_name || item.companyName || '',
-          identificationCode: item.identification_code || item.identificationCode || '',
-          contactPerson1: item.contact_person1 || item.contactPerson1 || '',
-          tel1: item.tel1 || item.contactTel1 || '',
-          contactPerson2: item.contact_person2 || item.contactPerson2 || '',
-          tel2: item.tel2 || item.contactTel2 || '',
-          contactPerson3: item.contact_person3 || item.contactPerson3 || '',
-          tel3: item.tel3 || item.contactTel3 || '',
-          callerName: item.caller_name || item.callerName || '',
-          callerNumber: item.caller_number || item.callerNumber || '',
-          receiverNumber: item.receiver_number || item.receiverNumber || '',
-          callCount: item.call_count || item.callCount || 0,
-          callDate: item.call_date || item.callDate || '',
-          callDuration: item.call_duration || item.callDuration || '',
-          callStatus: item.call_status || item.callStatus || '',
-        }));
-        setCompanyDetails(normalizedData);
-        setExcelData(normalizedData);
-      })
-      .catch(error => {
-        console.error('Error loading calls:', error);
-      });
-  }, []);
-
-  // Delete company
-  const handleDeleteCompany = (id) => {
-    if (window.confirm('Are you sure you want to delete this company?')) {
-      axios.delete(`${import.meta.env.VITE_API_BASE_URL}/companies/${id}`)
-        .then(response => {
-          if (response.data.success) {
-            setCompanies(companies.filter(company => company.id !== id));
-            setFilteredCompanies(filteredCompanies.filter(company => company.id !== id));
-          } else {
-            alert('Error deleting company');
-          }
-=======
     if (dashboardType === 'caller') {
       defaultInstance
         .get('http://localhost:8000/api/get-imported-companies')
@@ -131,7 +71,6 @@ function App({ dashboardType = 'company' }) {
           }));
           setCompanyDetails(normalizedData);
           setExcelData(normalizedData);
->>>>>>> ec394b2566a85d53221049b2b9cc553606757cb9
         })
         .catch((error) => {
           console.error('Error loading calls:', error);
@@ -199,58 +138,7 @@ function App({ dashboardType = 'company' }) {
     }
   };
 
-<<<<<<< HEAD
-  // Update company
-  const handleUpdateCompany = (data) => {
-    axios.put(`${import.meta.env.VITE_API_BASE_URL}/companies/${editingItem.id}`, data)
-      .then(response => {
-        if (response.data.success) {
-          setCompanies(companies.map(company => 
-            company.id === editingItem.id ? response.data.data : company
-          ));
-          setFilteredCompanies(filteredCompanies.map(company => 
-            company.id === editingItem.id ? response.data.data : company
-          ));
-          setShowCompanyModal(false);
-          setEditMode(false);
-          setEditingItem(null);
-        } else {
-          alert('Error updating company');
-        }
-      })
-      .catch(error => {
-        console.error('Error updating company:', error);
-      });
-  };
 
-  // Update call
-  const handleUpdateCaller = (data) => {
-    axios.put(`${import.meta.env.VITE_API_BASE_URL}/update_caller.php?id=${editingItem.id}`, data)
-      .then(response => {
-        if (response.data.success) {
-          setCalls(calls.map(call => 
-            call.id === editingItem.id ? {...call, ...data} : call
-          ));
-          setShowCallerModal(false);
-          setEditMode(false);
-          setEditingItem(null);
-        } else {
-          alert('Error updating call');
-        }
-      })
-      .catch(error => {
-        console.error('Error updating call:', error);
-      });
-  };
-
-  // Open modal based on active dashboard
-  const handleOpenModal = () => {
-    if (activeDashboard === 'caller') {
-      setShowCallerModal(true);
-    } else if (activeDashboard === 'company') {
-      setShowCompanyModal(true);
-=======
-  // Delete company
   const handleDeleteCompany = async (id) => {
     if (window.confirm('Are you sure you want to delete this company?')) {
       try {
@@ -262,7 +150,7 @@ function App({ dashboardType = 'company' }) {
       } catch (error) {
         alert('Error deleting company: ' + (error?.response?.data?.error || error.message));
       }
->>>>>>> ec394b2566a85d53221049b2b9cc553606757cb9
+
     }
   };
 
@@ -362,76 +250,10 @@ function App({ dashboardType = 'company' }) {
     }
   };
 
-<<<<<<< HEAD
-  // Add call
-  const handleAddCaller = (data) => {
-    if (editMode) {
-      handleUpdateCaller(data);
-      return;
-    }
-    
-    const newCaller = {
-      callerName: data.callerName || 'Null',
-      callerNumber: data.callerNumber || 'Null',
-      receiverNumber: data.receiverNumber || 'Null',
-      callCount: 0,
-      companyName: 'Null',
-      data: 'Null',
-      duration: 'Null',
-      status: 'InTransit'
-    };
-
-    axios.post(`${import.meta.env.VITE_API_BASE_URL}/save_caller.php`, newCaller)
-      .then(response => {
-        if (response.data.success) {
-          setCalls(prev => [...prev, { ...newCaller, id: counter }]);
-          setCounter(prev => prev + 1);
-          setShowCallerModal(false);
-        } else {
-          alert('Error saving call');
-        }
-      })
-      .catch(error => {
-        console.error('Error saving call:', error);
-      });
-  };
-
-  // Add company
-  const handleAddCompany = (data) => {
-    if (editMode) {
-      handleUpdateCompany(data);
-      return;
-    }
-    
-    const newCompany = {
-      companyName: data.companyName || 'Null',
-      identificationCode: data.identificationCode || 'Null',
-      contactPerson1: data.contactPerson1 || 'Null',
-      tel1: data.tel1 || 'Null',
-      contactPerson2: data.contactPerson2 || 'Null',
-      tel2: data.tel2 || 'Null',
-      contactPerson3: data.contactPerson3 || 'Null',
-      tel3: data.tel3 || 'Null',
-    };
-
-    axios.post(`${import.meta.env.VITE_API_BASE_URL}/save_company.php`, newCompany)
-      .then(response => {
-        if (response.data.success) {
-          setShowCompanyModal(false);
-        } else {
-          alert('Error saving company');
-        }
-      })
-      .catch(error => {
-        console.error('Error saving company:', error);
-      });
-  };
-=======
   // Render AdminDashboard if dashboardType is 'admin'
   if (dashboardType === 'admin') {
     return <AdminDashboard />;
   }
->>>>>>> ec394b2566a85d53221049b2b9cc553606757cb9
 
   return (
     <div className="dashboard-main-wrapper">
