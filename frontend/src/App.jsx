@@ -13,6 +13,74 @@ import DataTable from './assets/components/DataTable';
 import defaultInstance from './api/defaultInstance';
 import AdminDashboard from './assets/components/AdminDashboard';
 
+// ConfirmModal component
+function ConfirmModal({ open, onCancel, onConfirm, text }) {
+  if (!open) return null;
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: 0, left: 0, right: 0, bottom: 0,
+        background: 'rgba(0,0,0,0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 9999
+      }}
+      onClick={onCancel}
+    >
+      <div
+        style={{
+          background: '#fff',
+          padding: '2rem',
+          borderRadius: '12px',
+          minWidth: '340px',
+          boxShadow: '0 4px 24px rgba(0,0,0,0.18)',
+          textAlign: 'center',
+          position: 'relative'
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div style={{ marginBottom: '1.7rem', fontSize: '1.13rem', color: '#222' }}>
+          {text}
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '1.2rem' }}>
+          <button
+            onClick={onConfirm}
+            style={{
+              background: '#d9534f',
+              color: '#fff',
+              border: 'none',
+              padding: '0.55rem 1.4rem',
+              borderRadius: '5px',
+              cursor: 'pointer',
+              fontWeight: 500,
+              fontSize: '1rem'
+            }}
+          >
+            Delete
+          </button>
+          <button
+            onClick={onCancel}
+            style={{
+              background: '#f0f0f0',
+              color: '#333',
+              border: 'none',
+              padding: '0.55rem 1.4rem',
+              borderRadius: '5px',
+              cursor: 'pointer',
+              fontWeight: 500,
+              fontSize: '1rem'
+            }}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App({ dashboardType = 'company' }) {
   const [showCallerModal, setShowCallerModal] = useState(false);
   const [showCompanyModal, setShowCompanyModal] = useState(false);
@@ -28,6 +96,8 @@ function App({ dashboardType = 'company' }) {
   const [importedCompanies, setImportedCompanies] = useState([]);
   const [companyExcelData, setCompanyExcelData] = useState([]);
   const [previewData, setPreviewData] = useState([]);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState(null);
 
   useEffect(() => {
     if (dashboardType === 'company') {
@@ -138,20 +208,32 @@ function App({ dashboardType = 'company' }) {
     }
   };
 
+  // Open delete confirmation modal
+  const handleDeleteCompany = (id) => {
+    setDeleteTargetId(id);
+    setShowDeleteModal(true);
+  };
 
-  const handleDeleteCompany = async (id) => {
-    if (window.confirm('Are you sure you want to delete this company?')) {
-      try {
-        await defaultInstance.delete(`/company-excel-uploads/${id}`);
-        const response = await defaultInstance.get('/company-excel-uploads');
-        const dbData = response.data.data || [];
-        setCompanies(dbData);
-        setFilteredCompanies(dbData);
-      } catch (error) {
-        alert('Error deleting company: ' + (error?.response?.data?.error || error.message));
-      }
-
+  // Confirm deletion
+  const confirmDeleteCompany = async () => {
+    try {
+      await defaultInstance.delete(`/company-excel-uploads/${deleteTargetId}`);
+      const response = await defaultInstance.get('/company-excel-uploads');
+      const dbData = response.data.data || [];
+      setCompanies(dbData);
+      setFilteredCompanies(dbData);
+    } catch (error) {
+      alert('Error deleting company: ' + (error?.response?.data?.error || error.message));
+    } finally {
+      setShowDeleteModal(false);
+      setDeleteTargetId(null);
     }
+  };
+
+  // Cancel deletion
+  const cancelDeleteCompany = () => {
+    setShowDeleteModal(false);
+    setDeleteTargetId(null);
   };
 
   // Download Excel for Company Dashboard
@@ -329,6 +411,12 @@ function App({ dashboardType = 'company' }) {
         </div>
       </div>
       <Outlet />
+      <ConfirmModal
+        open={showDeleteModal}
+        onCancel={cancelDeleteCompany}
+        onConfirm={confirmDeleteCompany}
+        text="Are you sure you want to delete this company?"
+      />
     </div>
   );
 }

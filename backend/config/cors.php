@@ -19,7 +19,7 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['https://vip.gorgia.ge', 'http://vip.gorgia.ge', 'https://10.150.20.169', 'http://10.150.20.169'],
+    'allowed_origins' => ['https://vip.gorgia.ge', 'http://vip.gorgia.ge', 'https://10.150.20.169', 'http://10.150.20.169', 'http://localhost:5173'],
 
     'allowed_origins_patterns' => [],
 

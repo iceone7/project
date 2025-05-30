@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import styles from '../css/Modal.module.css';
 import defaultInstance from '../../api/defaultInstance';
+import confirmStyles from '../css/ConfirmModal.module.css';
 
 function AddCompanyModal({ onClose, editingItem, editMode }) {
   const [activeTab, setActiveTab] = useState(1);
@@ -22,8 +23,11 @@ function AddCompanyModal({ onClose, editingItem, editMode }) {
     manager: '',
     status: '',
   });
+  const [toast, setToast] = useState({ visible: false, message: '', type: '' });
+  const [isSaving, setIsSaving] = useState(false);
+  const [showSaved, setShowSaved] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
 
-  // Populate form when editing
   useEffect(() => {
     if (editMode && editingItem) {
       setFormData({
@@ -47,115 +51,157 @@ function AddCompanyModal({ onClose, editingItem, editMode }) {
     }
   }, [editMode, editingItem]);
 
-  const [isSaving, setIsSaving] = useState(false);
-
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const showToast = (message, type = 'success') => {
+    setToast({ visible: true, message, type });
+    setTimeout(() => {
+      setToast({ visible: false, message: '', type: '' });
+    }, 3000);
   };
 
   const handleSubmit = async () => {
     setIsSaving(true);
     try {
+      let response;
       if (editMode && editingItem) {
-        // Update existing company
         const res = await defaultInstance.put(`/company-excel-uploads/${editingItem.id}`, formData);
-        const response = res.data;
-        if (response.success || response.status === 'success' || response.message) {
-          alert('Company updated successfully!');
-          onClose();
-        } else {
-          alert('Error: ' + JSON.stringify(response.message || response));
-        }
+        response = res.data;
       } else {
-        // Add new company
         const res = await defaultInstance.post('/company-excel-uploads', { data: [formData] });
-        const response = res.data;
-        if (response.status === 'success' || response.success || response.message) {
-          alert('Company saved successfully!');
-          onClose();
-        } else {
-          alert('Error: ' + JSON.stringify(response.message || response));
-        }
+        response = res.data;
+      }
+      if (response.success || response.status === 'success' || response.message) {
+        setIsClosing(true);
+        setTimeout(() => {
+          setIsClosing(false);
+          setShowSaved(true);
+          setTimeout(() => {
+            setShowSaved(false);
+            onClose();
+          }, 2000);
+        }, 400); // match modal fade-out duration
+      } else {
+        showToast('Error: ' + JSON.stringify(response.message || response), 'error');
+        setIsSaving(false);
       }
     } catch (error) {
       let msg = error?.response?.data?.message || error.message;
-      alert('Fetch failed: ' + msg);
-    } finally {
+      showToast('Fetch failed: ' + msg, 'error');
       setIsSaving(false);
     }
   };
 
   return (
-    <div className={styles.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className={styles.modal} onClick={e => e.stopPropagation()}>
-        <h3 className={styles.title}>Add Company</h3>
+    <>
+      {!showSaved && (
+        <div
+          className={`${styles.overlay} ${isClosing ? confirmStyles.fadeOut : ''}`}
+          onClick={e => e.target === e.currentTarget && onClose()}
+        >
+          <div className={`${styles.modal} ${isClosing ? confirmStyles.modalFadeOut : ''}`} onClick={e => e.stopPropagation()}>
+            <h3 className={styles.title}>Add Company</h3>
 
-        <div className={styles.tabButtons}>
-          {[1, 2, 3].map(tab => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={activeTab === tab ? styles.activeTab : ''}
-              disabled={isSaving}
-            >
-              {tab === 1 && 'ძირითადი'}
-              {tab === 2 && 'საკონტაქტო'}
-              {tab === 3 && 'თარიღები'}
-            </button>
-          ))}
+            <div className={styles.tabButtons}>
+              {[1, 2, 3].map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={activeTab === tab ? styles.activeTab : ''}
+                  disabled={isSaving}
+                >
+                  {tab === 1 && 'ძირითადი'}
+                  {tab === 2 && 'საკონტაქტო'}
+                  {tab === 3 && 'თარიღები'}
+                </button>
+              ))}
+            </div>
+
+            {activeTab === 1 && (
+              <>
+                <Input label="ტენდერის N" value={formData.tenderNumber} onChange={v => handleChange('tenderNumber', v)} />
+                <Input label="შემსყიდველი" value={formData.buyer} onChange={v => handleChange('buyer', v)} />
+                <Input label="შემსრულებელი" value={formData.executor} onChange={v => handleChange('executor', v)} />
+                <Input label="ს/კ -ID" value={formData.idCode} onChange={v => handleChange('idCode', v)} />
+                <Input label="ელ-ფოსტა" type="email" value={formData.email} onChange={v => handleChange('email', v)} />
+              </>
+            )}
+
+            {activeTab === 2 && (
+              <>
+                <Input label="საკ. პირი #1" value={formData.contact1} onChange={v => handleChange('contact1', v)} />
+                <Input label="ტელ #1" value={formData.phone1} onChange={v => handleChange('phone1', v)} />
+                <Input label="საკ. პირი #2" value={formData.contact2} onChange={v => handleChange('contact2', v)} />
+                <Input label="ტელ #2" value={formData.phone2} onChange={v => handleChange('phone2', v)} />
+                <Input label="მენეჯერი" value={formData.manager} onChange={v => handleChange('manager', v)} />
+              </>
+            )}
+
+            {activeTab === 3 && (
+              <>
+                <Input label="ხელშ. ღირებ." value={formData.contractValue} onChange={v => handleChange('contractValue', v)} />
+                <Input label="გორგიაში შესყ. ჯამურ. ღირ" value={formData.totalValueGorgia} onChange={v => handleChange('totalValueGorgia', v)} />
+                <Input label="გორგიაში ბოლო შესყ. თარ." value={formData.lastPurchaseDateGorgia} onChange={v => handleChange('lastPurchaseDateGorgia', v)} />
+                <Input label="დაკონტ. საორ. თარიღი" value={formData.contractEndDate} onChange={v => handleChange('contractEndDate', v)} />
+                <Input label="დაფუძ. თარიღი" value={formData.foundationDate} onChange={v => handleChange('foundationDate', v)} />
+                <Input label="სტატუსი" value={formData.status} onChange={v => handleChange('status', v)} />
+              </>
+            )}
+
+            <div className={styles.buttonGroup}>
+              {activeTab < 3 ? (
+                <button
+                  onClick={() => setActiveTab(prev => prev + 1)}
+                  className={styles.nextBtn}
+                  disabled={isSaving}
+                >
+                  Next
+                </button>
+              ) : (
+                <button onClick={handleSubmit} className={styles.saveBtn} disabled={isSaving}>
+                  {isSaving ? 'Saving...' : 'Save'}
+                </button>
+              )}
+              <button onClick={onClose} className={styles.cancelBtn} disabled={isSaving}>
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
-
-        {activeTab === 1 && (
-          <>
-            <Input label="ტენდერის N" value={formData.tenderNumber} onChange={v => handleChange('tenderNumber', v)} />
-            <Input label="შემსყიდველი" value={formData.buyer} onChange={v => handleChange('buyer', v)} />
-            <Input label="შემსრულებელი" value={formData.executor} onChange={v => handleChange('executor', v)} />
-            <Input label="ს/კ -ID" value={formData.idCode} onChange={v => handleChange('idCode', v)} />
-            <Input label="ელ-ფოსტა" type="email" value={formData.email} onChange={v => handleChange('email', v)} />
-          </>
-        )}
-
-        {activeTab === 2 && (
-          <>
-            <Input label="საკ. პირი #1" value={formData.contact1} onChange={v => handleChange('contact1', v)} />
-            <Input label="ტელ #1" value={formData.phone1} onChange={v => handleChange('phone1', v)} />
-            <Input label="საკ. პირი #2" value={formData.contact2} onChange={v => handleChange('contact2', v)} />
-            <Input label="ტელ #2" value={formData.phone2} onChange={v => handleChange('phone2', v)} />
-            <Input label="მენეჯერი" value={formData.manager} onChange={v => handleChange('manager', v)} />
-          </>
-        )}
-
-        {activeTab === 3 && (
-          <>
-            <Input label="ხელშ. ღირებ." value={formData.contractValue} onChange={v => handleChange('contractValue', v)} />
-            <Input label="გორგიაში შესყ. ჯამურ. ღირ" value={formData.totalValueGorgia} onChange={v => handleChange('totalValueGorgia', v)} />
-            <Input label="გორგიაში ბოლო შესყ. თარ." value={formData.lastPurchaseDateGorgia} onChange={v => handleChange('lastPurchaseDateGorgia', v)} />
-            <Input label="დაკონტ. საორ. თარიღი" value={formData.contractEndDate} onChange={v => handleChange('contractEndDate', v)} />
-            <Input label="დაფუძ. თარიღი" value={formData.foundationDate} onChange={v => handleChange('foundationDate', v)} />
-            <Input label="სტატუსი" value={formData.status} onChange={v => handleChange('status', v)} />
-          </>
-        )}
-
-        <div className={styles.buttonGroup}>
-          {activeTab < 3 ? (
-            <button
-              onClick={() => setActiveTab(prev => prev + 1)}
-              className={styles.nextBtn}
-              disabled={isSaving}
-            >
-              Next
-            </button>
-          ) : (
-            <button onClick={handleSubmit} className={styles.saveBtn} disabled={isSaving}>
-              {isSaving ? 'Saving...' : 'Save'}
-            </button>
-          )}
-          <button onClick={onClose} className={styles.cancelBtn} disabled={isSaving}>
-            Cancel
-          </button>
+      )}
+      {showSaved && (
+        <div className={confirmStyles.savedPopup}>
+          <svg className={confirmStyles.savedCheck} viewBox="0 0 52 52">
+            <circle className={confirmStyles.savedCircle} cx="26" cy="26" r="25" fill="none" />
+            <path className={confirmStyles.savedCheckmark} fill="none" d="M14 27l7 7 16-16" />
+          </svg>
+          <span className={confirmStyles.savedText}>Saved!</span>
         </div>
+      )}
+      <div
+        style={{
+          position: 'fixed',
+          bottom: 20,
+          right: 20,
+          backgroundColor: toast.type === 'success' ? '#4BB543' : '#FF4444',
+          color: 'white',
+          padding: '12px 24px',
+          borderRadius: '8px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+          opacity: toast.visible ? 1 : 0,
+          pointerEvents: toast.visible ? 'auto' : 'none',
+          transition: 'opacity 0.3s ease-in-out',
+          zIndex: 1000,
+          fontWeight: 'bold',
+          minWidth: 200,
+          textAlign: 'center',
+        }}
+      >
+        {toast.message}
       </div>
-    </div>
+    </>
   );
 }
 
