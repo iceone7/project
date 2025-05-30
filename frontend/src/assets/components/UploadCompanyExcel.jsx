@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react';
 import styles from '../css/UploadButton.module.css';
 
+const isAdmin = localStorage.getItem('role') === 'admin';
+
 const UploadCompanyExcel = ({ onPreviewSuccess }) => {
   const fileInputRef = useRef(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -60,7 +62,8 @@ const UploadCompanyExcel = ({ onPreviewSuccess }) => {
 
   return (
     <div style={{ display: 'block', width: '100%' }}>
-      <button
+      {isAdmin && (
+        <button
         className={styles.button}
         onClick={() => fileInputRef.current?.click()}
         disabled={isLoading}
@@ -91,6 +94,7 @@ const UploadCompanyExcel = ({ onPreviewSuccess }) => {
             </svg>
         {isLoading ? 'Uploading...' : 'Upload Excel'}
       </button>
+      )}
       <input
         ref={fileInputRef}
         type="file"

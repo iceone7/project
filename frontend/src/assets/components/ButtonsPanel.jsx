@@ -4,8 +4,6 @@ import FilterForm from './FilterForm';
 import UploadExcel from './UploadExcel';
 import UploadCompanyExcel from './UploadCompanyExcel';
 
-const isAdmin = localStorage.getItem('role') === 'admin';
-
 const ButtonsPanel = ({
   activeDashboard,
   handleOpenModal,
@@ -56,9 +54,7 @@ const ButtonsPanel = ({
             onlyButton={true}
             onToggleFilters={() => setShowFilters(!showFilters)}
           />
-          {isAdmin && (
-            <UploadCompanyExcel onPreviewSuccess={onCompanyUploadSuccess} />
-          )}
+          <UploadCompanyExcel onPreviewSuccess={onCompanyUploadSuccess} />
         </div>
       )}
       {activeDashboard === 'caller' && (
