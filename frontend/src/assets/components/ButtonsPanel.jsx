@@ -14,8 +14,8 @@ const ButtonsPanel = ({
   onUploadSuccess,
   excelData,
   onCompanyUploadSuccess,
-  // companyExcelData,
-  // setCompanyExcelData,
+  // filteredCallerData,
+  setFilteredCallerData,
 }) => {
   return (
     <div className="buttons" style={{ marginBottom: '20px' }}>
@@ -59,7 +59,11 @@ const ButtonsPanel = ({
       )}
       {activeDashboard === 'caller' && (
         <div className="caller-dashboard fade-in">
-          <UploadExcel onUploadSuccess={onUploadSuccess} excelData={excelData} />
+          <UploadExcel
+            onUploadSuccess={onUploadSuccess}
+            excelData={excelData}
+            {...(typeof setFilteredCallerData === 'function' ? { setFilteredCallerData } : {})}
+          />
         </div>
       )}
     </div>

@@ -3,10 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
-use App\Models\Admin; // Импорт модели Admin
+use App\Models\Admin; // ადმინის მოდელის იმპორტი
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException; // Правильный импорт
+use Illuminate\Validation\ValidationException; // სწორი იმპორტი
 
 class AuthController extends Controller
 {
@@ -32,25 +32,25 @@ class AuthController extends Controller
             'password' => 'required',
         ]);
 
-        // Проверка в таблице users
+        // მომხმარებლების ცხრილში შემოწმება
         $user = User::where('email', $request->email)->first();
         if ($user && Hash::check($request->password, $user->password)) {
             return response()->json([
                 'token' => $user->createToken('api-token')->plainTextToken,
-                // 'isGorgiaAdmin' => false, // Обычные пользователи не админы
+                // 'isGorgiaAdmin' => false, // ჩვეულებრივი მომხმარებლები ადმინები არ არიან
                 'user' => $user,
             ]);
         }
 
-        // Если ни один пользователь не найден
+        // თუ არცერთი მომხმარებელი არ მოიძებნა
         throw ValidationException::withMessages([
-            'email' => ['Неверные учетные данные'],
+            'email' => ['არასწორი ავტორიზაციის მონაცემები'],
         ]);
     }
 
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
-        return response()->json(['message' => 'Выход выполнен успешно']);
+        return response()->json(['message' => 'გამოსვლა წარმატებით შესრულდა']);
     }
 }

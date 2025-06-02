@@ -86,15 +86,10 @@ function App({ dashboardType = 'company' }) {
   const [showCompanyModal, setShowCompanyModal] = useState(false);
   const [companies, setCompanies] = useState([]);
   const [filteredCompanies, setFilteredCompanies] = useState([]);
-  // eslint-disable-next-line 
-  const [companyDetails, setCompanyDetails] = useState([]);
   const [excelData, setExcelData] = useState([]);
   const [editingItem, setEditingItem] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  // eslint-disable-next-line 
-  const [importedCompanies, setImportedCompanies] = useState([]);
-  const [companyExcelData, setCompanyExcelData] = useState([]);
   const [previewData, setPreviewData] = useState([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
@@ -102,12 +97,11 @@ function App({ dashboardType = 'company' }) {
   useEffect(() => {
     if (dashboardType === 'company') {
       defaultInstance
-        .get('/company-excel-uploads')
+        .get('/company-excel-uploads') // <-- keep lowercase
         .then((response) => {
           const data = response.data.data || [];
           setCompanies(data);
           setFilteredCompanies(data);
-          setCompanyExcelData([]);
         })
         .catch((error) => {
           console.error('Error loading companies:', error);
@@ -139,8 +133,8 @@ function App({ dashboardType = 'company' }) {
             callDuration: item.call_duration || item.callDuration || '',
             callStatus: item.call_status || item.callStatus || '',
           }));
-          setCompanyDetails(normalizedData);
           setExcelData(normalizedData);
+          setFilteredCompanies(normalizedData);
         })
         .catch((error) => {
           console.error('Error loading calls:', error);
@@ -148,61 +142,56 @@ function App({ dashboardType = 'company' }) {
     }
   }, [dashboardType]);
 
+  // Handle upload success for caller dashboard
+  const handleCallerUploadSuccess = (data) => {
+    setExcelData(data);
+    setFilteredCompanies(data);
+  };
+
   // Handle upload success for company dashboard
   const handleCompanyUploadSuccess = async (data) => {
     const normalizedData = data.map((item, index) => ({
-      id: `preview-${index}`, // Добавляем временный id для previewData
-      tenderNumber: item.tenderNumber || '',
+      id: item.id, // Always use backend id if present
+      tenderNumber: item.tenderNumber || item.tender_number || '',
       buyer: item.buyer || '',
-      contact1: item.contact1 || '',
-      phone1: item.phone1 || '',
-      contact2: item.contact2 || '',
-      phone2: item.phone2 || '',
+      contact1: item.contact1 || item.contact_1 || '',
+      phone1: item.phone1 || item.phone_1 || '',
+      contact2: item.contact2 || item.contact_2 || '',
+      phone2: item.phone2 || item.phone_2 || '',
       email: item.email || '',
       executor: item.executor || '',
-      idCode: item.idCode || '',
-      contractValue: item.contractValue || '',
-      totalValueGorgia: item.totalValueGorgia || '',
-      lastPurchaseDateGorgia: item.lastPurchaseDateGorgia || '',
-      contractEndDate: item.contractEndDate || '',
-      foundationDate: item.foundationDate || '',
+      idCode: item.idCode || item.id_code || '',
+      contractValue: item.contractValue || item.contract_value || '',
+      totalValueGorgia: item.totalValueGorgia || item.total_value_gorgia || '',
+      lastPurchaseDateGorgia: item.lastPurchaseDateGorgia || item.last_purchase_date_gorgia || '',
+      contractEndDate: item.contractEndDate || item.contract_end_date || '',
+      foundationDate: item.foundationDate || item.foundation_date || '',
       manager: item.manager || '',
       status: item.status || '',
     }));
-    setPreviewData(normalizedData); 
+    console.log('Normalized company data:', normalizedData);
+    setPreviewData(normalizedData);
     try {
-      await defaultInstance.post('/company-excel-uploads', { data: normalizedData });
-      // Reload from DB after save
-      const response = await defaultInstance.get('/company-excel-uploads');
+      await defaultInstance.post('/company-excel-uploads', { data: normalizedData }); // <-- fixed
+      const response = await defaultInstance.get('/company-excel-uploads'); // <-- fixed
       const dbData = response.data.data || [];
       setCompanies(dbData);
       setFilteredCompanies(dbData);
-      setCompanyExcelData([]);
-      setPreviewData([]); 
+      setPreviewData([]);
     } catch (err) {
       alert('Failed to save data: ' + (err?.response?.data?.error || err.message));
     }
   };
 
-  // Edit company (inline or modal)
-  const handleEdit = async (item) => {
-    setEditingItem(item);
-    setEditMode(true);
-    setShowCompanyModal(true);
-  };
-
-  // Save edited company
-  const handleSaveEdit = async (updatedData) => {
+  // Edit company
+  const handleEdit = async (updatedData) => {
     try {
-      await defaultInstance.put(`/company-excel-uploads/${editingItem.id}`, updatedData);
+      // Always use the id from updatedData
+      await defaultInstance.put(`/company-excel-uploads/${updatedData.id}`, updatedData);
       const response = await defaultInstance.get('/company-excel-uploads');
       const dbData = response.data.data || [];
       setCompanies(dbData);
       setFilteredCompanies(dbData);
-      setShowCompanyModal(false);
-      setEditMode(false);
-      setEditingItem(null);
-      alert('Company updated!');
     } catch (err) {
       alert('Failed to update company: ' + (err?.response?.data?.error || err.message));
     }
@@ -217,8 +206,8 @@ function App({ dashboardType = 'company' }) {
   // Confirm deletion
   const confirmDeleteCompany = async () => {
     try {
-      await defaultInstance.delete(`/company-excel-uploads/${deleteTargetId}`);
-      const response = await defaultInstance.get('/company-excel-uploads');
+      await defaultInstance.delete(`/company-excel-uploads/${deleteTargetId}`); // <-- fixed
+      const response = await defaultInstance.get('/company-excel-uploads'); // <-- fixed
       const dbData = response.data.data || [];
       setCompanies(dbData);
       setFilteredCompanies(dbData);
@@ -239,15 +228,13 @@ function App({ dashboardType = 'company' }) {
   // Download Excel for Company Dashboard
   const handleDownloadExcel = async () => {
     try {
-      // Always fetch the latest data from the backend for download
-      const response = await defaultInstance.get('/company-excel-uploads');
-      const dbData = response.data.data || [];
+      console.log('Starting downloadExcel, using filteredCompanies:', filteredCompanies);
+      const dbData = filteredCompanies || []; // Используем локალური данные
       if (!dbData.length) {
         alert('No data to download');
         return;
       }
 
-      // Normalize keys for export
       const exportRows = dbData.map(row => ({
         tenderNumber: row.tenderNumber ?? row.tender_number ?? '',
         buyer: row.buyer ?? '',
@@ -267,7 +254,6 @@ function App({ dashboardType = 'company' }) {
         status: row.status ?? '',
       }));
 
-      // Define headers and order
       const headers = [
         'ტენდერის N',
         'შემსყიდველი',
@@ -306,7 +292,6 @@ function App({ dashboardType = 'company' }) {
         'status',
       ];
 
-      // Prepare data for export
       const exportData = exportRows.map(row => keys.map(k => row[k] || ''));
       const worksheet = XLSX.utils.aoa_to_sheet([headers, ...exportData]);
       worksheet['!cols'] = headers.map((h, i) => ({
@@ -328,8 +313,20 @@ function App({ dashboardType = 'company' }) {
 
       XLSX.writeFile(workbook, fileName);
     } catch (err) {
-      alert('Error downloading file: ' + (err?.message || 'Unknown error'));
+      console.error('Download error:', err.message);
+      alert('Error downloading file: ' + err.message);
     }
+  };
+
+  // Handle filter apply for caller dashboard
+  const handleCallerFilterApply = (filtered) => {
+    setExcelData(filtered);
+    setFilteredCompanies(filtered);
+  };
+
+  // Handle filter apply for company dashboard
+  const handleCompanyFilterApply = (filtered) => {
+    setFilteredCompanies(filtered);
   };
 
   // Render AdminDashboard if dashboardType is 'admin'
@@ -353,11 +350,9 @@ function App({ dashboardType = 'company' }) {
                   filteredCompanies={filteredCompanies}
                   setShowFilters={setShowFilters}
                   showFilters={showFilters}
-                  onUploadSuccess={() => {}} // Placeholder for caller dashboard
+                  onUploadSuccess={handleCallerUploadSuccess}
                   excelData={excelData}
                   onCompanyUploadSuccess={handleCompanyUploadSuccess}
-                  companyExcelData={companyExcelData}
-                  setCompanyExcelData={setCompanyExcelData}
                 />
                 {showCallerModal && (
                   <AddCallerModal
@@ -371,13 +366,12 @@ function App({ dashboardType = 'company' }) {
                     onClose={() => setShowCompanyModal(false)}
                     editingItem={editingItem}
                     editMode={editMode}
-                    onSave={handleSaveEdit}
                   />
                 )}
                 {dashboardType === 'company' && (
                   <FilterForm
                     data={companies}
-                    onFilterApply={setFilteredCompanies}
+                    onFilterApply={handleCompanyFilterApply}
                     showFilters={showFilters}
                     onToggleFilters={() => setShowFilters(!showFilters)}
                     onlyForm={true}
@@ -385,26 +379,22 @@ function App({ dashboardType = 'company' }) {
                   />
                 )}
                 {dashboardType === 'caller' && (
-                  <DataTable
-                    activeDashboard={dashboardType}
-                    excelData={excelData}
-                    filteredCompanies={filteredCompanies}
-                    handleDeleteCompany={handleDeleteCompany}
-                    handleEdit={handleEdit}
-                    importedCompanies={importedCompanies}
-                    companyExcelData={companyExcelData}
+                  <FilterForm
+                    data={excelData}
+                    onFilterApply={handleCallerFilterApply}
+                    showFilters={showFilters}
+                    onToggleFilters={() => setShowFilters(!showFilters)}
+                    onlyForm={true}
+                    dashboardType="caller"
                   />
                 )}
-                {dashboardType === 'company' && (
-                  <DataTable
-                    activeDashboard={dashboardType}
-                    excelData={[]}
-                    filteredCompanies={filteredCompanies}
-                    previewData={previewData} // Передаем previewData
-                    handleDeleteCompany={handleDeleteCompany}
-                    handleEdit={handleEdit}
-                  />
-                )}
+                <DataTable
+                  activeDashboard={dashboardType}
+                  excelData={excelData}
+                  filteredCompanies={filteredCompanies}
+                  handleDeleteCompany={handleDeleteCompany}
+                  handleEdit={handleEdit}
+                />
               </div>
             </div>
           </div>

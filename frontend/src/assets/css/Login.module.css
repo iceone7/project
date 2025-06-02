@@ -78,3 +78,8 @@
 .rightContainer button:hover {
   background-color: #002d57;
 }
+
+.error {
+  color: red;
+  font-size: 14px;
+}

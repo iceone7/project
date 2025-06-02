@@ -32,22 +32,22 @@ function EditModal({ isOpen, onClose, onSave, editData }) {
   useEffect(() => {
     if (editData) {
       setFormData({
-        tenderNumber: editData.tenderNumber || '',
-        buyer: editData.buyer || '',
-        contact1: editData.contact1 || '',
-        phone1: editData.phone1 || '',
-        contact2: editData.contact2 || '',
-        phone2: editData.phone2 || '',
-        email: editData.email || '',
-        executor: editData.executor || '',
-        idCode: editData.idCode || '',
-        contractValue: editData.contractValue || '',
-        totalValueGorgia: editData.totalValueGorgia || '',
-        lastPurchaseDateGorgia: editData.lastPurchaseDateGorgia || '',
-        contractEndDate: editData.contractEndDate || '',
-        foundationDate: editData.foundationDate || '',
-        manager: editData.manager || '',
-        status: editData.status || '',
+        tenderNumber: editData.tenderNumber || editData.tender_number || '',
+        buyer: editData.buyer || editData.buyer || '',
+        contact1: editData.contact1 || editData.contact_1 || '',
+        phone1: editData.phone1 || editData.phone_1 || '',
+        contact2: editData.contact2 || editData.contact_2 || '',
+        phone2: editData.phone2 || editData.phone_2 || '',
+        email: editData.email || editData.email || '',
+        executor: editData.executor || editData.executor || '',
+        idCode: editData.idCode || editData.id_code || '',
+        contractValue: editData.contractValue || editData.contract_value || '',
+        totalValueGorgia: editData.totalValueGorgia || editData.total_value_gorgia || '',
+        lastPurchaseDateGorgia: editData.lastPurchaseDateGorgia || editData.last_purchase_date_gorgia || '',
+        contractEndDate: editData.contractEndDate || editData.contract_end_date || '',
+        foundationDate: editData.foundationDate || editData.foundation_date || '',
+        manager: editData.manager || editData.manager || '',
+        status: editData.status || editData.status || '',
       });
     }
   }, [editData]);
@@ -56,11 +56,33 @@ function EditModal({ isOpen, onClose, onSave, editData }) {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  // Map camelCase to snake_case for backend
+  const normalizeForBackend = (data) => ({
+    tender_number: data.tenderNumber,
+    buyer: data.buyer,
+    contact1: data.contact1,
+    phone1: data.phone1,
+    contact2: data.contact2,
+    phone2: data.phone2,
+    email: data.email,
+    executor: data.executor,
+    id_code: data.idCode,
+    contract_value: data.contractValue,
+    total_value_gorgia: data.totalValueGorgia,
+    last_purchase_date_gorgia: data.lastPurchaseDateGorgia,
+    contract_end_date: data.contractEndDate,
+    foundation_date: data.foundationDate,
+    manager: data.manager,
+    status: data.status,
+    id: editData.id, // always include id
+  });
+
   const handleSubmit = async () => {
     setIsSaving(true);
     try {
-      await defaultInstance.put(`/company-excel-uploads/${editData.id}`, formData);
-      onSave(formData); // Передаем обновленные данные в DataTable
+      const payload = normalizeForBackend(formData);
+      await defaultInstance.put(`/company-excel-uploads/${editData.id}`, payload);
+      onSave({ ...formData, id: editData.id }); // Pass id back up
       setIsClosing(true);
       setTimeout(() => {
         setIsClosing(false);

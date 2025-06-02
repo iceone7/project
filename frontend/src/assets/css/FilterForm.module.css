@@ -1,0 +1,188 @@
+.filterContainer {
+  background-color: #f8f9fa00;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); 
+  width: 100%;
+  animation: scaleIn 0.3s ease-out;
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(1);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.filterTitle {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 16px;
+}
+
+.filterGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;  
+  align-items: center;
+  flex-grow: 1;
+}
+
+.inputGroup {
+  display: flex;
+  gap: 12px;
+  flex-wrap: nowrap;
+}
+
+.input,
+.select {
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: 'Inter', sans-serif;
+  background-color: #fff;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  flex: 1;
+  width: 200px;
+}
+
+.input:focus,
+.select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); 
+}
+
+.input::placeholder {
+  color: #9ca3af; 
+}
+
+.select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 16px;
+}
+
+.filterBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.buttonGroup {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  margin-top: 12px;
+  flex-wrap: nowrap;
+}
+
+.button {
+  padding: 10px 20px;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  transition: background-color 0.2s ease;
+  flex: 1;
+  text-align: center;
+  max-width: 150px;
+  margin-top: 10px;
+}
+
+.applyButton, .clearButton {
+  width: 100%;
+  position: relative;
+  transition: all 0.3s ease-in-out;
+  box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.2);
+  background-color: #017cbf;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #ffff;
+  gap: 10px;
+  font-weight: bold;
+  border: 3px solid #ffffff4d;
+  outline: none;
+  overflow: hidden;
+}
+
+.clearButton {
+  background-color: #e5e7eb;
+  color: #71797E;
+}
+
+.applyButton:hover, .clearButton:hover {
+  transform: scale(1.05);
+  border-color: #fff9;
+}
+
+.applyButton:hover .icon, .clearButton:hover .icon {
+  transform: translate(4px);
+}
+
+.applyButton:hover::before, .clearButton:hover::before {
+  animation: shine 1.5s ease-out infinite;
+}
+
+.applyButton::before, .clearButton::before {
+  content: "";
+  position: absolute;
+  width: 100px;
+  height: 100%;
+  background-image: linear-gradient(
+    120deg,
+    rgba(255, 255, 255, 0) 30%,
+    rgba(255, 255, 255, 0.8),
+    rgba(255, 255, 255, 0) 70%
+  );
+  top: 0;
+  left: -100px;
+  opacity: 0.6;
+}
+
+@keyframes shine {
+  0% {
+    left: -100px;
+  }
+
+  60% {
+    left: 100%;
+  }
+
+  to {
+    left: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .filterGrid {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .input,
+  .select {
+    min-width: 100%;
+    max-width: none;
+  }
+
+  .button {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+}

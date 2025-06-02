@@ -1,18 +1,50 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import edit_delete from '../css/edit_detele.module.css';
+import defaultInstance from '../../api/defaultInstance';
 import EditModal from './EditModal';
 
 const isAdmin = localStorage.getItem('role') === 'admin';
 
-const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDeleteCompany, handleEdit }) => {
+const DataTable = ({ activeDashboard, excelData, handleDeleteCompany }) => {
   const [editRowId, setEditRowId] = useState(null);
   const [editRowData, setEditRowData] = useState({});
+  const [companyRows, setCompanyRows] = useState([]);
   const [showEditModal, setShowEditModal] = useState(false);
 
+  useEffect(() => {
+    if (activeDashboard === 'company') {
+      defaultInstance
+        .get('/company-excel-uploads')
+        .then((response) => {
+          const rows = (response.data.data || []).map(row => ({
+            ...row,
+            tenderNumber: row.tenderNumber ?? row.tender_number ?? '',
+            buyer: row.buyer ?? '',
+            contact1: row.contact1 ?? '',
+            phone1: row.phone1 ?? '',
+            contact2: row.contact2 ?? '',
+            phone2: row.phone2 ?? '',
+            email: row.email ?? '',
+            executor: row.executor ?? '',
+            idCode: row.idCode ?? row.id_code ?? '',
+            contractValue: row.contractValue ?? row.contract_value ?? '',
+            totalValueGorgia: row.totalValueGorgia ?? row.total_value_gorgia ?? '',
+            lastPurchaseDateGorgia: row.lastPurchaseDateGorgia ?? row.last_purchase_date_gorgia ?? '',
+            contractEndDate: row.contractEndDate ?? row.contract_end_date ?? '',
+            foundationDate: row.foundationDate ?? row.foundation_date ?? '',
+            manager: row.manager ?? '',
+            status: row.status ?? '',
+            id: row.id,
+          }));
+          setCompanyRows(rows);
+        })
+        .catch(() => setCompanyRows([]));
+    }
+  }, [activeDashboard]);
+
   const startEdit = (row) => {
-    // Always use the real DB id if available
     setEditRowId(row.id);
-    setEditRowData({ ...row, id: row.id }); // Ensure id is present
+    setEditRowData({ ...row });
     setShowEditModal(true);
   };
 
@@ -24,8 +56,12 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
 
   const saveEdit = async (updatedData) => {
     try {
-      // Always pass the id to handleEdit
-      await handleEdit({ ...updatedData, id: editRowId });
+      // Update local table data
+      setCompanyRows(prevRows =>
+        prevRows.map(row =>
+          row.id === editRowId ? { ...row, ...updatedData } : row
+        )
+      );
       setShowEditModal(false);
       setEditRowId(null);
       setEditRowData({});
@@ -34,7 +70,7 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
     }
   };
 
-  const dataToDisplay = activeDashboard === 'caller' ? excelData : filteredCompanies;
+  const dataToDisplay = activeDashboard === 'caller' ? excelData : companyRows;
 
   return (
     <div className="ecommerce-widget">
@@ -91,25 +127,25 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                     </thead>
                     <tbody>
                       {activeDashboard === 'caller' ? (
-                        dataToDisplay.length > 0 ? (
-                          dataToDisplay.map((call, index) => (
-                            <tr key={call.id || index}>
+                        excelData.length > 0 ? (
+                          excelData.map((call, index) => (
+                            <tr key={index}>
                               <td>{index + 1}</td>
-                              <td>{call.companyName || call.company_name || 'N/A'}</td>
+                              <td>{call.companyName || 'N/A'}</td>
                               <td>{call.identificationCode || call.id || 'N/A'}</td>
-                              <td>{call.contactPerson1 || call.contact_person1 || 'N/A'}</td>
-                              <td>{call.tel1 || call.contactTel1 || 'N/A'}</td>
-                              <td>{call.contactPerson2 || call.contact_person2 || 'N/A'}</td>
-                              <td>{call.tel2 || call.contactTel2 || 'N/A'}</td>
-                              <td>{call.contactPerson3 || call.contact_person3 || 'N/A'}</td>
-                              <td>{call.tel3 || call.contactTel3 || 'N/A'}</td>
-                              <td>{call.callerName || call.caller_name || 'N/A'}</td>
-                              <td>{call.callerNumber || call.caller_number || 'N/A'}</td>
-                              <td>{call.receiverNumber || call.receiver_number || 'N/A'}</td>
-                              <td>{call.callCount || call.call_count || '0'}</td>
-                              <td>{call.callDate || call.call_date || 'N/A'}</td>
-                              <td>{call.callDuration || call.call_duration || 'N/A'}</td>
-                              <td>{call.callStatus || call.call_status || 'N/A'}</td>
+                              <td>{call.contactPerson1 || 'N/A'}</td>
+                              <td>{call.tel1 || 'N/A'}</td>
+                              <td>{call.contactPerson2 || 'N/A'}</td>
+                              <td>{call.tel2 || 'N/A'}</td>
+                              <td>{call.contactPerson3 || 'N/A'}</td>
+                              <td>{call.tel3 || 'N/A'}</td>
+                              <td>{call.callerName || 'N/A'}</td>
+                              <td>{call.callerNumber || 'N/A'}</td>
+                              <td>{call.receiverNumber || 'N/A'}</td>
+                              <td>{call.callCount || '0'}</td>
+                              <td>{call.callDate || 'N/A'}</td>
+                              <td>{call.callDuration || 'N/A'}</td>
+                              <td>{call.callStatus || 'N/A'}</td>
                             </tr>
                           ))
                         ) : (
@@ -122,20 +158,20 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                           dataToDisplay.map((company, index) => (
                             <tr key={company.id || index}>
                               <td>{index + 1}</td>
-                              <td>{company.tenderNumber || company.tender_number || 'N/A'}</td>
+                              <td>{company.tenderNumber || 'N/A'}</td>
                               <td>{company.buyer || 'N/A'}</td>
-                              <td>{company.contact1 || company.contact_1 || 'N/A'}</td>
-                              <td>{company.phone1 || company.phone_1 || 'N/A'}</td>
-                              <td>{company.contact2 || company.contact_2 || 'N/A'}</td>
-                              <td>{company.phone2 || company.phone_2 || 'N/A'}</td>
+                              <td>{company.contact1 || 'N/A'}</td>
+                              <td>{company.phone1 || 'N/A'}</td>
+                              <td>{company.contact2 || 'N/A'}</td>
+                              <td>{company.phone2 || 'N/A'}</td>
                               <td>{company.email || 'N/A'}</td>
                               <td>{company.executor || 'N/A'}</td>
-                              <td>{company.idCode || company.id_code || 'N/A'}</td>
-                              <td>{company.contractValue || company.contract_value || 'N/A'}</td>
-                              <td>{company.totalValueGorgia || company.total_value_gorgia || 'N/A'}</td>
-                              <td>{company.lastPurchaseDateGorgia || company.last_purchase_date_gorgia || 'N/A'}</td>
-                              <td>{company.contractEndDate || company.contract_end_date || 'N/A'}</td>
-                              <td>{company.foundationDate || company.foundation_date || 'N/A'}</td>
+                              <td>{company.idCode || 'N/A'}</td>
+                              <td>{company.contractValue || 'N/A'}</td>
+                              <td>{company.totalValueGorgia || 'N/A'}</td>
+                              <td>{company.lastPurchaseDateGorgia || 'N/A'}</td>
+                              <td>{company.contractEndDate || 'N/A'}</td>
+                              <td>{company.foundationDate || 'N/A'}</td>
                               <td>{company.manager || 'N/A'}</td>
                               <td>{company.status || 'N/A'}</td>
                               <td className={edit_delete.editdelete}>
