@@ -2,7 +2,7 @@ import { useState } from 'react';
 import edit_delete from '../css/edit_detele.module.css';
 import EditModal from './EditModal';
 
-const isAdmin = localStorage.getItem('role') === 'admin';
+const isAdmin = localStorage.getItem('role') === 'super_admin' || localStorage.getItem('role') === 'admin';
 
 const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDeleteCompany, handleEdit }) => {
   const [editRowId, setEditRowId] = useState(null);

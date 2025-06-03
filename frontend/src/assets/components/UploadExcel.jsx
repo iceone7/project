@@ -7,7 +7,7 @@ const UploadExcel = ({ onUploadSuccess, excelData }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
-  const isAdmin = localStorage.getItem('role') === 'admin';
+  const isAdmin = localStorage.getItem('role') === 'super_admin' || localStorage.getItem('role') === 'admin';
 
   // Converts Excel time decimal to HH:MM:SS string
   const excelTimeToHMS = (excelTime) => {

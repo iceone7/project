@@ -21,17 +21,22 @@ export default function Login() {
         throw new Error('No token received from server');
       }
 
-      // console.log(response);
-
       // Save token, login flag, and email
       localStorage.setItem('authToken', response.data.token);
       localStorage.setItem('isLoggedIn', 'true');
-      localStorage.setItem('userEmail', response.data.user?.email); // Сохраняем email
-      localStorage.setItem('role', response.data.user?.role); 
-      console.log('Token saved:', localStorage.getItem('authToken'));
+      localStorage.setItem('userEmail', response.data.user?.email);
+      localStorage.setItem('role', response.data.user?.role);
+      localStorage.setItem('department_id', response.data.user?.department_id);
 
-      // Redirect to dashboard
-      window.location.replace('/dashboard');
+      // Redirect to dashboard by role
+      const role = response.data.user?.role;
+      if (role === 'super_admin') {
+        window.location.replace('/super-admin-dashboard');
+      } else if (role === 'admin') {
+        window.location.replace('/admin-dashboard');
+      } else {
+        window.location.replace('/dashboard');
+      }
     } catch (err) {
       console.error('Login error:', err.response?.data || err.message);
       const errorMessage = err.response?.data?.message || 'Login failed. Please check your credentials.';

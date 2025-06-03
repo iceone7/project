@@ -33,10 +33,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/excel-import', [ExcelImportController::class, 'import']);
 
     // admin and login
-    Route::post('/admin/create-user', [AdminController::class, 'createUser'])->withoutMiddleware('auth:sanctum');
-    Route::get('/admin/users', [AdminController::class, 'getUsers'])->withoutMiddleware('auth:sanctum');
-    Route::delete('/admin/users/{id}', [AdminController::class, 'deleteUser'])->withoutMiddleware('auth:sanctum');
-    Route::put('/admin/users/{id}', [AdminController::class, 'updateUser'])->withoutMiddleware('auth:sanctum');
+    Route::post('/admin/create-user', [AdminController::class, 'createUser']);
+    Route::get('/admin/users', [AdminController::class, 'getUsers']);
+    Route::delete('/admin/users/{id}', [AdminController::class, 'deleteUser']);
+    Route::put('/admin/users/{id}', [AdminController::class, 'updateUser']);
+
+    // Departments for super_admin
+    Route::get('/departments', function() {
+        return \App\Models\Department::all();
+    });
 
     // --- Company Excel Import routes ---
     Route::get('/import-company-list', [CompanyExcelImportController::class, 'index']);

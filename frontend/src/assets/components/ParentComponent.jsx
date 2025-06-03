@@ -3,7 +3,7 @@ import edit_delete from '../css/edit_detele.module.css';
 import defaultInstance from '../../api/defaultInstance';
 import EditModal from './EditModal';
 
-const isAdmin = localStorage.getItem('role') === 'admin';
+const isAdmin = localStorage.getItem('role') === 'super_admin' || localStorage.getItem('role') === 'admin';
 
 const DataTable = ({ activeDashboard, excelData, handleDeleteCompany }) => {
   const [editRowId, setEditRowId] = useState(null);

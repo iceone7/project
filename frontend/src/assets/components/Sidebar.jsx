@@ -34,7 +34,7 @@ const Sidebar = () => {
     }
   };
 
-  const isAdmin = localStorage.getItem('role') === 'admin';
+const isAdmin = localStorage.getItem('role') === 'super_admin' || localStorage.getItem('role') === 'admin';
 
   return (
     <div className="nav-left-sidebar sidebar-dark">

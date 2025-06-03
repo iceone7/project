@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import styles from '../css/UploadButton.module.css';
 
-const isAdmin = localStorage.getItem('role') === 'admin';
+const isAdmin = localStorage.getItem('role') === 'super_admin' || localStorage.getItem('role') === 'admin';
 
 const UploadCompanyExcel = ({ onPreviewSuccess }) => {
   const fileInputRef = useRef(null);
