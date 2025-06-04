@@ -101,41 +101,63 @@ class AdminController extends Controller
             if (!$authUser || $authUser->role !== 'super_admin') {
                 return response()->json(['message' => 'Only super_admin can update admins'], 403);
             }
+            // Allow super_admin to change role between admin/user and department
             $validated = $request->validate([
                 'name' => 'required|string|max:255',
                 'email' => 'required|email|unique:users,email,' . $user->id,
-                'role' => 'required|in:admin',
+                'role' => 'required|in:admin,user',
                 'department_id' => 'required|exists:departments,id',
                 'password' => 'nullable|string|min:6',
             ]);
             $user->name = $validated['name'];
             $user->email = $validated['email'];
-            $user->role = 'admin';
+            $user->role = $validated['role'];
             $user->department_id = $validated['department_id'];
             if (!empty($validated['password'])) {
                 $user->password = \Hash::make($validated['password']);
             }
             $user->save();
-            return response()->json(['message' => 'Admin updated successfully', 'user' => $user]);
-        } else {
-            if (!$authUser || $authUser->role !== 'admin' || $user->department_id !== $authUser->department_id) {
-                return response()->json(['message' => 'Only admin can update users in their department'], 403);
-            }
-            $validated = $request->validate([
-                'name' => 'required|string|max:255',
-                'email' => 'required|email|unique:users,email,' . $user->id,
-                'role' => 'required|in:user',
-                'password' => 'nullable|string|min:6',
-            ]);
-            $user->name = $validated['name'];
-            $user->email = $validated['email'];
-            $user->role = 'user';
-            // department_id cannot be changed by user/admin
-            if (!empty($validated['password'])) {
-                $user->password = \Hash::make($validated['password']);
-            }
-            $user->save();
             return response()->json(['message' => 'User updated successfully', 'user' => $user]);
+        } else {
+            if ($authUser && $authUser->role === 'super_admin') {
+                // super_admin can update any user, including department and role
+                $validated = $request->validate([
+                    'name' => 'required|string|max:255',
+                    'email' => 'required|email|unique:users,email,' . $user->id,
+                    'role' => 'required|in:admin,user',
+                    'department_id' => 'required|exists:departments,id',
+                    'password' => 'nullable|string|min:6',
+                ]);
+                $user->name = $validated['name'];
+                $user->email = $validated['email'];
+                $user->role = $validated['role'];
+                $user->department_id = $validated['department_id'];
+                if (!empty($validated['password'])) {
+                    $user->password = \Hash::make($validated['password']);
+                }
+                $user->save();
+                return response()->json(['message' => 'User updated successfully', 'user' => $user]);
+            } else {
+                // admin can only update users in their department, but not change department or role
+                if (!$authUser || $authUser->role !== 'admin' || $user->department_id !== $authUser->department_id) {
+                    return response()->json(['message' => 'Only admin can update users in their department'], 403);
+                }
+                $validated = $request->validate([
+                    'name' => 'required|string|max:255',
+                    'email' => 'required|email|unique:users,email,' . $user->id,
+                    'role' => 'required|in:user',
+                    'password' => 'nullable|string|min:6',
+                ]);
+                $user->name = $validated['name'];
+                $user->email = $validated['email'];
+                $user->role = 'user';
+                // department_id cannot be changed by user/admin
+                if (!empty($validated['password'])) {
+                    $user->password = \Hash::make($validated['password']);
+                }
+                $user->save();
+                return response()->json(['message' => 'User updated successfully', 'user' => $user]);
+            }
         }
     }
 

@@ -1,0 +1,144 @@
+.modalOverlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  background: rgba(30, 41, 59, 0.45);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s;
+}
+
+.modalContent {
+  background: linear-gradient(135deg, #f8fafc 0%, #e0e7ef 100%);
+  border-radius: 18px;
+  box-shadow: 0 8px 40px rgba(30,41,59,0.18);
+  padding: 36px 32px 28px 32px;
+  min-width: 370px;
+  max-width: 420px;
+  width: 100%;
+  position: relative;
+  animation: modalPop 0.35s cubic-bezier(.68,-0.55,.27,1.55);
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.modalTitle {
+  margin: 0;
+  font-weight: 700;
+  font-size: 22px;
+  color: #1e293b;
+  letter-spacing: 0.2px;
+}
+
+.modalTitleAccent {
+  color: #0173b1;
+  font-weight: 600;
+  text-transform: capitalize;
+  font-size: 20px;
+}
+
+.modalClose {
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: #64748b;
+  cursor: pointer;
+  transition: color 0.2s;
+  margin-left: 12px;
+  line-height: 1;
+}
+
+.modalClose:hover {
+  color: #ef4444;
+}
+
+.userForm {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.input,
+.select {
+  padding: 12px 14px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 16px;
+  background: #f9fafb;
+  transition: border-color 0.2s;
+  outline: none;
+  color: #334155;
+}
+
+.input:focus,
+.select:focus {
+  border-color: #0173b1;
+}
+
+.userError {
+  color: #ef4444;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 15px;
+  margin-top: -8px;
+  margin-bottom: 2px;
+}
+
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.cancelBtn {
+  padding: 10px 22px;
+  background: #f3f4f6;
+  color: #334155;
+  border: none;
+  border-radius: 7px;
+  font-weight: 500;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.cancelBtn:hover {
+  background: #e5e7eb;
+}
+
+.submitBtn {
+  padding: 10px 22px;
+  background: #0173b1;
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  font-weight: 600;
+  font-size: 16px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(37,99,235,0.08);
+  transition: background 0.2s;
+}
+
+.submitBtn:disabled {
+  background: #93c5fd;
+  cursor: not-allowed;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes modalPop {
+  0% { transform: scale(0.85) translateY(40px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}

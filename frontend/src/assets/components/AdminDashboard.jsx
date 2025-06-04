@@ -4,7 +4,8 @@ import Header from './Header';
 import '../css/UserManagement.css';
 import edit_delete from '../css/edit_detele.module.css';
 import defaultInstance from '../../api/defaultInstance';
-
+import modalStyles from '../css/AddUser.module.css';
+import deleteModalStyles from '../css/DeleteModal.module.css';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -37,6 +38,10 @@ const AdminDashboard = () => {
   const [userFocused, setUserFocused] = useState(false);
   const [filteredAdmins, setFilteredAdmins] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
+
+  // --- Deletion state ---
+  const [deletingId, setDeletingId] = useState(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   // --- Fetch data ---
   useEffect(() => {
@@ -161,16 +166,16 @@ const AdminDashboard = () => {
       password: form.password || undefined,
       role: form.role,
     };
-    if (role === 'super_admin') {
+    if (role === 'super_admin' || (editMode && role === 'super_admin')) {
       payload.department_id = form.department_id;
     }
 
     if (editMode) {
       defaultInstance.put(`${API_URL}/admin/users/${form.id}`, {
         ...payload,
-        // For edit, department_id is required for super_admin editing admin/user
-        department_id: role === 'super_admin' ? form.department_id : undefined,
+        department_id: (role === 'super_admin') ? form.department_id : undefined,
       })
+        // eslint-disable-next-line
         .then(res => {
           fetchUsers();
           closeModal();
@@ -187,6 +192,7 @@ const AdminDashboard = () => {
         });
     } else {
       defaultInstance.post(`${API_URL}/admin/create-user`, payload)
+        // eslint-disable-next-line
         .then(res => {
           fetchUsers();
           closeModal();
@@ -204,12 +210,26 @@ const AdminDashboard = () => {
     }
   };
 
-  // --- Delete logic ---
+  // --- Delete logic with animation and modal ---
   const handleDelete = id => {
-    if (!window.confirm('Delete this user?')) return;
-    defaultInstance.delete(`${API_URL}/admin/users/${id}`)
-      .then(() => fetchUsers())
-      .catch(() => {});
+    setConfirmDeleteId(id);
+  };
+
+  const confirmDelete = id => {
+    setDeletingId(id);
+    setConfirmDeleteId(null);
+    setTimeout(() => {
+      defaultInstance.delete(`${API_URL}/admin/users/${id}`)
+        .then(() => {
+          fetchUsers();
+          setDeletingId(null);
+        })
+        .catch(() => setDeletingId(null));
+    }, 400); // match animation duration
+  };
+
+  const cancelDelete = () => {
+    setConfirmDeleteId(null);
   };
 
   // --- Render ---
@@ -249,7 +269,7 @@ const AdminDashboard = () => {
                     >
                       <input
                         type="text"
-                        placeholder="Search admins..."
+                        placeholder=" Search admins..."
                         value={adminFilter}
                         onChange={e => setAdminFilter(e.target.value)}
                         onFocus={() => setAdminFocused(true)}
@@ -358,7 +378,7 @@ const AdminDashboard = () => {
                     >
                       <input
                         type="text"
-                        placeholder="Search users..."
+                        placeholder=" Search users..."
                         value={userFilter}
                         onChange={e => setUserFilter(e.target.value)}
                         onFocus={() => setUserFocused(true)}
@@ -419,7 +439,16 @@ const AdminDashboard = () => {
                         </thead>
                         <tbody>
                           {filteredUsers.map(user => (
-                            <tr key={user.id}>
+                            <tr
+                              key={user.id}
+                              className={deletingId === user.id ? 'delete-anim' : ''}
+                              style={{
+                                transition: 'background 0.3s, opacity 0.4s, transform 0.4s',
+                                background: deletingId === user.id ? '#fee2e2' : undefined,
+                                opacity: deletingId === user.id ? 0 : 1,
+                                transform: deletingId === user.id ? 'scale(0.96)' : 'scale(1)',
+                              }}
+                            >
                               <td>{user.id}</td>
                               <td>{user.username || user.name}</td>
                               <td>{user.email}</td>
@@ -428,8 +457,16 @@ const AdminDashboard = () => {
                               <td className={edit_delete.editdelete}>
                                 <button
                                   onClick={() => handleDelete(user.id)}
-                                  className={edit_delete.deletebutton}
+                                  className={edit_delete.deletebutton + ' delete-btn-anim'}
                                   title="Delete"
+                                  disabled={deletingId === user.id}
+                                  style={{
+                                    transition: 'transform 0.2s, background 0.2s, color 0.2s',
+                                    transform: deletingId === user.id ? 'scale(1.15) rotate(-10deg)' : 'none',
+                                    background: deletingId === user.id ? '#ef4444' : undefined,
+                                    color: deletingId === user.id ? '#fff' : undefined,
+                                    boxShadow: deletingId === user.id ? '0 0 12px #ef4444aa' : undefined,
+                                  }}
                                 >
                                   <svg className={edit_delete.deletesvgIcon} viewBox="0 0 448 512">
                                     <path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"></path>
@@ -454,19 +491,32 @@ const AdminDashboard = () => {
 
                   {/* Modal */}
                   {showModal && (
-                    <div className="modal-overlay">
-                      <div className="modal-content">
-                        <div className="modal-header">
-                          <h4>{editMode ? 'Edit' : 'Add'} {role === 'super_admin' ? (form.role === 'admin' ? 'Admin' : 'User') : 'User'}</h4>
-                          <button className="modal-close" onClick={closeModal}>×</button>
+                    <div className={modalStyles.modalOverlay}>
+                      <div className={modalStyles.modalContent}>
+                        <div className={modalStyles.modalHeader}>
+                          <h4 className={modalStyles.modalTitle}>
+                            {editMode ? 'Edit' : 'Add'}{' '}
+                            <span className={modalStyles.modalTitleAccent}>
+                              {role === 'super_admin' ? 'User/Admin' : 'User'}
+                            </span>
+                          </h4>
+                          <button
+                            className={modalStyles.modalClose}
+                            onClick={closeModal}
+                            aria-label="Close"
+                          >×</button>
                         </div>
-                        <form onSubmit={handleSubmit} className="user-form">
+                        <form
+                          onSubmit={handleSubmit}
+                          className={modalStyles.userForm}
+                        >
                           <input
                             name="username"
                             placeholder="Username"
                             value={form.username}
                             onChange={handleInput}
                             required
+                            className={modalStyles.input}
                           />
                           <input
                             name="email"
@@ -475,6 +525,7 @@ const AdminDashboard = () => {
                             value={form.email}
                             onChange={handleInput}
                             required
+                            className={modalStyles.input}
                           />
                           {role === 'super_admin' && (
                             <>
@@ -483,6 +534,7 @@ const AdminDashboard = () => {
                                 value={form.role}
                                 onChange={handleInput}
                                 required
+                                className={modalStyles.select}
                               >
                                 <option value="user">User</option>
                                 <option value="admin">Admin</option>
@@ -492,6 +544,7 @@ const AdminDashboard = () => {
                                 value={form.department_id}
                                 onChange={handleInput}
                                 required
+                                className={modalStyles.select}
                               >
                                 <option value="">Select Department</option>
                                 {departments.map(dep => (
@@ -510,15 +563,59 @@ const AdminDashboard = () => {
                             value={form.password}
                             onChange={handleInput}
                             required={!editMode}
+                            className={modalStyles.input}
                           />
-                          {formError && <div className="user-error">{formError}</div>}
-                          <div className="modal-footer">
-                            <button type="button" onClick={closeModal}>Cancel</button>
-                            <button type="submit" disabled={formLoading}>
+                          {formError && (
+                            <div className={modalStyles.userError}>
+                              {formError}
+                            </div>
+                          )}
+                          <div className={modalStyles.modalFooter}>
+                            <button
+                              type="button"
+                              onClick={closeModal}
+                              className={modalStyles.cancelBtn}
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="submit"
+                              disabled={formLoading}
+                              className={modalStyles.submitBtn}
+                            >
                               {formLoading ? 'Saving...' : (editMode ? 'Update' : 'Add')}
                             </button>
                           </div>
                         </form>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Delete confirmation modal */}
+                  {confirmDeleteId && (
+                    <div className={deleteModalStyles.deleteModalOverlay}>
+                      <div className={deleteModalStyles.deleteModalContent}>
+                        <div className={deleteModalStyles.deleteModalHeader}>
+                          <span role="img" aria-label="warning" style={{ fontSize: 32, marginRight: 10 }}>⚠️</span>
+                          <span style={{ fontWeight: 600, fontSize: 20, color: '#ef4444' }}>Confirm Deletion</span>
+                        </div>
+                        <div className={deleteModalStyles.deleteModalText}>
+                          Are you sure you want to delete this user? This action cannot be undone.
+                        </div>
+                        <div className={deleteModalStyles.deleteModalFooter}>
+                          <button
+                            onClick={cancelDelete}
+                            className={deleteModalStyles.cancelBtn}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={() => confirmDelete(confirmDeleteId)}
+                            className={deleteModalStyles.deleteBtn}
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )}

@@ -12,68 +12,39 @@ import ButtonsPanel from './assets/components/ButtonsPanel';
 import DataTable from './assets/components/DataTable';
 import defaultInstance from './api/defaultInstance';
 import AdminDashboard from './assets/components/AdminDashboard';
+import deleteModalStyles from './assets/css/DeleteModal.module.css';
 
 // ConfirmModal component
 function ConfirmModal({ open, onCancel, onConfirm, text }) {
   if (!open) return null;
   return (
     <div
-      style={{
-        position: 'fixed',
-        top: 0, left: 0, right: 0, bottom: 0,
-        background: 'rgba(0,0,0,0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 9999
-      }}
+      className={deleteModalStyles.deleteModalOverlay}
       onClick={onCancel}
     >
       <div
-        style={{
-          background: '#fff',
-          padding: '2rem',
-          borderRadius: '12px',
-          minWidth: '340px',
-          boxShadow: '0 4px 24px rgba(0,0,0,0.18)',
-          textAlign: 'center',
-          position: 'relative'
-        }}
+        className={deleteModalStyles.deleteModalContent}
         onClick={e => e.stopPropagation()}
       >
-        <div style={{ marginBottom: '1.7rem', fontSize: '1.13rem', color: '#222' }}>
+        <div className={deleteModalStyles.deleteModalHeader}>
+          <span role="img" aria-label="warning" style={{ fontSize: 32, marginRight: 10 }}>⚠️</span>
+          <span style={{ fontWeight: 600, fontSize: 20, color: '#ef4444' }}>Confirm Deletion</span>
+        </div>
+        <div className={deleteModalStyles.deleteModalText}>
           {text}
         </div>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '1.2rem' }}>
-          <button
-            onClick={onConfirm}
-            style={{
-              background: '#d9534f',
-              color: '#fff',
-              border: 'none',
-              padding: '0.55rem 1.4rem',
-              borderRadius: '5px',
-              cursor: 'pointer',
-              fontWeight: 500,
-              fontSize: '1rem'
-            }}
-          >
-            Delete
-          </button>
+        <div className={deleteModalStyles.deleteModalFooter}>
           <button
             onClick={onCancel}
-            style={{
-              background: '#f0f0f0',
-              color: '#333',
-              border: 'none',
-              padding: '0.55rem 1.4rem',
-              borderRadius: '5px',
-              cursor: 'pointer',
-              fontWeight: 500,
-              fontSize: '1rem'
-            }}
+            className={deleteModalStyles.cancelBtn}
           >
             Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className={deleteModalStyles.deleteBtn}
+          >
+            Delete
           </button>
         </div>
       </div>
@@ -87,9 +58,12 @@ function App({ dashboardType = 'company' }) {
   const [companies, setCompanies] = useState([]);
   const [filteredCompanies, setFilteredCompanies] = useState([]);
   const [excelData, setExcelData] = useState([]);
+  // eslint-disable-next-line
   const [editingItem, setEditingItem] = useState(null);
+  // eslint-disable-next-line
   const [editMode, setEditMode] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  // eslint-disable-next-line
   const [previewData, setPreviewData] = useState([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
@@ -150,6 +124,7 @@ function App({ dashboardType = 'company' }) {
 
   // Handle upload success for company dashboard
   const handleCompanyUploadSuccess = async (data) => {
+    // eslint-disable-next-line
     const normalizedData = data.map((item, index) => ({
       id: item.id, // Always use backend id if present
       tenderNumber: item.tenderNumber || item.tender_number || '',
