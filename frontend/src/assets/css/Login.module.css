@@ -83,3 +83,37 @@
   color: red;
   font-size: 14px;
 }
+
+@media (max-width: 768px) {
+  .mainContainer {
+    flex-direction: column;
+    width: 90%;
+    height: auto;
+  }
+
+  .leftContainer,
+  .rightContainer {
+    width: 100%;
+    height: auto;
+  }
+
+  .rightContainer {
+    padding: 30px 20px;
+  }
+
+  .rightContainer input,
+  .rightContainer button {
+    font-size: 16px;
+    padding: 14px;
+  }
+
+  .rightContainer b {
+    font-size: 18px;
+  }
+
+  .leftContainer img {
+    max-width: 80%;
+    padding: 40px 0;
+  }
+}
+

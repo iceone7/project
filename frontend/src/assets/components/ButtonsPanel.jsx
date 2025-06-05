@@ -4,6 +4,9 @@ import FilterForm from './FilterForm';
 import UploadExcel from './UploadExcel';
 import UploadCompanyExcel from './UploadCompanyExcel';
 
+const isDepartamentCraftsmen = localStorage.getItem('department_id') === '2';
+
+
 const ButtonsPanel = ({
   activeDashboard,
   handleOpenModal,
@@ -19,7 +22,7 @@ const ButtonsPanel = ({
 }) => {
   return (
     <div className="buttons" style={{ marginBottom: '20px' }}>
-      {activeDashboard === 'company' && (
+      {activeDashboard === 'company' && !isDepartamentCraftsmen && (
         <div className="fade-in" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           <div className="create">
             <button className={styles.button} onClick={handleOpenModal}>

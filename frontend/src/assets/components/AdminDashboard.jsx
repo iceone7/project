@@ -175,7 +175,7 @@ const AdminDashboard = () => {
         ...payload,
         department_id: (role === 'super_admin') ? form.department_id : undefined,
       })
-        // eslint-disable-next-line
+      // eslint-disable-next-line
         .then(res => {
           fetchUsers();
           closeModal();
@@ -192,7 +192,7 @@ const AdminDashboard = () => {
         });
     } else {
       defaultInstance.post(`${API_URL}/admin/create-user`, payload)
-        // eslint-disable-next-line
+      // eslint-disable-next-line
         .then(res => {
           fetchUsers();
           closeModal();

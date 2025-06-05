@@ -1,0 +1,76 @@
+.dropdownToggle {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  user-select: none;
+  font-weight: 500;
+  transition: background 0.2s;
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
+.dropdownToggle:hover, .dropdownToggle:focus {
+  outline: none;
+}
+
+.arrow {
+  margin-left: 8px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  display: inline-block;
+  padding: 3px;
+  transform: rotate(45deg);
+  transition: transform 0.3s;
+  
+}
+
+.arrow.open {
+  transform: rotate(-135deg);
+}
+
+.dropdownPanel {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.35s cubic-bezier(0.4,0,0.2,1), opacity 0.3s;
+  opacity: 0;
+  border-radius: 0 0 8px 8px;
+  margin-left: 16px;
+  margin-top: 2px;
+  background-color: none;
+}
+
+.dropdownPanel.open {
+  max-height: 200px;
+  width: 100%;
+  opacity: 1;
+}
+
+.dropdownList {
+  list-style: none;
+  margin: 0;
+  padding: 8px 0;
+}
+
+.dropdownItem {
+  padding: 8px 16px;
+  color: #000;
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+  transition: background 0.2s;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background-color 0.3s ease-in-out, transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dropdownItem:hover {
+  background-color: rgba(255, 255, 255, 0.15); /* Hover effect */
+  transform: translateX(6px); /* Slightly increased shift for emphasis */
+}
+
+.dropdownItem i {
+  margin-right: 10px;
+  color: #000; /* Match icon color with text */
+  font-size: 16px;
+}

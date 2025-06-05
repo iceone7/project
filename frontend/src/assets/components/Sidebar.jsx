@@ -1,11 +1,15 @@
 import { NavLink, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import logo from '../images/logo.png';
 import styles from '../css/Logout.module.css';
+import sidebarStyles from '../css/Sidebar.module.css';
 import '../../App.css';
 import defaultInstance from '../../api/defaultInstance';
 
 const Sidebar = () => {
   const navigate = useNavigate();
+  const [vipOpen, setVipOpen] = useState(false);
+  const [workerOpen, setWorkerOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -34,7 +38,8 @@ const Sidebar = () => {
     }
   };
 
-const isAdmin = localStorage.getItem('role') === 'super_admin' || localStorage.getItem('role') === 'admin';
+  const isSuperAdmin = localStorage.getItem('role') === 'super_admin';
+  const isAdmin = localStorage.getItem('role') === 'admin';
 
   return (
     <div className="nav-left-sidebar sidebar-dark">
@@ -42,28 +47,17 @@ const isAdmin = localStorage.getItem('role') === 'super_admin' || localStorage.g
         <img src={logo} className="logo bottom-fade-in" alt="Logo" />
         <hr />
         <nav className="navbar navbar-expand-lg navbar-light">
-          <a className="d-xl-none d-lg-none" href="#">Dashboard</a>
-          <button
-            className="navbar-toggler"
-            type="button"
-            data-toggle="collapse"
-            data-target="#navbarNav"
-            aria-controls="navbarNav"
-            aria-expanded="false"
-            aria-label="Toggle navigation"
-          >
-            <span className="navbar-toggler-icon"></span>
-          </button>
           <div className="collapse navbar-collapse" id="navbarNav">
             <ul className="navbar-nav flex-column">
               <li className="nav-item">
-                <NavLink
+                {!isSuperAdmin && (
+                  <NavLink
                   to="/company-dashboard"
                   className={({ isActive }) => `fade-in nav-link ${isActive ? 'my-active' : ''}`}
                 >
                   <i className="fa fa-fw fa-user-circle"></i>Company Dashboard
-                  <span className="badge badge-success">6</span>
                 </NavLink>
+                )}          
               </li>
               {isAdmin && (
               <li className="nav-item" style={{ marginTop: '20px' }}>
@@ -72,18 +66,85 @@ const isAdmin = localStorage.getItem('role') === 'super_admin' || localStorage.g
                   className={({ isActive }) => `fade-in nav-link ${isActive ? 'my-active' : ''}`}
                 >
                   <i className="fa fa-fw fa-user-circle"></i>Caller Dashboard
-                  <span className="badge badge-success">6</span>
                 </NavLink>
               </li>
               )}
-              {isAdmin && (
+              {isSuperAdmin && (
+                <li className="nav-item" style={{ marginTop: '20px' }}>
+                  <div
+                    className={`${sidebarStyles.dropdownToggle} fade-in nav-link`}
+                    onClick={() => setVipOpen((open) => !open)}
+                    tabIndex={0}
+                    role="button"
+                  >
+                    <div className={sidebarStyles.vip} >
+                      <i className="fa fa-fw fa-star"></i>VIP დეპარტამენტი
+                    </div>
+                    <span className={sidebarStyles.arrow + (vipOpen ? ` ${sidebarStyles.open}` : '')}></span>
+                  </div>
+                  <div
+                    className={`${sidebarStyles.dropdownPanel} ${vipOpen ? sidebarStyles.open : ''}`}
+                  >
+                    <ul className={sidebarStyles.dropdownList}>
+                      <li className={sidebarStyles.dropdownItem}
+                          onClick={() => {
+                            localStorage.setItem('department_id', '1');
+                            window.location.href = '/company-dashboard';
+                          }}>
+                        <i className="fa fa-fw fa-building"></i>Company Dashboard
+                      </li>
+                      <li className={sidebarStyles.dropdownItem}
+                          onClick={() => {
+                            localStorage.setItem('department_id', '1');
+                            window.location.href = '/caller-dashboard';
+                          }}>
+                        <i className="fa fa-fw fa-phone"></i>Caller Dashboard
+                      </li>
+                    </ul>
+                  </div>
+                </li>
+              )}
+              {isSuperAdmin && (
+                <li className="nav-item" style={{ marginTop: '20px' }}>
+                  <div
+                    className={`${sidebarStyles.dropdownToggle} fade-in nav-link`}
+                    onClick={() => setWorkerOpen((open) => !open)}
+                    tabIndex={0}
+                    role="button"
+                  >
+                  <div className={sidebarStyles.worker}> <i className="fa fa-fw fa-user-circle"></i>ხელოსნების დეპარტამენტი</div>
+                   
+                    <span className={sidebarStyles.arrow + (workerOpen ? ` ${sidebarStyles.open}` : '')}></span>
+                  </div>
+                  <div
+                    className={`${sidebarStyles.dropdownPanel} ${workerOpen ? sidebarStyles.open : ''}`}
+                  >
+                    <ul className={sidebarStyles.dropdownList}>
+                      <li className={sidebarStyles.dropdownItem}
+                          onClick={() => {
+                            localStorage.setItem('department_id', '2');
+                            window.location.href = '/company-dashboard';
+                          }}>
+                        <i className="fa fa-fw fa-building"></i>Company Dashboard
+                      </li>
+                      {/* <li className={sidebarStyles.dropdownItem}
+                          onClick={() => {
+                            localStorage.setItem('department_id', '2');
+                            window.location.href = '/caller-dashboard';
+                          }}>
+                        <i className="fa fa-fw fa-phone"></i>Caller Dashboard
+                      </li> */}
+                    </ul>
+                  </div>
+                </li>
+              )}
+              {isAdmin || isSuperAdmin && (
                 <li className="nav-item" style={{ marginTop: '20px' }}>
                   <NavLink
                     to="/admin-dahsboard"
                     className={({ isActive }) => `fade-in nav-link ${isActive ? 'my-active' : ''}`}
                   >
                     <i className="fa fa-fw fa-user-circle"></i>Admin Dashboard
-                    <span className="badge badge-success">A</span>
                   </NavLink>
                 </li>
               )}

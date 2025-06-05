@@ -1,0 +1,43 @@
+        .nav-left-sidebar{
+          position:fixed;
+          top:0;
+          left:0;
+          width:264px;
+          height:100vh;
+          transition:left .5s ease;
+          z-index:1000;
+        }
+        .dashboard-content{
+          transition:width .5s ease,margin-left .5s ease;
+          width:100%;
+          max-width:none!important;
+          margin-left:0;
+        }
+        .dashboard-content.sidebar-closed{
+          margin-left:-264px;
+          width:calc(100% + 264px);
+        }
+        /* .page-header{
+            padding:0 0 48px;
+            border-bottom:1px solid #ddd;
+        } */
+        .pageheader-title{font-size:24px;margin:0;display:flex;align-items:center;gap:15px; color:#000;}
+
+        /* ---------- кнопка ---------- */
+        .close-sidebar-btn{
+          font-size:24px;
+          background:transparent;border:none;cursor:pointer;
+          transition:transform .4s cubic-bezier(.25,.8,.25,1), color .4s ease;
+        }
+
+        .close-sidebar-btn.close:hover{
+          color:#ff3b30;          
+          transform: scale(1.15);
+        }
+        .close-sidebar-btn.close:active{transform:scale(.9);color:#c00;}
+
+        .close-sidebar-btn.open:hover{
+          color:#0066ff;          /* синий */
+          transform: scale(1.15);
+        }
+        .close-sidebar-btn.open:active{transform:scale(.9);color:#0047b3;}
