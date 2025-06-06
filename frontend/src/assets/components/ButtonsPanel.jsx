@@ -69,6 +69,7 @@ const ButtonsPanel = ({
           />
         </div>
       )}
+
     </div>
   );
 };

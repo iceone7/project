@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import edit_delete from '../css/edit_detele.module.css';
 import EditModal from './EditModal';
+import defaultInstance from '../../api/defaultInstance';
 
 const isAdmin = localStorage.getItem('role') === 'super_admin' || localStorage.getItem('role') === 'admin';
 const isDepartamentVip = localStorage.getItem('department_id') === '1';
@@ -10,138 +11,43 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
   const [editRowId, setEditRowId] = useState(null);
   const [editRowData, setEditRowData] = useState({});
   const [showEditModal, setShowEditModal] = useState(false);
-  const [callsData, setCallsData] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [playingAudioId, setPlayingAudioId] = useState(null);
-  const [showCommentModal, setShowCommentModal] = useState(false);
-  const [currentCallId, setCurrentCallId] = useState(null);
-  const [newComment, setNewComment] = useState('');
-  const [comments, setComments] = useState([]);
+  const [calls, setCalls] = useState([]);
+  const [filterA, setFilterA] = useState('');
+  const [filterB, setFilterB] = useState('');
+  const [filterDate, setFilterDate] = useState('');
+  const [filterDuration, setFilterDuration] = useState('');
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
 
-  // Получение данных с сервера
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch('http://10.150.20.117/api/calls', {
-        method: 'GET',
-        headers: {
-          Authorization: `Basic ${btoa('admin:asdASD123!@#')}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      if (!response.ok) {
-        throw new Error('Failed to fetch data');
-      }
-      const data = await response.json();
-      setCallsData(data);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+  // Fetch call history data for craftsmen section
+  useEffect(() => {
+    if (isDepartamentCraftsmen && activeDashboard === 'company') {
+      defaultInstance.get(`${import.meta.env.VITE_API_BASE_URL}/cdr`)
+        .then(response => {
+          console.log('API response:', response.data);
+          setCalls(response.data);
+        })
+        .catch(error => {
+          console.error('Ошибка при загрузке данных:', error);
+        });
     }
+  }, [activeDashboard]);
+
+  // Function to get recording path
+  const getPath = (recordingfile) => {
+    // Example: out-+995595959499-7-20250606-090810-1749200890.1822.wav
+    if (!recordingfile) return '';
+    const parts = recordingfile.split('-');
+    // parts[3] is date in YYYYMMDD format
+    if (parts.length < 5) return recordingfile;
+    const dateStr = parts[3]; // e.g., "20250606"
+    if (!/^\d{8}$/.test(dateStr)) return recordingfile;
+    const yyyy = dateStr.substring(0, 4);
+    const mm = dateStr.substring(4, 6);
+    const dd = dateStr.substring(6, 8);
+    return `${yyyy}/${mm}/${dd}/${recordingfile}`;
   };
 
-  // Получение комментариев
-  const fetchComments = async (callId) => {
-    try {
-      const response = await fetch(`http://10.150.20.117/api/calls/${callId}/comments`, {
-        headers: {
-          Authorization: `Basic ${btoa('admin:asdASD123!@#')}`,
-        },
-      });
-      if (!response.ok) throw new Error('Failed to fetch comments');
-      const data = await response.json();
-      setComments(data);
-    } catch (err) {
-      alert('Error fetching comments: ' + err.message);
-    }
-  };
-
-  // Добавление комментария
-  const addComment = async () => {
-    if (!newComment.trim()) return;
-    try {
-      const response = await fetch(`http://10.150.20.117/api/calls/${currentCallId}/comments`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Basic ${btoa('admin:asdASD123!@#')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ comment: newComment }),
-      });
-      if (!response.ok) throw new Error('Failed to add comment');
-      const updatedComments = await response.json();
-      setComments(updatedComments);
-      setNewComment('');
-    } catch (err) {
-      alert('Error adding comment: ' + err.message);
-    }
-  };
-
-  // Воспроизведение/пауза аудио
-  const toggleAudio = (callId, audioUrl) => {
-    const audio = document.getElementById(`audio-${callId}`);
-    if (playingAudioId === callId) {
-      audio.pause();
-      setPlayingAudioId(null);
-    } else {
-      if (playingAudioId) {
-        const prevAudio = document.getElementById(`audio-${playingAudioId}`);
-        prevAudio.pause();
-      }
-      audio.play();
-      setPlayingAudioId(callId);
-    }
-  };
-
-  // Открытие модального окна комментариев
-  const openCommentModal = (callId) => {
-    setCurrentCallId(callId);
-    fetchComments(callId);
-    setShowCommentModal(true);
-  };
-
-  // Закрытие модального окна комментариев
-  const closeCommentModal = () => {
-    setShowCommentModal(false);
-    setCurrentCallId(null);
-    setNewComment('');
-    setComments([]);
-  };
-
-  // Модальное окно для комментариев
-  const CommentModal = ({ isOpen, onClose, comments, onAddComment, newComment, setNewComment }) => {
-    if (!isOpen) return null;
-    return (
-      <div className="modal" style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)', position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
-        <div className="modal-content" style={{ background: 'white', padding: '20px', margin: '100px auto', width: '400px', borderRadius: '5px', boxShadow: '0 0 10px rgba(0,0,0,0.3)' }}>
-          <h5>Comments</h5>
-          <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-            {comments.length > 0 ? (
-              comments.map((comment, index) => (
-                <p key={index}>{comment.text} <small>({new Date(comment.createdAt).toLocaleString()})</small></p>
-              ))
-            ) : (
-              <p>No comments yet.</p>
-            )}
-          </div>
-          <textarea
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            placeholder="Add a comment..."
-            style={{ width: '100%', marginTop: '10px', minHeight: '60px' }}
-          />
-          <div style={{ marginTop: '10px' }}>
-            <button onClick={onAddComment} style={{ marginRight: '10px' }}>Add Comment</button>
-            <button onClick={onClose}>Close</button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Функции для редактирования
+  // Functions for editing
   const startEdit = (row) => {
     setEditRowId(row.id);
     setEditRowData({ ...row, id: row.id });
@@ -165,14 +71,32 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
     }
   };
 
-  // Загрузка данных при монтировании
-  useEffect(() => {
-    if (isDepartamentCraftsmen && activeDashboard === 'company') {
-      fetchData();
-    }
-  }, [activeDashboard]);
+  // Helper to format seconds as hh:mm:ss
+  const formatDuration = (seconds) => {
+    if (!seconds || isNaN(seconds)) return 'N/A';
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return [h, m, s]
+      .map(unit => String(unit).padStart(2, '0'))
+      .join(':');
+  };
 
   const dataToDisplay = activeDashboard === 'caller' ? excelData : filteredCompanies;
+
+  // Filtered calls for Craftsmen table
+  const filteredCalls = calls.filter(call => {
+    const matchA = filterA === '' || (call.src && call.src.toString().includes(filterA));
+    const matchB = filterB === '' || (call.dst && call.dst.toString().includes(filterB));
+    // For date, try to match YYYY-MM-DD in call.calldate
+    const matchDate =
+      filterDate === '' ||
+      (call.calldate && call.calldate.includes(filterDate));
+    const matchDuration = filterDuration === '' || (
+      call.duration && formatDuration(Number(call.duration)).includes(filterDuration)
+    );
+    return matchA && matchB && matchDate && matchDuration;
+  });
 
   return (
     <>
@@ -338,6 +262,96 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                 <div className="card">
                   <h5 className="card-header">Craftsmen Companies</h5>
                   <div className="card-body p-0">
+                    {/* Filter Button */}
+                    <div style={{ padding: '10px' }}>
+                      <button
+                        onClick={() => setShowFilterPanel(true)}
+                        style={{
+                          padding: '6px 16px',
+                          background: '#007bff',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Filter
+                      </button>
+                    </div>
+                    {/* Filter Panel */}
+                    {showFilterPanel && (
+                      <div
+                        style={{
+                          background: '#f8f9fa',
+                          border: '1px solid #ddd',
+                          borderRadius: '6px',
+                          padding: '16px',
+                          margin: '0 10px 16px 10px',
+                          position: 'relative',
+                          zIndex: 10
+                        }}
+                      >
+                        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                          <div>
+                            <label>A ნომერი<br />
+                              <input
+                                type="text"
+                                value={filterA}
+                                onChange={e => setFilterA(e.target.value)}
+                                placeholder="Filter"
+                                style={{ width: '140px' }}
+                              />
+                            </label>
+                          </div>
+                          <div>
+                            <label>B ნომერი<br />
+                              <input
+                                type="text"
+                                value={filterB}
+                                onChange={e => setFilterB(e.target.value)}
+                                placeholder="Filter"
+                                style={{ width: '140px' }}
+                              />
+                            </label>
+                          </div>
+                          <div>
+                            <label>თარიღი<br />
+                              <input
+                                type="date"
+                                value={filterDate}
+                                onChange={e => setFilterDate(e.target.value)}
+                                style={{ width: '140px' }}
+                              />
+                            </label>
+                          </div>
+                          <div>
+                            <label>საუბრის დრო<br />
+                              <input
+                                type="text"
+                                value={filterDuration}
+                                onChange={e => setFilterDuration(e.target.value)}
+                                placeholder="Filter"
+                                style={{ width: '140px' }}
+                              />
+                            </label>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setShowFilterPanel(false)}
+                          style={{
+                            marginTop: '16px',
+                            padding: '6px 16px',
+                            background: '#6c757d',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Close
+                        </button>
+                      </div>
+                    )}
                     <div className="table-responsive">
                       <table className="table">
                         <thead className="bg-light">
@@ -351,38 +365,31 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                           </tr>
                         </thead>
                         <tbody>
-                          {loading ? (
-                            <tr>
-                              <td colSpan="6">Loading...</td>
-                            </tr>
-                          ) : error ? (
-                            <tr>
-                              <td colSpan="6">Error: {error}</td>
-                            </tr>
-                          ) : callsData.length > 0 ? (
-                            callsData.map((call, index) => (
-                              <tr key={call.id || index}>
+                          {filteredCalls.length > 0 ? (
+                            filteredCalls.map((call, index) => (
+                              <tr key={index}>
                                 <td>{index + 1}</td>
-                                <td>{call.callerNumber || 'N/A'}</td>
-                                <td>{call.receiverNumber || 'N/A'}</td>
-                                <td>{call.callDate || 'N/A'}</td>
-                                <td>{call.callDuration || 'N/A'}</td>
-                                <td className={edit_delete.editdelete}>
-                                  {call.audioUrl && (
-                                    <>
-                                      <audio id={`audio-${call.id}`} src={call.audioUrl} />
-                                      <button
-                                        onClick={() => toggleAudio(call.id, call.audioUrl)}
-                                        style={{ marginRight: '5px' }}
-                                      >
-                                        {playingAudioId === call.id ? 'Pause' : 'Play'}
-                                      </button>
-                                      <a href={call.audioUrl} download>
-                                        <button style={{ marginRight: '5px' }}>Download</button>
-                                      </a>
-                                    </>
+                                <td>{call.src || 'N/A'}</td>
+                                <td>{call.dst || 'N/A'}</td>
+                                <td>{call.calldate || 'N/A'}</td>
+                                <td>
+                                  {call.duration ? formatDuration(Number(call.duration)) : 'N/A'}
+                                </td>
+                                <td>
+                                  {call.recordingfile ? (
+                                    <audio
+                                      controls
+                                      onError={(e) => console.error('Audio error for file:', call.recordingfile, e)}
+                                    >
+                                      <source
+                                        src={`http://10.150.20.117/recordings/${getPath(call.recordingfile)}`}
+                                        type="audio/wav"
+                                      />
+                                      Ваш браузер не поддерживает аудио или файл недоступен.
+                                    </audio>
+                                  ) : (
+                                    'Нет записи'
                                   )}
-                                  <button onClick={() => openCommentModal(call.id)}>Comments</button>
                                 </td>
                               </tr>
                             ))
@@ -399,14 +406,6 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
               </div>
             </div>
           </div>
-          <CommentModal
-            isOpen={showCommentModal}
-            onClose={closeCommentModal}
-            comments={comments}
-            onAddComment={addComment}
-            newComment={newComment}
-            setNewComment={setNewComment}
-          />
         </div>
       )}
       <EditModal
@@ -420,3 +419,7 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
 };
 
 export default DataTable;
+
+
+
+

@@ -9,10 +9,12 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminAuthController;
 use App\Http\Controllers\CompanyExcelImportController;
 use App\Http\Controllers\CompanyExcelUploadController;
+use App\Http\Controllers\CdrController;
 
 Route::post('/admin/login', [AdminAuthController::class, 'login']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
+
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::delete('companies/{id}', [CompanyController::class, 'destroy']);
@@ -56,4 +58,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/company-excel-uploads/{id}', [CompanyExcelUploadController::class, 'destroy']);
     Route::post('/company-excel-preview', [CompanyExcelUploadController::class, 'preview'])->withoutMiddleware('auth:sanctum');
 
+
+    Route::get('/cdr', [CdrController::class, 'index']);
 });

@@ -44,7 +44,22 @@ const Sidebar = () => {
   return (
     <div className="nav-left-sidebar sidebar-dark">
       <div className="menu-list">
-        <img src={logo} className="logo bottom-fade-in" alt="Logo" />
+        <div className="logo-gorgia">
+          <button
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              margin: 0,
+              cursor: 'pointer',
+              display: 'block'
+            }}
+            onClick={() => window.location.reload()}
+            aria-label="Reload page"
+          >
+            <img src={logo} className="logo bottom-fade-in" alt="Logo" />
+          </button>
+        </div>
         <hr />
         <nav className="navbar navbar-expand-lg navbar-light">
           <div className="collapse navbar-collapse" id="navbarNav">
