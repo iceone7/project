@@ -19,7 +19,7 @@ const DashboardContent = ({
   handleEdit,
   edit_delete,
   companyDetails, 
-  companies
+  // companies
 }) => {
   return (
     <div className="dashboard-wrapper">

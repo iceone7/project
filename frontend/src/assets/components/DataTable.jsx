@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
 import edit_delete from '../css/edit_detele.module.css';
 import EditModal from './EditModal';
+import FilterForm from './FilterForm';
 import defaultInstance from '../../api/defaultInstance';
+import { useLanguage } from '../i18n/LanguageContext';
+
 
 const isAdmin = localStorage.getItem('role') === 'super_admin' || localStorage.getItem('role') === 'admin';
 const isDepartamentVip = localStorage.getItem('department_id') === '1';
@@ -12,11 +15,7 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
   const [editRowData, setEditRowData] = useState({});
   const [showEditModal, setShowEditModal] = useState(false);
   const [calls, setCalls] = useState([]);
-  const [filterA, setFilterA] = useState('');
-  const [filterB, setFilterB] = useState('');
-  const [filterDate, setFilterDate] = useState('');
-  const [filterDuration, setFilterDuration] = useState('');
-  const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const {t} = useLanguage();
 
   // Fetch call history data for craftsmen section
   useEffect(() => {
@@ -34,12 +33,10 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
 
   // Function to get recording path
   const getPath = (recordingfile) => {
-    // Example: out-+995595959499-7-20250606-090810-1749200890.1822.wav
     if (!recordingfile) return '';
     const parts = recordingfile.split('-');
-    // parts[3] is date in YYYYMMDD format
     if (parts.length < 5) return recordingfile;
-    const dateStr = parts[3]; // e.g., "20250606"
+    const dateStr = parts[3];
     if (!/^\d{8}$/.test(dateStr)) return recordingfile;
     const yyyy = dateStr.substring(0, 4);
     const mm = dateStr.substring(4, 6);
@@ -71,32 +68,7 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
     }
   };
 
-  // Helper to format seconds as hh:mm:ss
-  const formatDuration = (seconds) => {
-    if (!seconds || isNaN(seconds)) return 'N/A';
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
-    return [h, m, s]
-      .map(unit => String(unit).padStart(2, '0'))
-      .join(':');
-  };
-
   const dataToDisplay = activeDashboard === 'caller' ? excelData : filteredCompanies;
-
-  // Filtered calls for Craftsmen table
-  const filteredCalls = calls.filter(call => {
-    const matchA = filterA === '' || (call.src && call.src.toString().includes(filterA));
-    const matchB = filterB === '' || (call.dst && call.dst.toString().includes(filterB));
-    // For date, try to match YYYY-MM-DD in call.calldate
-    const matchDate =
-      filterDate === '' ||
-      (call.calldate && call.calldate.includes(filterDate));
-    const matchDuration = filterDuration === '' || (
-      call.duration && formatDuration(Number(call.duration)).includes(filterDuration)
-    );
-    return matchA && matchB && matchDate && matchDuration;
-  });
 
   return (
     <>
@@ -113,23 +85,23 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                         <thead className="bg-light">
                           <tr className="border-0">
                             <th>#</th>
-                            <th>ტენდერის N</th>
-                            <th>შემსყიდველი</th>
-                            <th>საკ. პირი #1</th>
-                            <th>ტელ</th>
-                            <th>საკ.პირი #2</th>
-                            <th>ტელ</th>
-                            <th>ელ-ფოსტა</th>
-                            <th>შემსრულებელი</th>
-                            <th>ს/კ -ID</th>
-                            <th>ხელშ. ღირებ.</th>
-                            <th>გორგიაში შესყ. ჯამურ. ღირ</th>
-                            <th>გორგიაში ბოლო შესყ. თარ.</th>
-                            <th>დაკონტ. საორ. თარიღი</th>
-                            <th>დაფუძ. თარიღი</th>
-                            <th>მენეჯერი</th>
-                            <th>სტატუსი</th>
-                            <th>Edit / Delete</th>
+                            <th>{t('tenderNumber')}</th>
+                            <th>{t('buyer')}</th>
+                            <th>{t('contactPerson1')}</th>
+                            <th>{t('phone1')}</th>
+                            <th>{t('contactPerson2')}</th>
+                            <th>{t('phone2')}</th>
+                            <th>{t('email')}</th>
+                            <th>{t('contractor')}</th>
+                            <th>{t('idNumber')}</th>
+                            <th>{t('contractValue')}</th>
+                            <th>{t('gorgiaTotalValue')}</th>
+                            <th>{t('gorgiaLastPurchaseDate')}</th>
+                            <th>{t('communicationStartDate')}</th>
+                            <th>{t('foundationDate')}</th>
+                            <th>{t('manager')}</th>
+                            <th>{t('status')}</th>
+                            <th>{t('editDelete')}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -200,21 +172,21 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                         <thead className="bg-light">
                           <tr className="border-0">
                             <th>#</th>
-                            <th>Company Name</th>
-                            <th>Identification Code or ID</th>
-                            <th>Contact Person #1</th>
-                            <th>Tel</th>
-                            <th>Contact Person #2</th>
-                            <th>Tel</th>
-                            <th>Contact Person #3</th>
-                            <th>Tel</th>
-                            <th>Caller Name</th>
-                            <th>Caller Number</th>
-                            <th>Receiver Number</th>
-                            <th>Call Count</th>
-                            <th>Call Date</th>
-                            <th>Call Duration</th>
-                            <th>Call Status</th>
+                            <th>{t('companyName')}</th>
+                            <th>{t('identificationCode')}</th>
+                            <th>{t('contactPerson1')}</th>
+                            <th>{t('phone1')}</th>
+                            <th>{t('contactPerson2')}</th>
+                            <th>{t('phone2')}</th>
+                            <th>{t('contactPerson3')}</th>
+                            <th>{t('phone3')}</th>
+                            <th>{t('callerName')}</th>
+                            <th>{t('callerNumber')}</th>
+                            <th>{t('receiverNumber')}</th>
+                            <th>{t('callCount')}</th>
+                            <th>{t('callDate')}</th>
+                            <th>{t('callDuration')}</th>
+                            <th>{t('callStatus')}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -262,118 +234,36 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                 <div className="card">
                   <h5 className="card-header">Craftsmen Companies</h5>
                   <div className="card-body p-0">
-                    {/* Filter Button */}
-                    <div style={{ padding: '10px' }}>
-                      <button
-                        onClick={() => setShowFilterPanel(true)}
-                        style={{
-                          padding: '6px 16px',
-                          background: '#007bff',
-                          color: '#fff',
-                          border: 'none',
-                          borderRadius: '4px',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        Filter
-                      </button>
-                    </div>
-                    {/* Filter Panel */}
-                    {showFilterPanel && (
-                      <div
-                        style={{
-                          background: '#f8f9fa',
-                          border: '1px solid #ddd',
-                          borderRadius: '6px',
-                          padding: '16px',
-                          margin: '0 10px 16px 10px',
-                          position: 'relative',
-                          zIndex: 10
-                        }}
-                      >
-                        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                          <div>
-                            <label>A ნომერი<br />
-                              <input
-                                type="text"
-                                value={filterA}
-                                onChange={e => setFilterA(e.target.value)}
-                                placeholder="Filter"
-                                style={{ width: '140px' }}
-                              />
-                            </label>
-                          </div>
-                          <div>
-                            <label>B ნომერი<br />
-                              <input
-                                type="text"
-                                value={filterB}
-                                onChange={e => setFilterB(e.target.value)}
-                                placeholder="Filter"
-                                style={{ width: '140px' }}
-                              />
-                            </label>
-                          </div>
-                          <div>
-                            <label>თარიღი<br />
-                              <input
-                                type="date"
-                                value={filterDate}
-                                onChange={e => setFilterDate(e.target.value)}
-                                style={{ width: '140px' }}
-                              />
-                            </label>
-                          </div>
-                          <div>
-                            <label>საუბრის დრო<br />
-                              <input
-                                type="text"
-                                value={filterDuration}
-                                onChange={e => setFilterDuration(e.target.value)}
-                                placeholder="Filter"
-                                style={{ width: '140px' }}
-                              />
-                            </label>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => setShowFilterPanel(false)}
-                          style={{
-                            marginTop: '16px',
-                            padding: '6px 16px',
-                            background: '#6c757d',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Close
-                        </button>
-                      </div>
-                    )}
                     <div className="table-responsive">
                       <table className="table">
                         <thead className="bg-light">
                           <tr className="border-0">
                             <th>#</th>
-                            <th>A ნომერი</th>
-                            <th>B ნომერი</th>
-                            <th>თარიღი</th>
-                            <th>საუბრის დრო</th>
-                            <th>ქმედებები</th>
+                            <th>{t('aNumber')}</th>
+                            <th>{t('bNumber')}</th>
+                            <th>{t('date')}</th>
+                            <th>{t('callTime')}</th>
+                            <th>{t('actions')}</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {filteredCalls.length > 0 ? (
-                            filteredCalls.map((call, index) => (
+                          {calls.length > 0 ? (
+                            calls.map((call, index) => (
                               <tr key={index}>
                                 <td>{index + 1}</td>
                                 <td>{call.src || 'N/A'}</td>
                                 <td>{call.dst || 'N/A'}</td>
                                 <td>{call.calldate || 'N/A'}</td>
                                 <td>
-                                  {call.duration ? formatDuration(Number(call.duration)) : 'N/A'}
+                                  {call.duration
+                                    ? `${Math.floor(Number(call.duration) / 3600)
+                                        .toString()
+                                        .padStart(2, '0')}:${Math.floor((Number(call.duration) % 3600) / 60)
+                                        .toString()
+                                        .padStart(2, '0')}:${(Number(call.duration) % 60)
+                                        .toString()
+                                        .padStart(2, '0')}`
+                                    : 'N/A'}
                                 </td>
                                 <td>
                                   {call.recordingfile ? (
@@ -419,7 +309,3 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
 };
 
 export default DataTable;
-
-
-
-

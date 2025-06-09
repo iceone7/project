@@ -1,7 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import App from './App';
 import Login from './pages/Login';
-// import AdminDashboard from './assets/components/AdminDashboard';
 
 const AppRouter = () => {
   const isAuthenticated = localStorage.getItem('isLoggedIn') === 'true';

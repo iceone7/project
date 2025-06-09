@@ -13,7 +13,6 @@ use App\Http\Controllers\CdrController;
 
 Route::post('/admin/login', [AdminAuthController::class, 'login']);
 Route::post('/login', [AuthController::class, 'login']);
-Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
 
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -60,4 +59,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
     Route::get('/cdr', [CdrController::class, 'index']);
+
+    // logout
+    Route::post('/logout', [AuthController::class, 'logout']);
 });

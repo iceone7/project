@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import * as XLSX from 'xlsx';
-
-// components
 import AddCallerModal from './assets/components/AddCallerModal';
 import AddCompanyModal from './assets/components/AddCompanyModal';
 import FilterForm from './assets/components/FilterForm';
@@ -13,38 +11,26 @@ import DataTable from './assets/components/DataTable';
 import defaultInstance from './api/defaultInstance';
 import AdminDashboard from './assets/components/AdminDashboard';
 import deleteModalStyles from './assets/css/DeleteModal.module.css';
+import { LanguageProvider, useLanguage } from './assets/i18n/LanguageContext';
 
 // ConfirmModal component
 function ConfirmModal({ open, onCancel, onConfirm, text }) {
+  const { t } = useLanguage();
   if (!open) return null;
   return (
-    <div
-      className={deleteModalStyles.deleteModalOverlay}
-      onClick={onCancel}
-    >
-      <div
-        className={deleteModalStyles.deleteModalContent}
-        onClick={e => e.stopPropagation()}
-      >
+    <div className={deleteModalStyles.deleteModalOverlay} onClick={onCancel}>
+      <div className={deleteModalStyles.deleteModalContent} onClick={e => e.stopPropagation()}>
         <div className={deleteModalStyles.deleteModalHeader}>
           <span role="img" aria-label="warning" style={{ fontSize: 32, marginRight: 10 }}>⚠️</span>
-          <span style={{ fontWeight: 600, fontSize: 20, color: '#ef4444' }}>Confirm Deletion</span>
+          <span style={{ fontWeight: 600, fontSize: 20, color: '#ef4444' }}>{t('confirmDeletion')}</span>
         </div>
-        <div className={deleteModalStyles.deleteModalText}>
-          {text}
-        </div>
+        <div className={deleteModalStyles.deleteModalText}>{t('areYouSureDelete')}</div>
         <div className={deleteModalStyles.deleteModalFooter}>
-          <button
-            onClick={onCancel}
-            className={deleteModalStyles.cancelBtn}
-          >
-            Cancel
+          <button onClick={onCancel} className={deleteModalStyles.cancelBtn}>
+            {t('cancel')}
           </button>
-          <button
-            onClick={onConfirm}
-            className={deleteModalStyles.deleteBtn}
-          >
-            Delete
+          <button onClick={onConfirm} className={deleteModalStyles.deleteBtn}>
+            {t('delete')}
           </button>
         </div>
       </div>
@@ -58,12 +44,9 @@ function App({ dashboardType = 'company' }) {
   const [companies, setCompanies] = useState([]);
   const [filteredCompanies, setFilteredCompanies] = useState([]);
   const [excelData, setExcelData] = useState([]);
-  // eslint-disable-next-line
   const [editingItem, setEditingItem] = useState(null);
-  // eslint-disable-next-line
   const [editMode, setEditMode] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  // eslint-disable-next-line
   const [previewData, setPreviewData] = useState([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
@@ -71,7 +54,7 @@ function App({ dashboardType = 'company' }) {
   useEffect(() => {
     if (dashboardType === 'company') {
       defaultInstance
-        .get('/company-excel-uploads') // <-- keep lowercase
+        .get('/company-excel-uploads')
         .then((response) => {
           const data = response.data.data || [];
           setCompanies(data);
@@ -116,17 +99,14 @@ function App({ dashboardType = 'company' }) {
     }
   }, [dashboardType]);
 
-  // Handle upload success for caller dashboard
   const handleCallerUploadSuccess = (data) => {
     setExcelData(data);
     setFilteredCompanies(data);
   };
 
-  // Handle upload success for company dashboard
   const handleCompanyUploadSuccess = async (data) => {
-    // eslint-disable-next-line
     const normalizedData = data.map((item, index) => ({
-      id: item.id, // Always use backend id if present
+      id: item.id,
       tenderNumber: item.tenderNumber || item.tender_number || '',
       buyer: item.buyer || '',
       contact1: item.contact1 || item.contact_1 || '',
@@ -147,8 +127,8 @@ function App({ dashboardType = 'company' }) {
     console.log('Normalized company data:', normalizedData);
     setPreviewData(normalizedData);
     try {
-      await defaultInstance.post('/company-excel-uploads', { data: normalizedData }); // <-- fixed
-      const response = await defaultInstance.get('/company-excel-uploads'); // <-- fixed
+      await defaultInstance.post('/company-excel-uploads', { data: normalizedData });
+      const response = await defaultInstance.get('/company-excel-uploads');
       const dbData = response.data.data || [];
       setCompanies(dbData);
       setFilteredCompanies(dbData);
@@ -158,10 +138,8 @@ function App({ dashboardType = 'company' }) {
     }
   };
 
-  // Edit company
   const handleEdit = async (updatedData) => {
     try {
-      // Always use the id from updatedData
       await defaultInstance.put(`/company-excel-uploads/${updatedData.id}`, updatedData);
       const response = await defaultInstance.get('/company-excel-uploads');
       const dbData = response.data.data || [];
@@ -172,17 +150,15 @@ function App({ dashboardType = 'company' }) {
     }
   };
 
-  // Open delete confirmation modal
   const handleDeleteCompany = (id) => {
     setDeleteTargetId(id);
     setShowDeleteModal(true);
   };
 
-  // Confirm deletion
   const confirmDeleteCompany = async () => {
     try {
-      await defaultInstance.delete(`/company-excel-uploads/${deleteTargetId}`); // <-- fixed
-      const response = await defaultInstance.get('/company-excel-uploads'); // <-- fixed
+      await defaultInstance.delete(`/company-excel-uploads/${deleteTargetId}`);
+      const response = await defaultInstance.get('/company-excel-uploads');
       const dbData = response.data.data || [];
       setCompanies(dbData);
       setFilteredCompanies(dbData);
@@ -194,17 +170,15 @@ function App({ dashboardType = 'company' }) {
     }
   };
 
-  // Cancel deletion
   const cancelDeleteCompany = () => {
     setShowDeleteModal(false);
     setDeleteTargetId(null);
   };
 
-  // Download Excel for Company Dashboard
   const handleDownloadExcel = async () => {
     try {
       console.log('Starting downloadExcel, using filteredCompanies:', filteredCompanies);
-      const dbData = filteredCompanies || []; // Используем локალური данные
+      const dbData = filteredCompanies || [];
       if (!dbData.length) {
         alert('No data to download');
         return;
@@ -293,96 +267,97 @@ function App({ dashboardType = 'company' }) {
     }
   };
 
-  // Handle filter apply for caller dashboard
   const handleCallerFilterApply = (filtered) => {
     setExcelData(filtered);
     setFilteredCompanies(filtered);
   };
 
-  // Handle filter apply for company dashboard
   const handleCompanyFilterApply = (filtered) => {
     setFilteredCompanies(filtered);
   };
 
-  // Render AdminDashboard if dashboardType is 'admin'
-  if (dashboardType === 'admin') {
-    return <AdminDashboard />;
-  }
-
   return (
-    <div className="dashboard-main-wrapper">
-      <Sidebar activeDashboard={dashboardType} setActiveDashboard={() => {}} />
-      <div className="dashboard-wrapper">
-        <div className="dashboard-ecommerce">
-          <div className="container-fluid dashboard-content">
-            <div className="row">
-              <div className="col-12">
-                <Header activeDashboard={dashboardType} />
-                <ButtonsPanel
-                  activeDashboard={dashboardType}
-                  handleOpenModal={() => setShowCompanyModal(true)}
-                  handleDownloadExcel={handleDownloadExcel}
-                  filteredCompanies={filteredCompanies}
-                  setShowFilters={setShowFilters}
-                  showFilters={showFilters}
-                  onUploadSuccess={handleCallerUploadSuccess}
-                  excelData={excelData}
-                  onCompanyUploadSuccess={handleCompanyUploadSuccess}
-                />
-                {showCallerModal && (
-                  <AddCallerModal
-                    onClose={() => setShowCallerModal(false)}
-                    editingItem={editingItem}
-                    editMode={editMode}
-                  />
-                )}
-                {showCompanyModal && (
-                  <AddCompanyModal
-                    onClose={() => setShowCompanyModal(false)}
-                    editingItem={editingItem}
-                    editMode={editMode}
-                  />
-                )}
-                {dashboardType === 'company' && (
-                  <FilterForm
-                    data={companies}
-                    onFilterApply={handleCompanyFilterApply}
-                    showFilters={showFilters}
-                    onToggleFilters={() => setShowFilters(!showFilters)}
-                    onlyForm={true}
-                    dashboardType="company"
-                  />
-                )}
-                {dashboardType === 'caller' && (
-                  <FilterForm
-                    data={excelData}
-                    onFilterApply={handleCallerFilterApply}
-                    showFilters={showFilters}
-                    onToggleFilters={() => setShowFilters(!showFilters)}
-                    onlyForm={true}
-                    dashboardType="caller"
-                  />
-                )}
-                <DataTable
-                  activeDashboard={dashboardType}
-                  excelData={excelData}
-                  filteredCompanies={filteredCompanies}
-                  handleDeleteCompany={handleDeleteCompany}
-                  handleEdit={handleEdit}
-                />
+    <LanguageProvider>
+      <div className="dashboard-main-wrapper">
+        {dashboardType === 'admin' ? (
+          <AdminDashboard />
+        ) : (
+          <>
+            <Sidebar activeDashboard={dashboardType} setActiveDashboard={() => {}} />
+            <div className="dashboard-wrapper">
+              <div className="dashboard-ecommerce">
+                <div className="container-fluid dashboard-content">
+                  <div className="row">
+                    <div className="col-12">
+                      <Header activeDashboard={dashboardType} />
+                      <ButtonsPanel
+                        activeDashboard={dashboardType}
+                        handleOpenModal={() => setShowCompanyModal(true)}
+                        handleDownloadExcel={handleDownloadExcel}
+                        filteredCompanies={filteredCompanies}
+                        setShowFilters={setShowFilters}
+                        showFilters={showFilters}
+                        onUploadSuccess={handleCallerUploadSuccess}
+                        excelData={excelData}
+                        onCompanyUploadSuccess={handleCompanyUploadSuccess}
+                      />
+                      {showCallerModal && (
+                        <AddCallerModal
+                          onClose={() => setShowCallerModal(false)}
+                          editingItem={editingItem}
+                          editMode={editMode}
+                        />
+                      )}
+                      {showCompanyModal && (
+                        <AddCompanyModal
+                          onClose={() => setShowCompanyModal(false)}
+                          editingItem={editingItem}
+                          editMode={editMode}
+                        />
+                      )}
+                      {dashboardType === 'company' && (
+                        <FilterForm
+                          data={companies}
+                          onFilterApply={handleCompanyFilterApply}
+                          showFilters={showFilters}
+                          onToggleFilters={() => setShowFilters(!showFilters)}
+                          onlyForm={true}
+                          dashboardType="company"
+                        />
+                      )}
+                      {dashboardType === 'caller' && (
+                        <FilterForm
+                          data={excelData}
+                          onFilterApply={handleCallerFilterApply}
+                          showFilters={showFilters}
+                          onToggleFilters={() => setShowFilters(!showFilters)}
+                          onlyForm={true}
+                          dashboardType="caller"
+                        />
+                      )}
+                      <DataTable
+                        activeDashboard={dashboardType}
+                        excelData={excelData}
+                        filteredCompanies={filteredCompanies}
+                        handleDeleteCompany={handleDeleteCompany}
+                        handleEdit={handleEdit}
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+            <Outlet />
+            <ConfirmModal
+              open={showDeleteModal}
+              onCancel={cancelDeleteCompany}
+              onConfirm={confirmDeleteCompany}
+              text="Are you sure you want to delete this company?"
+            />
+          </>
+        )}
       </div>
-      <Outlet />
-      <ConfirmModal
-        open={showDeleteModal}
-        onCancel={cancelDeleteCompany}
-        onConfirm={confirmDeleteCompany}
-        text="Are you sure you want to delete this company?"
-      />
-    </div>
+    </LanguageProvider>
   );
 }
 

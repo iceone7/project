@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import filterStyles from '../css/FilterModal.module.css';
 import styles from '../css/UploadButton.module.css';
+import { useLanguage } from '../i18n/LanguageContext';
 
 const initialFilters = {
   companyName: '',
@@ -40,6 +41,10 @@ const initialFilters = {
   foundationDateEnd: '',
   manager: '',
   status: '',
+  src: '', // A ნომერი (Caller Number for craftsmen)
+  dst: '', // B ნომერი (Receiver Number for craftsmen)
+  callDate: '', // თარიღი (Call Date for craftsmen)
+  duration: '', // საუბრის დრო (Call Duration for craftsmen)
 };
 
 const FilterForm = ({
@@ -53,6 +58,8 @@ const FilterForm = ({
 }) => {
   const [filters, setFilters] = useState(initialFilters);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const {t} = useLanguage();
+  
 
   useEffect(() => {
     if (isInitialLoad && data && data.length > 0) {
@@ -112,63 +119,76 @@ const FilterForm = ({
     return String(status).toLowerCase().trim() === filter.toLowerCase().trim();
   };
 
-const applyFilters = (dataArr) => {
-  if (!Array.isArray(dataArr)) {
-    console.log('applyFilters: dataArr is not an array', dataArr);
-    return [];
-  }
-  const filtered = dataArr.filter((row) => {
-    try {
-      if (dashboardType === 'caller') {
-        const result = (
-          matchesText(row.companyName || row.company_name, filters.companyName) &&
-          matchesText(row.identificationCode || row.identification_code, filters.identificationCode) &&
-          matchesText(row.contactPerson1 || row.contact_person1, filters.contactPerson1) &&
-          matchesText(row.tel1 || row.contactTel1 || row.tel || row.contact_tel1, filters.tel1) &&
-          matchesText(row.contactPerson2 || row.contact_person2, filters.contactPerson2) &&
-          matchesText(row.tel2 || row.contactTel2 || row.tel_2 || row.contact_tel2, filters.tel2) &&
-          matchesText(row.contactPerson3 || row.contact_person3, filters.contactPerson3) &&
-          matchesText(row.tel3 || row.contactTel3 || row.tel_3 || row.contact_tel3, filters.tel3) &&
-          matchesText(row.callerName || row.caller_name, filters.callerName) &&
-          matchesText(row.callerNumber || row.caller_number, filters.callerNumber) &&
-          matchesText(row.receiverNumber || row.receiver_number, filters.receiverNumber) &&
-          matchesNumberRange(row.callCount || row.call_count, filters.callCountMin, filters.callCountMax) &&
-          matchesDateRange(row.callDate || row.call_date, filters.callDateStart, filters.callDateEnd) &&
-          matchesStatus(row.callStatus || row.call_status, filters.callStatus)
-        );
-        console.log('Row:', row, 'Filter result:', result);
-        return result;
-      } else if (dashboardType === 'company') {
-        const result = (
-          matchesText(row.tenderNumber || row.tender_number, filters.tenderNumber) &&
-          matchesText(row.buyer, filters.buyer) &&
-          matchesText(row.contact1, filters.contact1) &&
-          matchesText(row.phone1, filters.phone1) &&
-          matchesText(row.contact2, filters.contact2) &&
-          matchesText(row.phone2, filters.phone2) &&
-          matchesText(row.email, filters.email) &&
-          matchesText(row.executor, filters.executor) &&
-          matchesText(row.idCode || row.id_code, filters.idCode) &&
-          matchesNumberRange(row.contractValue || row.contract_value, filters.contractValueMin, filters.contractValueMax) &&
-          matchesNumberRange(row.totalValueGorgia || row.total_value_gorgia, filters.totalValueGorgiaMin, filters.totalValueGorgiaMax) &&
-          matchesDateRange(row.lastPurchaseDateGorgia || row.last_purchase_date_gorgia, filters.lastPurchaseDateStart, filters.lastPurchaseDateEnd) &&
-          matchesDateRange(row.contractEndDate || row.contract_end_date, filters.contractEndDateStart, filters.contractEndDateEnd) &&
-          matchesDateRange(row.foundationDate || row.foundation_date, filters.foundationDateStart, filters.foundationDateEnd) &&
-          matchesText(row.manager, filters.manager) &&
-          matchesStatus(row.status, filters.status)
-        );
-        console.log('Row:', row, 'Filter result:', result);
-        return result;
-      }
-      return true;
-    } catch (err) {
-      console.error('Filter error for row:', row, err);
-      return false;
+  const formatDuration = (seconds) => {
+    if (!seconds || isNaN(seconds)) return 'N/A';
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return [h, m, s]
+      .map(unit => String(unit).padStart(2, '0'))
+      .join(':');
+  };
+
+  const applyFilters = (dataArr) => {
+    if (!Array.isArray(dataArr)) {
+      console.log('applyFilters: dataArr is not an array', dataArr);
+      return [];
     }
-  });
-  console.log('Filtered data:', filtered);
-  return filtered;
-};
+    const filtered = dataArr.filter((row) => {
+      try {
+        if (dashboardType === 'caller') {
+          return (
+            matchesText(row.companyName || row.company_name, filters.companyName) &&
+            matchesText(row.identificationCode || row.identification_code, filters.identificationCode) &&
+            matchesText(row.contactPerson1 || row.contact_person1, filters.contactPerson1) &&
+            matchesText(row.tel1 || row.contactTel1 || row.tel || row.contact_tel1, filters.tel1) &&
+            matchesText(row.contactPerson2 || row.contact_person2, filters.contactPerson2) &&
+            matchesText(row.tel2 || row.contactTel2 || row.tel_2 || row.contact_tel2, filters.tel2) &&
+            matchesText(row.contactPerson3 || row.contact_person3, filters.contactPerson3) &&
+            matchesText(row.tel3 || row.contactTel3 || row.tel_3 || row.contact_tel3, filters.tel3) &&
+            matchesText(row.callerName || row.caller_name, filters.callerName) &&
+            matchesText(row.callerNumber || row.caller_number, filters.callerNumber) &&
+            matchesText(row.receiverNumber || row.receiver_number, filters.receiverNumber) &&
+            matchesNumberRange(row.callCount || row.call_count, filters.callCountMin, filters.callCountMax) &&
+            matchesDateRange(row.callDate || row.call_date, filters.callDateStart, filters.callDateEnd) &&
+            matchesStatus(row.callStatus || row.call_status, filters.callStatus)
+          );
+        } else if (dashboardType === 'company') {
+          return (
+            matchesText(row.tenderNumber || row.tender_number, filters.tenderNumber) &&
+            matchesText(row.buyer, filters.buyer) &&
+            matchesText(row.contact1, filters.contact1) &&
+            matchesText(row.phone1, filters.phone1) &&
+            matchesText(row.contact2, filters.contact2) &&
+            matchesText(row.phone2, filters.phone2) &&
+            matchesText(row.email, filters.email) &&
+            matchesText(row.executor, filters.executor) &&
+            matchesText(row.idCode || row.id_code, filters.idCode) &&
+            matchesNumberRange(row.contractValue || row.contract_value, filters.contractValueMin, filters.contractValueMax) &&
+            matchesNumberRange(row.totalValueGorgia || row.total_value_gorgia, filters.totalValueGorgiaMin, filters.totalValueGorgiaMax) &&
+            matchesDateRange(row.lastPurchaseDateGorgia || row.last_purchase_date_gorgia, filters.lastPurchaseDateStart, filters.lastPurchaseDateEnd) &&
+            matchesDateRange(row.contractEndDate || row.contract_end_date, filters.contractEndDateStart, filters.contractEndDateEnd) &&
+            matchesDateRange(row.foundationDate || row.foundation_date, filters.foundationDateStart, filters.foundationDateEnd) &&
+            matchesText(row.manager, filters.manager) &&
+            matchesStatus(row.status, filters.status)
+          );
+        } else if (dashboardType === 'craftsmen') {
+          return (
+            matchesText(row.src, filters.src) &&
+            matchesText(row.dst, filters.dst) &&
+            matchesText(row.calldate, filters.callDate) &&
+            (filters.duration === '' || (row.duration && formatDuration(Number(row.duration)).includes(filters.duration)))
+          );
+        }
+        return true;
+      } catch (err) {
+        console.error('Filter error for row:', row, err);
+        return false;
+      }
+    });
+    console.log('Filtered data:', filtered);
+    return filtered;
+  };
 
   const handleApplyFilters = () => {
     const filteredData = getFilteredData();
@@ -200,85 +220,389 @@ const applyFilters = (dataArr) => {
     return (
       <div className={filterStyles.filterContainer} style={{ marginBottom: '20px' }}>
         <h3 className={filterStyles.filterTitle}>
-          {dashboardType === 'caller' ? 'ზარების ფილტრი' : 'კომპანიის ფილტრი'}
+          {dashboardType === 'caller' ?  t('callFilter') : dashboardType === 'craftsmen' ? t('craftsmanFilter') : t('companyFilter')}
         </h3>
         <div className={filterStyles.filterGrid}>
           {dashboardType === 'caller' ? (
             <>
-              <input type="text" name="companyName" placeholder="Company Name" value={filters.companyName} onChange={handleFilterChange} className={filterStyles.input} />
-              <input type="text" name="identificationCode" placeholder="Identification Code" value={filters.identificationCode} onChange={handleFilterChange} className={filterStyles.input} />
-              <input type="text" name="contactPerson1" placeholder="Contact Person #1" value={filters.contactPerson1} onChange={handleFilterChange} className={filterStyles.input} />
-              <input type="text" name="tel1" placeholder="Phone #1" value={filters.tel1} onChange={handleFilterChange} className={filterStyles.input} />
-              <input type="text" name="contactPerson2" placeholder="Contact Person #2" value={filters.contactPerson2} onChange={handleFilterChange} className={filterStyles.input} />
-              <input type="text" name="tel2" placeholder="Phone #2" value={filters.tel2} onChange={handleFilterChange} className={filterStyles.input} />
-              <input type="text" name="contactPerson3" placeholder="Contact Person #3" value={filters.contactPerson3} onChange={handleFilterChange} className={filterStyles.input} />
-              <input type="text" name="tel3" placeholder="Phone #3" value={filters.tel3} onChange={handleFilterChange} className={filterStyles.input} />
-              <input type="text" name="callerName" placeholder="Caller Name" value={filters.callerName} onChange={handleFilterChange} className={filterStyles.input} />
-              <input type="text" name="callerNumber" placeholder="Caller Number" value={filters.callerNumber} onChange={handleFilterChange} className={filterStyles.input} />
-              <input type="text" name="receiverNumber" placeholder="Receiver Number" value={filters.receiverNumber} onChange={handleFilterChange} className={filterStyles.input} />
+              <input
+                type="text"
+                name="companyName"
+                placeholder={t('companyName')}
+                value={filters.companyName}
+                onChange={handleFilterChange}
+                className={filterStyles.input}
+              />
+              <input
+                type="text"
+                name="identificationCode"
+                placeholder={t('identificationCode')}
+                value={filters.identificationCode}
+                onChange={handleFilterChange}
+                className={filterStyles.input}
+              />
+              <input
+                type="text"
+                name="contactPerson1"
+                placeholder={t('contactPerson1')}
+                value={filters.contactPerson1}
+                onChange={handleFilterChange}
+                className={filterStyles.input}
+              />
+              <input
+                type="text"
+                name="tel1"
+                placeholder={t('phone1')}
+                value={filters.tel1}
+                onChange={handleFilterChange}
+                className={filterStyles.input}
+              />
+              <input
+                type="text"
+                name="contactPerson2"
+                placeholder={t('contactPerson2')}
+                value={filters.contactPerson2}
+                onChange={handleFilterChange}
+                className={filterStyles.input}
+              />
+              <input
+                type="text"
+                name="tel2"
+                placeholder={t('phone2')}
+                value={filters.tel2}
+                onChange={handleFilterChange}
+                className={filterStyles.input}
+              />
+              <input
+                type="text"
+                name="contactPerson3"
+                placeholder={t('contactPerson3')}
+                value={filters.contactPerson3}
+                onChange={handleFilterChange}
+                className={filterStyles.input}
+              />
+              <input
+                type="text"
+                name="tel3"
+                placeholder={t('phone3')}
+                value={filters.tel3}
+                onChange={handleFilterChange}
+                className={filterStyles.input}
+              />
+              <input
+                type="text"
+                name="callerName"
+                placeholder={t('callerName')}
+                value={filters.callerName}
+                onChange={handleFilterChange}
+                className={filterStyles.input}
+              />
+              <input
+                type="text"
+                name="callerNumber"
+                placeholder={t('callerNumber')}
+                value={filters.callerNumber}
+                onChange={handleFilterChange}
+                className={filterStyles.input}
+              />
+              <input
+                type="text"
+                name="receiverNumber"
+                placeholder={t('receiverNumber')}
+                value={filters.receiverNumber}
+                onChange={handleFilterChange}
+                className={filterStyles.input}
+              />
               <div className={filterStyles.inputGroup}>
-                <input type="number" name="callCountMin" placeholder="Min. Call Count" value={filters.callCountMin} onChange={handleFilterChange} className={filterStyles.input} />
-                <input type="number" name="callCountMax" placeholder="Max. Call Count" value={filters.callCountMax} onChange={handleFilterChange} className={filterStyles.input} />
+                <input
+                  type="number"
+                  name="callCountMin"
+                  placeholder={t('callCountMin')}
+                  value={filters.callCountMin}
+                  onChange={handleFilterChange}
+                  className={filterStyles.input}
+                />
+                <input
+                  type="number"
+                  name="callCountMax"
+                  placeholder={t('callCountMax')}
+                  value={filters.callCountMax}
+                  onChange={handleFilterChange}
+                  className={filterStyles.input}
+                />
               </div>
               <div className={filterStyles.inputGroup}>
-                <input type="date" name="callDateStart" placeholder="Start Date" value={filters.callDateStart} onChange={handleFilterChange} className={filterStyles.input} />
-                <input type="date" name="callDateEnd" placeholder="End Date" value={filters.callDateEnd} onChange={handleFilterChange} className={filterStyles.input} />
+                <input
+                  type="date"
+                  name="callDateStart"
+                  placeholder={t('callDateStart')}
+                  value={filters.callDateStart}
+                  onChange={handleFilterChange}
+                  className={filterStyles.input}
+                />
+                <input
+                  type="date"
+                  name="callDateEnd"
+                  placeholder={t('callDateEnd')}
+                  value={filters.callDateEnd}
+                  onChange={handleFilterChange}
+                  className={filterStyles.input}
+                />
               </div>
-              <select name="callStatus" value={filters.callStatus} onChange={handleFilterChange} className={filterStyles.select}>
-                <option value="">All Statuses</option>
-                <option value="answered">Answered</option>
-                <option value="no answer">No Answer</option>
-                <option value="busy">Busy</option>
-                <option value="failed">Failed</option>
+              <select
+                name="callStatus"
+                value={filters.callStatus}
+                onChange={handleFilterChange}
+                className={filterStyles.select}
+              >
+                <option value="">{t('allStatuses')}</option>
+                <option value="answered">{t('answered')}</option>
+                <option value="no answer">{t('noAnswer')}</option>
+                <option value="busy">{t('busy')}</option>
+                <option value="failed">{t('failed')}</option>
               </select>
             </>
-          ) : (
+          ) : dashboardType === 'company' ? (
             <>
-              <input type="text" name="tenderNumber" placeholder="Tender Number" value={filters.tenderNumber} onChange={handleFilterChange} className={filterStyles.input} />
-              <input type="text" name="buyer" placeholder="Buyer" value={filters.buyer} onChange={handleFilterChange} className={filterStyles.input} />
-              <input type="text" name="contact1" placeholder="Contact Person #1" value={filters.contact1} onChange={handleFilterChange} className={filterStyles.input} />
-              <input type="text" name="phone1" placeholder="Phone #1" value={filters.phone1} onChange={handleFilterChange} className={filterStyles.input} />
-              <input type="text" name="contact2" placeholder="Contact Person #2" value={filters.contact2} onChange={handleFilterChange} className={filterStyles.input} />
-              <input type="text" name="phone2" placeholder="Phone #2" value={filters.phone2} onChange={handleFilterChange} className={filterStyles.input} />
-              <input type="text" name="email" placeholder="Email" value={filters.email} onChange={handleFilterChange} className={filterStyles.input} />
-              <input type="text" name="executor" placeholder="Executor" value={filters.executor} onChange={handleFilterChange} className={filterStyles.input} />
-              <input type="text" name="idCode" placeholder="ID Code" value={filters.idCode} onChange={handleFilterChange} className={filterStyles.input} />
+              <input
+                type="text"
+                name="tenderNumber"
+                placeholder={t('tenderNumber')}
+                value={filters.tenderNumber}
+                onChange={handleFilterChange}
+                className={filterStyles.input}
+              />
+              <input
+                type="text"
+                name="buyer"
+                placeholder={t('buyer')}
+                value={filters.buyer}
+                onChange={handleFilterChange}
+                className={filterStyles.input}
+              />
+              <input
+                type="text"
+                name="contact1"
+                placeholder={t('contactPerson1')}
+                value={filters.contact1}
+                onChange={handleFilterChange}
+                className={filterStyles.input}
+              />
+              <input
+                type="text"
+                name="phone1"
+                placeholder={t('phone1')}
+                value={filters.phone1}
+                onChange={handleFilterChange}
+                className={filterStyles.input}
+              />
+              <input
+                type="text"
+                name="contact2"
+                placeholder={t('contactPerson2')}
+                value={filters.contact2}
+                onChange={handleFilterChange}
+                className={filterStyles.input}
+              />
+              <input
+                type="text"
+                name="phone2"
+                placeholder={t('phone2')}
+                value={filters.phone2}
+                onChange={handleFilterChange}
+                className={filterStyles.input}
+              />
+              <input
+                type="text"
+                name="email"
+                placeholder={t('email')}
+                value={filters.email}
+                onChange={handleFilterChange}
+                className={filterStyles.input}
+              />
+              <input
+                type="text"
+                name="executor"
+                placeholder={t('executor')}
+                value={filters.executor}
+                onChange={handleFilterChange}
+                className={filterStyles.input}
+              />
+              <input
+                type="text"
+                name="idCode"
+                placeholder={t('idCode')}
+                value={filters.idCode}
+                onChange={handleFilterChange}
+                className={filterStyles.input}
+              />
+
               <div className={filterStyles.inputGroup}>
-                <input type="number" name="contractValueMin" placeholder="Min. Contract Value" value={filters.contractValueMin} onChange={handleFilterChange} className={filterStyles.input} />
-                <input type="number" name="contractValueMax" placeholder="Max. Contract Value" value={filters.contractValueMax} onChange={handleFilterChange} className={filterStyles.input} />
+                <input
+                  type="number"
+                  name="contractValueMin"
+                  placeholder={t('contractValueMin')}
+                  value={filters.contractValueMin}
+                  onChange={handleFilterChange}
+                  className={filterStyles.input}
+                />
+                <input
+                  type="number"
+                  name="contractValueMax"
+                  placeholder={t('contractValueMax')}
+                  value={filters.contractValueMax}
+                  onChange={handleFilterChange}
+                  className={filterStyles.input}
+                />
               </div>
+
               <div className={filterStyles.inputGroup}>
-                <input type="number" name="totalValueGorgiaMin" placeholder="Min. Total Value Gorgia" value={filters.totalValueGorgiaMin} onChange={handleFilterChange} className={filterStyles.input} />
-                <input type="number" name="totalValueGorgiaMax" placeholder="Max. Total Value Gorgia" value={filters.totalValueGorgiaMax} onChange={handleFilterChange} className={filterStyles.input} />
+                <input
+                  type="number"
+                  name="totalValueGorgiaMin"
+                  placeholder={t('totalValueGorgiaMin')}
+                  value={filters.totalValueGorgiaMin}
+                  onChange={handleFilterChange}
+                  className={filterStyles.input}
+                />
+                <input
+                  type="number"
+                  name="totalValueGorgiaMax"
+                  placeholder={t('totalValueGorgiaMax')}
+                  value={filters.totalValueGorgiaMax}
+                  onChange={handleFilterChange}
+                  className={filterStyles.input}
+                />
               </div>
+
               <div className={filterStyles.inputGroup}>
-                <input type="date" name="lastPurchaseDateStart" placeholder="Last Purchase Start Date" value={filters.lastPurchaseDateStart} onChange={handleFilterChange} className={filterStyles.input} />
-                <input type="date" name="lastPurchaseDateEnd" placeholder="Last Purchase End Date" value={filters.lastPurchaseDateEnd} onChange={handleFilterChange} className={filterStyles.input} />
+                <input
+                  type="date"
+                  name="lastPurchaseDateStart"
+                  placeholder={t('lastPurchaseDateStart')}
+                  value={filters.lastPurchaseDateStart}
+                  onChange={handleFilterChange}
+                  className={filterStyles.input}
+                />
+                <input
+                  type="date"
+                  name="lastPurchaseDateEnd"
+                  placeholder={t('lastPurchaseDateEnd')}
+                  value={filters.lastPurchaseDateEnd}
+                  onChange={handleFilterChange}
+                  className={filterStyles.input}
+                />
               </div>
+
               <div className={filterStyles.inputGroup}>
-                <input type="date" name="contractEndDateStart" placeholder="Contract End Start Date" value={filters.contractEndDateStart} onChange={handleFilterChange} className={filterStyles.input} />
-                <input type="date" name="contractEndDateEnd" placeholder="Contract End End Date" value={filters.contractEndDateEnd} onChange={handleFilterChange} className={filterStyles.input} />
+                <input
+                  type="date"
+                  name="contractEndDateStart"
+                  placeholder={t('contractEndDateStart')}
+                  value={filters.contractEndDateStart}
+                  onChange={handleFilterChange}
+                  className={filterStyles.input}
+                />
+                <input
+                  type="date"
+                  name="contractEndDateEnd"
+                  placeholder={t('contractEndDateEnd')}
+                  value={filters.contractEndDateEnd}
+                  onChange={handleFilterChange}
+                  className={filterStyles.input}
+                />
               </div>
+
               <div className={filterStyles.inputGroup}>
-                <input type="date" name="foundationDateStart" placeholder="Foundation Start Date" value={filters.foundationDateStart} onChange={handleFilterChange} className={filterStyles.input} />
-                <input type="date" name="foundationDateEnd" placeholder="Foundation End Date" value={filters.foundationDateEnd} onChange={handleFilterChange} className={filterStyles.input} />
+                <input
+                  type="date"
+                  name="foundationDateStart"
+                  placeholder={t('foundationDateStart')}
+                  value={filters.foundationDateStart}
+                  onChange={handleFilterChange}
+                  className={filterStyles.input}
+                />
+                <input
+                  type="date"
+                  name="foundationDateEnd"
+                  placeholder={t('foundationDateEnd')}
+                  value={filters.foundationDateEnd}
+                  onChange={handleFilterChange}
+                  className={filterStyles.input}
+                />
               </div>
-              <input type="text" name="manager" placeholder="Manager" value={filters.manager} onChange={handleFilterChange} className={filterStyles.input} />
-              <select name="status" value={filters.status} onChange={handleFilterChange} className={filterStyles.select}>
-                <option value="">All Statuses</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="pending">Pending</option>
+
+              <input
+                type="text"
+                name="manager"
+                placeholder={t('manager')}
+                value={filters.manager}
+                onChange={handleFilterChange}
+                className={filterStyles.input}
+              />
+
+              <select
+                name="status"
+                value={filters.status}
+                onChange={handleFilterChange}
+                className={filterStyles.select}
+              >
+                <option value="">{t('allStatuses')}</option>
+                <option value="active">{t('active')}</option>
+                <option value="inactive">{t('inactive')}</option>
+                <option value="pending">{t('pending')}</option>
               </select>
+
             </>
-          )}
+          ) : dashboardType === 'craftsmen' ? (
+            <>
+              <input
+                type="text"
+                name="src"
+                placeholder="A ნომერი"
+                value={filters.src}
+                onChange={handleFilterChange}
+                className={filterStyles.input}
+              />
+              <input
+                type="text"
+                name="dst"
+                placeholder="B ნომერი"
+                value={filters.dst}
+                onChange={handleFilterChange}
+                className={filterStyles.input}
+              />
+              <input
+                type="date"
+                name="callDate"
+                placeholder="თარიღი"
+                value={filters.callDate}
+                onChange={handleFilterChange}
+                className={filterStyles.input}
+              />
+              <input
+                type="text"
+                name="duration"
+                placeholder="საუბრის დრო"
+                value={filters.duration}
+                onChange={handleFilterChange}
+                className={filterStyles.input}
+              />
+            </>
+          ) : null}
         </div>
         <div>
           <div className={filterStyles.buttonGroup}>
-            <button className={[filterStyles.button, filterStyles.applyButton].join(' ')} onClick={handleApplyFilters}>
+            <button
+              className={[filterStyles.button, filterStyles.applyButton].join(' ')}
+              onClick={handleApplyFilters}
+            >
               Apply Filters
             </button>
-            <button className={[filterStyles.button, filterStyles.clearButton].join(' ')} onClick={handleClearFilters}>
+            <button
+              className={[filterStyles.button, filterStyles.clearButton].join(' ')}
+              onClick={handleClearFilters}
+            >
               <span className="label">Clear Filters</span>
             </button>
           </div>
@@ -291,7 +615,7 @@ const applyFilters = (dataArr) => {
     <>
       <button
         title="Filter"
-        className={filterStyles.filter}
+        className={styles.filter}
         onClick={onToggleFilters}
       >
         <svg viewBox="0 0 512 512" height="1em">
@@ -300,7 +624,9 @@ const applyFilters = (dataArr) => {
       </button>
       {showFilters && (
         <div className={filterStyles.filterContainer}>
-          <h3 className={filterStyles.filterTitle}>ფილტრი</h3>
+          <h3 className={filterStyles.filterTitle}>
+            {dashboardType === 'caller' ? 'ზარების ფილტრი' : dashboardType === 'craftsmen' ? 'ხელოსნების ფილტრი' : 'კომპანიის ფილტრი'}
+          </h3>
           <div className={filterStyles.filterGrid}>
             {dashboardType === 'caller' ? (
               <>
@@ -331,7 +657,7 @@ const applyFilters = (dataArr) => {
                   <option value="failed">Failed</option>
                 </select>
               </>
-            ) : (
+            ) : dashboardType === 'company' ? (
               <>
                 <input type="text" name="tenderNumber" placeholder="Tender Number" value={filters.tenderNumber} onChange={handleFilterChange} className={filterStyles.input} />
                 <input type="text" name="buyer" placeholder="Buyer" value={filters.buyer} onChange={handleFilterChange} className={filterStyles.input} />
@@ -370,14 +696,55 @@ const applyFilters = (dataArr) => {
                   <option value="pending">Pending</option>
                 </select>
               </>
-            )}
+            ) : dashboardType === 'craftsmen' ? (
+              <>
+                <input
+                  type="text"
+                  name="src"
+                  placeholder="A ნომერი"
+                  value={filters.src}
+                  onChange={handleFilterChange}
+                  className={filterStyles.input}
+                />
+                <input
+                  type="text"
+                  name="dst"
+                  placeholder="B ნომერი"
+                  value={filters.dst}
+                  onChange={handleFilterChange}
+                  className={filterStyles.input}
+                />
+                <input
+                  type="date"
+                  name="callDate"
+                  placeholder="თარიღი"
+                  value={filters.callDate}
+                  onChange={handleFilterChange}
+                  className={filterStyles.input}
+                />
+                <input
+                  type="text"
+                  name="duration"
+                  placeholder="საუბრის დრო"
+                  value={filters.duration}
+                  onChange={handleFilterChange}
+                  className={filterStyles.input}
+                />
+              </>
+            ) : null}
           </div>
           <div>
             <div className={filterStyles.buttonGroup}>
-              <button className={[filterStyles.button, filterStyles.applyButton].join(' ')} onClick={handleApplyFilters}>
+              <button
+                className={[filterStyles.button, filterStyles.applyButton].join(' ')}
+                onClick={handleApplyFilters}
+              >
                 Apply Filters
               </button>
-              <button className={[filterStyles.button, filterStyles.clearButton].join(' ')} onClick={handleClearFilters}>
+              <button
+                className={[filterStyles.button, filterStyles.clearButton].join(' ')}
+                onClick={handleClearFilters}
+              >
                 <span className="label">Clear Filters</span>
               </button>
             </div>

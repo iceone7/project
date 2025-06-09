@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import '../css/Header.css';
+import { useLanguage } from '../i18n/LanguageContext';
 
 const Header = ({ activeDashboard }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const { t } = useLanguage();
 
   useEffect(() => {
     const container = document.querySelector('.dashboard-content');
@@ -35,10 +37,10 @@ const Header = ({ activeDashboard }) => {
             {sidebarOpen ? '✕' : '☰'}
           </button>
           {activeDashboard === 'caller'
-            ? 'Caller Dashboard'
+            ? t('callerDashboard')
             : activeDashboard === 'company'
-            ? 'Company Dashboard'
-            : 'Admin Dashboard'}
+            ? t('companyDashboard')
+            : t('adminDashboard')}
         </h2>
       </div>
     </>

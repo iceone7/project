@@ -2,8 +2,12 @@ import { useState, useEffect } from 'react';
 import styles from '../css/Modal.module.css';
 import defaultInstance from '../../api/defaultInstance';
 import confirmStyles from '../css/ConfirmModal.module.css';
+import { useLanguage } from '../i18n/LanguageContext';
+
 
 function AddCompanyModal({ onClose, editingItem, editMode }) {
+  const {t} = useLanguage();
+
   const [activeTab, setActiveTab] = useState(1);
   const [formData, setFormData] = useState({
     tenderNumber: '',
@@ -27,6 +31,7 @@ function AddCompanyModal({ onClose, editingItem, editMode }) {
   const [isSaving, setIsSaving] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+
 
   useEffect(() => {
     if (editMode && editingItem) {
@@ -102,7 +107,7 @@ function AddCompanyModal({ onClose, editingItem, editMode }) {
           onClick={e => e.target === e.currentTarget && onClose()}
         >
           <div className={`${styles.modal} ${isClosing ? confirmStyles.modalFadeOut : ''}`} onClick={e => e.stopPropagation()}>
-            <h3 className={styles.title}>Add Company</h3>
+            <h3 className={styles.title}>{t('addCompany')}</h3>
 
             <div className={styles.tabButtons}>
               {[1, 2, 3].map(tab => (
@@ -112,41 +117,41 @@ function AddCompanyModal({ onClose, editingItem, editMode }) {
                   className={activeTab === tab ? styles.activeTab : ''}
                   disabled={isSaving}
                 >
-                  {tab === 1 && 'ძირითადი'}
-                  {tab === 2 && 'საკონტაქტო'}
-                  {tab === 3 && 'თარიღები'}
+                  {tab === 1 && t('main')}
+                  {tab === 2 && t('contacts')}
+                  {tab === 3 && t('dates')}
                 </button>
               ))}
             </div>
 
             {activeTab === 1 && (
               <>
-                <Input label="ტენდერის N" value={formData.tenderNumber} onChange={v => handleChange('tenderNumber', v)} />
-                <Input label="შემსყიდველი" value={formData.buyer} onChange={v => handleChange('buyer', v)} />
-                <Input label="შემსრულებელი" value={formData.executor} onChange={v => handleChange('executor', v)} />
-                <Input label="ს/კ -ID" value={formData.idCode} onChange={v => handleChange('idCode', v)} />
-                <Input label="ელ-ფოსტა" type="email" value={formData.email} onChange={v => handleChange('email', v)} />
+                <Input label={t('tenderNumber')} value={formData.tenderNumber} onChange={v => handleChange('tenderNumber', v)} />
+                <Input label={t('buyer')} value={formData.buyer} onChange={v => handleChange('buyer', v)} />
+                <Input label={t('executor')} value={formData.executor} onChange={v => handleChange('executor', v)} />
+                <Input label={t('idCode')} value={formData.idCode} onChange={v => handleChange('idCode', v)} />
+                <Input label={t('email')} type="email" value={formData.email} onChange={v => handleChange('email', v)} />
               </>
             )}
 
             {activeTab === 2 && (
               <>
-                <Input label="საკ. პირი #1" value={formData.contact1} onChange={v => handleChange('contact1', v)} />
-                <Input label="ტელ #1" value={formData.phone1} onChange={v => handleChange('phone1', v)} />
-                <Input label="საკ. პირი #2" value={formData.contact2} onChange={v => handleChange('contact2', v)} />
-                <Input label="ტელ #2" value={formData.phone2} onChange={v => handleChange('phone2', v)} />
-                <Input label="მენეჯერი" value={formData.manager} onChange={v => handleChange('manager', v)} />
+                <Input label={t('contactPerson1')} value={formData.contact1} onChange={v => handleChange('contact1', v)} />
+                <Input label={t('phone1')} value={formData.phone1} onChange={v => handleChange('phone1', v)} />
+                <Input label={t('contactPerson2')} value={formData.contact2} onChange={v => handleChange('contact2', v)} />
+                <Input label={t('phone2')} value={formData.phone2} onChange={v => handleChange('phone2', v)} />
+                <Input label={t('manager')} value={formData.manager} onChange={v => handleChange('manager', v)} />
               </>
             )}
 
             {activeTab === 3 && (
               <>
-                <Input label="ხელშ. ღირებ." value={formData.contractValue} onChange={v => handleChange('contractValue', v)} />
-                <Input label="გორგიაში შესყ. ჯამურ. ღირ" value={formData.totalValueGorgia} onChange={v => handleChange('totalValueGorgia', v)} />
-                <Input label="გორგიაში ბოლო შესყ. თარ." value={formData.lastPurchaseDateGorgia} onChange={v => handleChange('lastPurchaseDateGorgia', v)} />
-                <Input label="დაკონტ. საორ. თარიღი" value={formData.contractEndDate} onChange={v => handleChange('contractEndDate', v)} />
-                <Input label="დაფუძ. თარიღი" value={formData.foundationDate} onChange={v => handleChange('foundationDate', v)} />
-                <Input label="სტატუსი" value={formData.status} onChange={v => handleChange('status', v)} />
+                <Input label={t('contractValue')} value={formData.contractValue} onChange={v => handleChange('contractValue', v)} />
+                <Input label={t('totalValueGorgia')} value={formData.totalValueGorgia} onChange={v => handleChange('totalValueGorgia', v)} />
+                <Input label={t('lastPurchaseDateGorgia')} value={formData.lastPurchaseDateGorgia} onChange={v => handleChange('lastPurchaseDateGorgia', v)} />
+                <Input label={t('contractEndDate')} value={formData.contractEndDate} onChange={v => handleChange('contractEndDate', v)} />
+                <Input label={t('foundationDate')} value={formData.foundationDate} onChange={v => handleChange('foundationDate', v)} />
+                <Input label={t('status')} value={formData.status} onChange={v => handleChange('status', v)} />
               </>
             )}
 
@@ -157,15 +162,15 @@ function AddCompanyModal({ onClose, editingItem, editMode }) {
                   className={styles.nextBtn}
                   disabled={isSaving}
                 >
-                  Next
+                  {t('next')}
                 </button>
               ) : (
                 <button onClick={handleSubmit} className={styles.saveBtn} disabled={isSaving}>
-                  {isSaving ? 'Saving...' : 'Save'}
+                  {isSaving ? t('saving') : t('save')}
                 </button>
               )}
               <button onClick={onClose} className={styles.cancelBtn} disabled={isSaving}>
-                Cancel
+                {t('cancel')}
               </button>
             </div>
           </div>
