@@ -13,7 +13,7 @@ import AdminDashboard from './assets/components/AdminDashboard';
 import deleteModalStyles from './assets/css/DeleteModal.module.css';
 import { LanguageProvider, useLanguage } from './assets/i18n/LanguageContext';
 
-// ConfirmModal componentt
+// ConfirmModal componenttt
 function ConfirmModal({ open, onCancel, onConfirm, text }) {
   const { t } = useLanguage();
   if (!open) return null;
