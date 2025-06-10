@@ -59,3 +59,30 @@
 .editsvgIcon path {
   fill: white;
 }
+
+
+/* edit_detele.module.css */
+.commentButton {
+  background-color: #007bff;
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 10px;
+  cursor: pointer;
+  transition: background-color 0.3s, transform 0.2s;
+}
+
+.commentButton:hover {
+  background-color: #0056b3;
+  transform: scale(1.1);
+}
+
+.commentSvgIcon {
+  fill: #fff;
+  width: 16px;
+  height: 16px;
+}

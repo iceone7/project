@@ -13,7 +13,7 @@ import AdminDashboard from './assets/components/AdminDashboard';
 import deleteModalStyles from './assets/css/DeleteModal.module.css';
 import { LanguageProvider, useLanguage } from './assets/i18n/LanguageContext';
 
-// ConfirmModal componenttttttttttttttttttt
+// ConfirmModal component
 function ConfirmModal({ open, onCancel, onConfirm, text }) {
   const { t } = useLanguage();
   if (!open) return null;
@@ -113,7 +113,10 @@ function App({ dashboardType = 'company' }) {
       phone1: item.phone1 || item.phone_1 || '',
       contact2: item.contact2 || item.contact_2 || '',
       phone2: item.phone2 || item.phone_2 || '',
-      email: item.email || '',
+      contact3: item.contact3 || item.contact_3 || '',
+      phone3: item.phone3 || item.phone_3 || '',
+      // Handle email field more carefully
+      email: (item.email || '').trim() === '' ? null : item.email || '',
       executor: item.executor || '',
       idCode: item.idCode || item.id_code || '',
       contractValue: item.contractValue || item.contract_value || '',
@@ -124,6 +127,7 @@ function App({ dashboardType = 'company' }) {
       manager: item.manager || '',
       status: item.status || '',
     }));
+    
     console.log('Normalized company data:', normalizedData);
     setPreviewData(normalizedData);
     try {
@@ -191,6 +195,8 @@ function App({ dashboardType = 'company' }) {
         phone1: row.phone1 ?? '',
         contact2: row.contact2 ?? '',
         phone2: row.phone2 ?? '',
+        contact3: row.contact3 ?? '',
+        phone3: row.phone3 ?? '',
         email: row.email ?? '',
         executor: row.executor ?? '',
         idCode: row.idCode ?? row.id_code ?? '',
@@ -210,6 +216,8 @@ function App({ dashboardType = 'company' }) {
         'ტელ #1',
         'საკ. პირი #2',
         'ტელ #2',
+        'საკ. პირი #3',
+        'ტელ #3',
         'ელ-ფოსტა',
         'შემსრულებელი',
         'ს/კ -ID',
@@ -229,6 +237,8 @@ function App({ dashboardType = 'company' }) {
         'phone1',
         'contact2',
         'phone2',
+        'contact3',
+        'phone3',
         'email',
         'executor',
         'idCode',

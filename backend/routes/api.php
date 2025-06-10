@@ -10,6 +10,8 @@ use App\Http\Controllers\AdminAuthController;
 use App\Http\Controllers\CompanyExcelImportController;
 use App\Http\Controllers\CompanyExcelUploadController;
 use App\Http\Controllers\CdrController;
+use App\Http\Controllers\CommentController;
+
 
 Route::post('/admin/login', [AdminAuthController::class, 'login']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -59,7 +61,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
     Route::get('/cdr', [CdrController::class, 'index']);
-
+    Route::get('/comments/{cdr_id}', [CommentController::class, 'index']);
+    Route::post('/comments', [CommentController::class, 'store']);
     // logout
     Route::post('/logout', [AuthController::class, 'logout']);
 });

@@ -29,6 +29,8 @@ class CompanyExcelUploadController extends Controller
     public function store(Request $request)
     {
         try {
+            Log::info('Received data:', $request->all());
+
             $request->validate([
                 'data' => 'required|array',
                 'data.*.tenderNumber' => 'nullable|string|max:255',
@@ -37,7 +39,9 @@ class CompanyExcelUploadController extends Controller
                 'data.*.phone1' => 'nullable|string|max:255',
                 'data.*.contact2' => 'nullable|string|max:255',
                 'data.*.phone2' => 'nullable|string|max:255',
-                'data.*.email' => 'nullable|string|email|max:255',
+                'data.*.contact3' => 'nullable|string|max:255',
+                'data.*.phone3' => 'nullable|string|max:255',
+                'data.*.email' => 'nullable|string|max:255',
                 'data.*.executor' => 'nullable|string|max:255',
                 'data.*.idCode' => 'nullable|string|max:255',
                 'data.*.contractValue' => 'nullable|string|max:255',
@@ -58,23 +62,28 @@ class CompanyExcelUploadController extends Controller
             }
 
             foreach ($request->input('data') as $row) {
+                // Sanitize the data
+                $sanitizedData = $this->sanitizeRow($row);
+                
                 CompanyExcelUpload::create([
-                    'tender_number' => $row['tenderNumber'] ?? null,
-                    'buyer' => $row['buyer'] ?? null,
-                    'contact1' => $row['contact1'] ?? null,
-                    'phone1' => $row['phone1'] ?? null,
-                    'contact2' => $row['contact2'] ?? null,
-                    'phone2' => $row['phone2'] ?? null,
-                    'email' => $row['email'] ?? null,
-                    'executor' => $row['executor'] ?? null,
-                    'id_code' => $row['idCode'] ?? null,
-                    'contract_value' => $row['contractValue'] ?? null,
-                    'total_value_gorgia' => $row['totalValueGorgia'] ?? null,
-                    'last_purchase_date_gorgia' => $row['lastPurchaseDateGorgia'] ?? null,
-                    'contract_end_date' => $row['contractEndDate'] ?? null,
-                    'foundation_date' => $row['foundationDate'] ?? null,
-                    'manager' => $row['manager'] ?? null,
-                    'status' => $row['status'] ?? null,
+                    'tender_number' => $sanitizedData['tenderNumber'] ?? null,
+                    'buyer' => $sanitizedData['buyer'] ?? null,
+                    'contact1' => $sanitizedData['contact1'] ?? null,
+                    'phone1' => $sanitizedData['phone1'] ?? null,
+                    'contact2' => $sanitizedData['contact2'] ?? null,
+                    'phone2' => $sanitizedData['phone2'] ?? null,
+                    'contact3' => $sanitizedData['contact3'] ?? null,
+                    'phone3' => $sanitizedData['phone3'] ?? null,
+                    'email' => $sanitizedData['email'] ?? null,
+                    'executor' => $sanitizedData['executor'] ?? null,
+                    'id_code' => $sanitizedData['idCode'] ?? null,
+                    'contract_value' => $sanitizedData['contractValue'] ?? null,
+                    'total_value_gorgia' => $sanitizedData['totalValueGorgia'] ?? null,
+                    'last_purchase_date_gorgia' => $sanitizedData['lastPurchaseDateGorgia'] ?? null,
+                    'contract_end_date' => $sanitizedData['contractEndDate'] ?? null,
+                    'foundation_date' => $sanitizedData['foundationDate'] ?? null,
+                    'manager' => $sanitizedData['manager'] ?? null,
+                    'status' => $sanitizedData['status'] ?? null,
                 ]);
             }
 
@@ -83,6 +92,23 @@ class CompanyExcelUploadController extends Controller
             Log::error('Error storing company uploads: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to store data: ' . $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Sanitize a data row before saving
+     * 
+     * @param array $row
+     * @return array
+     */
+    private function sanitizeRow($row)
+    {
+        // Process email - make sure it's a valid email or null
+        if (isset($row['email']) && !empty($row['email']) && !filter_var($row['email'], FILTER_VALIDATE_EMAIL)) {
+            $row['email'] = null;
+        }
+        
+        // Clean other fields as needed
+        return $row;
     }
 
     public function update(Request $request, $id)
@@ -158,6 +184,8 @@ class CompanyExcelUploadController extends Controller
                     'Phone #1' => 'phone1',
                     'Contact Person #2' => 'contact2',
                     'Phone #2' => 'phone2',
+                    'Contact Person #3' => 'contact3',
+                    'Phone #3' => 'phone3',
                     'Email' => 'email',
                     'Executor' => 'executor',
                     'ID Code' => 'idCode',

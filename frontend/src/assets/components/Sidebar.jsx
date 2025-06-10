@@ -39,6 +39,9 @@ const Sidebar = () => {
   const isAdmin = localStorage.getItem('role') === 'admin';
 
   const langBtnStyle = (active) => ({
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
     border: 'none',
     background: active ? '#017cbf' : '#f0f0f8',
     color: active ? '#fff' : '#017cbf',
@@ -46,7 +49,7 @@ const Sidebar = () => {
     borderRadius: '6px',
     marginRight: 8,
     marginBottom: 8,
-    padding: '6px 16px',
+    padding: ' 14px',
     cursor: 'pointer',
     fontSize: 14,
     boxShadow: active ? '0 2px 8px rgba(1,124,191,0.08)' : 'none',
@@ -81,18 +84,26 @@ const Sidebar = () => {
             style={langBtnStyle(language === 'en')}
             onClick={() => setLanguage('en')}
             aria-label="Switch to English"
-          >EN</button>
+          >
+            <img src="https://flagcdn.com/w40/gb.png" alt="EN" style={{ width: 24, height: 16, display: 'block'}} />
+          </button>
           <button
             style={langBtnStyle(language === 'ru')}
             onClick={() => setLanguage('ru')}
             aria-label="Switch to Russian"
-          >RU</button>
+          >
+            <img src="https://flagcdn.com/w40/ru.png" alt="RU" style={{ width: 24, height: 16, display: 'block' }} />
+          </button>
           <button
             style={langBtnStyle(language === 'ka')}
             onClick={() => setLanguage('ka')}
             aria-label="Switch to Georgian"
-          >KA</button>
+          >
+            <img src="https://flagcdn.com/w40/ge.png" alt="KA" style={{ width: 24, height: 16, display: 'block' }} />
+          </button>
         </div>
+
+
         <nav className="navbar navbar-expand-lg navbar-light">
           <div className="collapse navbar-collapse" id="navbarNav">
             <ul className="navbar-nav flex-column">
@@ -187,12 +198,12 @@ const Sidebar = () => {
               )}
               {(isAdmin || isSuperAdmin) && (
                 <li className="nav-item" style={{ marginTop: '20px' }}>
-<NavLink
-  to="/admin-dahsboard"
-  className={({ isActive }) => `fade-in nav-link ${isActive ? 'my-active' : ''}`}
->
-  <i className="fa fa-fw fa-user-circle"></i>{t('adminDashboard')}
-</NavLink>
+                  <NavLink
+                    to="/admin-dahsboard"
+                    className={({ isActive }) => `fade-in nav-link ${isActive ? 'my-active' : ''}`}
+                  >
+                    <i className="fa fa-fw fa-user-circle"></i>{t('adminDashboard')}
+                  </NavLink>
                 </li>
               )}
               <li className="nav-item fade-in" style={{ marginTop: '20px' }}>

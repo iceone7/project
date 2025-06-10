@@ -16,6 +16,8 @@ class CompanyExcelUpload extends Model
         'phone1',
         'contact2',
         'phone2',
+        'contact3',
+        'phone3',
         'email',
         'executor',
         'id_code',

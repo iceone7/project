@@ -15,6 +15,8 @@ function EditModal({ isOpen, onClose, onSave, editData }) {
     phone1: '',
     contact2: '',
     phone2: '',
+    contact3: '',
+    phone3: '',
     email: '',
     executor: '',
     idCode: '',
@@ -33,21 +35,23 @@ function EditModal({ isOpen, onClose, onSave, editData }) {
     if (editData) {
       setFormData({
         tenderNumber: editData.tenderNumber || editData.tender_number || '',
-        buyer: editData.buyer || editData.buyer || '',
-        contact1: editData.contact1 || editData.contact_1 || '',
-        phone1: editData.phone1 || editData.phone_1 || '',
-        contact2: editData.contact2 || editData.contact_2 || '',
-        phone2: editData.phone2 || editData.phone_2 || '',
-        email: editData.email || editData.email || '',
-        executor: editData.executor || editData.executor || '',
+        buyer: editData.buyer || '',
+        contact1: editData.contact1 || '',
+        phone1: editData.phone1 || '',
+        contact2: editData.contact2 || '',
+        phone2: editData.phone2 || '',
+        contact3: editData.contact3 || '',
+        phone3: editData.phone3 || '',
+        email: editData.email || '',
+        executor: editData.executor || '',
         idCode: editData.idCode || editData.id_code || '',
         contractValue: editData.contractValue || editData.contract_value || '',
         totalValueGorgia: editData.totalValueGorgia || editData.total_value_gorgia || '',
         lastPurchaseDateGorgia: editData.lastPurchaseDateGorgia || editData.last_purchase_date_gorgia || '',
         contractEndDate: editData.contractEndDate || editData.contract_end_date || '',
         foundationDate: editData.foundationDate || editData.foundation_date || '',
-        manager: editData.manager || editData.manager || '',
-        status: editData.status || editData.status || '',
+        manager: editData.manager || '',
+        status: editData.status || '',
       });
     }
   }, [editData]);
@@ -64,6 +68,8 @@ function EditModal({ isOpen, onClose, onSave, editData }) {
     phone1: data.phone1,
     contact2: data.contact2,
     phone2: data.phone2,
+    contact3: data.contact3,
+    phone3: data.phone3,
     email: data.email,
     executor: data.executor,
     id_code: data.idCode,
@@ -143,6 +149,8 @@ function EditModal({ isOpen, onClose, onSave, editData }) {
                 <Input label="ტელ #1" value={formData.phone1} onChange={v => handleChange('phone1', v)} />
                 <Input label="საკ. პირი #2" value={formData.contact2} onChange={v => handleChange('contact2', v)} />
                 <Input label="ტელ #2" value={formData.phone2} onChange={v => handleChange('phone2', v)} />
+                <Input label="საკ. პირი #3" value={formData.contact3} onChange={v => handleChange('contact3', v)} />
+                <Input label="ტელ #3" value={formData.phone3} onChange={v => handleChange('phone3', v)} />
                 <Input label="მენეჯერი" value={formData.manager} onChange={v => handleChange('manager', v)} />
               </>
             )}

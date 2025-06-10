@@ -8,14 +8,13 @@ class CdrController extends Controller
 {
     public function index()
     {
-        $cdrs = DB::connection('asterisk') // если другая БД, укажи здесь соединение
+        $cdrs = DB::connection('asterisk')
             ->table('cdr')
-            ->select('calldate', 'src', 'dst', 'duration', 'recordingfile')
+            ->select('uniqueid', 'calldate', 'src', 'dst', 'duration', 'recordingfile') // Добавляем uniqueid
             ->orderBy('calldate', 'desc')
-            ->limit(50)
+            ->limit(70)
             ->get();
 
         return response()->json($cdrs);
     }
 }
-
