@@ -1,7 +1,8 @@
 import axios from 'axios';
 
 const defaultInstance = axios.create({
-  baseURL: `${import.meta.env.VITE_API_BASE_URL}`,
+  //baseURL: `${import.meta.env.REACT_APP_API_BASE_URL}`,
+  baseURL: `https://vip-back.gorgia.ge/api`,
   headers: {
     Accept: "application/json",
     "Content-Type": "application/json",
