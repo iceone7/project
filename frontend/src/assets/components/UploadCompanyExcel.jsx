@@ -48,7 +48,6 @@ const UploadCompanyExcel = ({ onPreviewSuccess }) => {
 
       const json = await response.json();
       if (json.data && Array.isArray(json.data) && json.data.length > 0) {
-        // Нормализуем данные
         const normalizedData = json.data.map((item, index) => ({
           id: item.id || `preview-${index}`,
           tenderNumber: item.tender_number || item.tenderNumber || '',
@@ -57,6 +56,8 @@ const UploadCompanyExcel = ({ onPreviewSuccess }) => {
           phone1: item.phone1 || item.phone_1 || '',
           contact2: item.contact2 || item.contact_2 || '',
           phone2: item.phone2 || item.phone_2 || '',
+          contact3: item.contact3 || item.contact_3 || '', // Ensure we check both formats
+          phone3: item.phone3 || item.phone_3 || '',      // Ensure we check both formats
           email: item.email || '',
           executor: item.executor || '',
           idCode: item.id_code || item.idCode || '',
@@ -66,10 +67,14 @@ const UploadCompanyExcel = ({ onPreviewSuccess }) => {
           contractEndDate: item.contract_end_date || item.contractEndDate || '',
           foundationDate: item.foundation_date || item.foundationDate || '',
           manager: item.manager || '',
+          managerNumber: item.managerNumber || item.manager_number || '',
           status: item.status || '',
         }));
-        console.log('Normalized data:', normalizedData); // Для отладки
-        if (onPreviewSuccess) await onPreviewSuccess(normalizedData); // Передаем нормализованные данные
+        
+        // Debug log the first row to verify data
+        console.log('Normalized data first row:', normalizedData[0]);
+        
+        if (onPreviewSuccess) await onPreviewSuccess(normalizedData); // Pass the normalized data
       } else if (json.data && Array.isArray(json.data) && json.data.length === 0) {
         setError('Excel parsed but no rows found.');
       } else {

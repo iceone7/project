@@ -26,6 +26,8 @@ const initialFilters = {
   phone1: '',
   contact2: '',
   phone2: '',
+  contact3: '',
+  phone3: '',
   email: '',
   executor: '',
   idCode: '',
@@ -40,6 +42,7 @@ const initialFilters = {
   foundationDateStart: '',
   foundationDateEnd: '',
   manager: '',
+  managerNumber: '', // Added manager number for company dashboard
   status: '',
   src: '', // A ნომერი (Caller Number for craftsmen)
   dst: '', // B ნომერი (Receiver Number for craftsmen)
@@ -55,6 +58,7 @@ const FilterForm = ({
   onlyButton = false,
   onlyForm = false,
   dashboardType = 'caller',
+  onDownloadFiltered, // Add new prop for download function
 }) => {
   const [filters, setFilters] = useState(initialFilters);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -161,6 +165,8 @@ const FilterForm = ({
             matchesText(row.phone1, filters.phone1) &&
             matchesText(row.contact2, filters.contact2) &&
             matchesText(row.phone2, filters.phone2) &&
+            matchesText(row.contact3, filters.contact3) &&
+            matchesText(row.phone3, filters.phone3) &&
             matchesText(row.email, filters.email) &&
             matchesText(row.executor, filters.executor) &&
             matchesText(row.idCode || row.id_code, filters.idCode) &&
@@ -170,6 +176,7 @@ const FilterForm = ({
             matchesDateRange(row.contractEndDate || row.contract_end_date, filters.contractEndDateStart, filters.contractEndDateEnd) &&
             matchesDateRange(row.foundationDate || row.foundation_date, filters.foundationDateStart, filters.foundationDateEnd) &&
             matchesText(row.manager, filters.manager) &&
+             matchesText(row.manager, filters.managerNumber) &&
             matchesStatus(row.status, filters.status)
           );
         } else if (dashboardType === 'craftsmen') {
@@ -199,6 +206,15 @@ const FilterForm = ({
   const handleClearFilters = () => {
     setFilters(initialFilters);
     onFilterApply(Array.isArray(data) ? data : []);
+  };
+
+  const handleDownloadFiltered = () => {
+    const filteredData = getFilteredData();
+    if (filteredData.length > 0) {
+      onDownloadFiltered(filteredData);
+    } else {
+      alert('No data to download after filtering');
+    }
   };
 
   if (onlyButton) {
@@ -414,6 +430,22 @@ const FilterForm = ({
               />
               <input
                 type="text"
+                name="contact3"
+                placeholder={t('contactPerson3')}
+                value={filters.contact3}
+                onChange={handleFilterChange}
+                className={filterStyles.input}
+              />
+              <input
+                type="text"
+                name="phone3"
+                placeholder={t('phone3')}
+                value={filters.phone3}
+                onChange={handleFilterChange}
+                className={filterStyles.input}
+              />
+              <input
+                type="text"
                 name="email"
                 placeholder={t('email')}
                 value={filters.email}
@@ -541,6 +573,15 @@ const FilterForm = ({
                 className={filterStyles.input}
               />
 
+              <input
+                type="text"
+                name="manager number"
+                placeholder={t('manager number')}
+                value={filters.managerNumber}
+                onChange={handleFilterChange}
+                className={filterStyles.input}
+              />
+
               <select
                 name="status"
                 value={filters.status}
@@ -548,9 +589,9 @@ const FilterForm = ({
                 className={filterStyles.select}
               >
                 <option value="">{t('allStatuses')}</option>
-                <option value="active">{t('active')}</option>
-                <option value="inactive">{t('inactive')}</option>
-                <option value="pending">{t('pending')}</option>
+                <option value="შესრულებულია">{t('შესრულებულია')}</option>
+                <option value="მიმდინარეა">{t('მიმდინარეა')}</option>
+                <option value="გაუქმებულია">{t('გაუქმებულია')}</option>
               </select>
 
             </>
@@ -605,6 +646,19 @@ const FilterForm = ({
             >
               <span className="label">Clear Filters</span>
             </button>
+            {/* Add new download button for company dashboard */}
+            {dashboardType === 'company' && onDownloadFiltered && (
+              <button
+                className={[filterStyles.button, styles.filterDownloadBtn].join(' ')}
+                onClick={handleDownloadFiltered}
+                disabled={getFilteredData().length === 0}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512">
+                  <path d="M144 480C64.5 480 0 415.5 0 336c0-62.8 40.2-116.2 96.2-135.9c-.1-2.7-.2-5.4-.2-8.1c0-88.4 71.6-160 160-160c59.3 0 111 32.2 138.7 80.2C409.9 102 428.3 96 448 96c53 0 96 43 96 96c0 12.2-2.3 23.8-6.4 34.6C596 238.4 640 290.1 640 352c0 70.7-57.3 128-128 128H144zm79-167l80 80c9.4 9.4 24.6 9.4 33.9 0l80-80c9.4-9.4 9.4-24.6 0-33.9s-24.6-9.4-33.9 0l-39 39V184c0-13.3-10.7-24-24-24s-24 10.7-24 24V318.1l-39-39c-9.4-9.4-24.6-9.4-33.9 0s-9.4 24.6 0 33.9z" />
+                </svg>
+                Download
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -665,6 +719,8 @@ const FilterForm = ({
                 <input type="text" name="phone1" placeholder="Phone #1" value={filters.phone1} onChange={handleFilterChange} className={filterStyles.input} />
                 <input type="text" name="contact2" placeholder="Contact Person #2" value={filters.contact2} onChange={handleFilterChange} className={filterStyles.input} />
                 <input type="text" name="phone2" placeholder="Phone #2" value={filters.phone2} onChange={handleFilterChange} className={filterStyles.input} />
+                <input type="text" name="contact3" placeholder="Contact Person #3" value={filters.contact3} onChange={handleFilterChange} className={filterStyles.input} />
+                <input type="text" name="phone3" placeholder="Phone #3" value={filters.phone3} onChange={handleFilterChange} className={filterStyles.input} />
                 <input type="text" name="email" placeholder="Email" value={filters.email} onChange={handleFilterChange} className={filterStyles.input} />
                 <input type="text" name="executor" placeholder="Executor" value={filters.executor} onChange={handleFilterChange} className={filterStyles.input} />
                 <input type="text" name="idCode" placeholder="ID Code" value={filters.idCode} onChange={handleFilterChange} className={filterStyles.input} />
@@ -689,6 +745,7 @@ const FilterForm = ({
                   <input type="date" name="foundationDateEnd" placeholder="Foundation End Date" value={filters.foundationDateEnd} onChange={handleFilterChange} className={filterStyles.input} />
                 </div>
                 <input type="text" name="manager" placeholder="Manager" value={filters.manager} onChange={handleFilterChange} className={filterStyles.input} />
+                <input type="text" name="manager" placeholder="Manager" value={filters.managerNumber} onChange={handleFilterChange} className={filterStyles.input} />
                 <select name="status" value={filters.status} onChange={handleFilterChange} className={filterStyles.select}>
                   <option value="">All Statuses</option>
                   <option value="active">Active</option>
@@ -747,6 +804,19 @@ const FilterForm = ({
               >
                 <span className="label">Clear Filters</span>
               </button>
+              {/* Add new download button for company dashboard */}
+              {dashboardType === 'company' && onDownloadFiltered && (
+                <button
+                  className={[filterStyles.button, styles.filterDownloadBtn].join(' ')}
+                  onClick={handleDownloadFiltered}
+                  disabled={getFilteredData().length === 0}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512">
+                    <path d="M144 480C64.5 480 0 415.5 0 336c0-62.8 40.2-116.2 96.2-135.9c-.1-2.7-.2-5.4-.2-8.1c0-88.4 71.6-160 160-160c59.3 0 111 32.2 138.7 80.2C409.9 102 428.3 96 448 96c53 0 96 43 96 96c0 12.2-2.3 23.8-6.4 34.6C596 238.4 640 290.1 640 352c0 70.7-57.3 128-128 128H144zm79-167l80 80c9.4 9.4 24.6 9.4 33.9 0l80-80c9.4-9.4 9.4-24.6 0-33.9s-24.6-9.4-33.9 0l-39 39V184c0-13.3-10.7-24-24-24s-24 10.7-24 24V318.1l-39-39c-9.4-9.4-24.6-9.4-33.9 0s-9.4 24.6 0 33.9z" />
+                  </svg>
+                  Download
+                </button>
+              )}
             </div>
           </div>
         </div>

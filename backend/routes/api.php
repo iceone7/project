@@ -61,7 +61,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
     Route::get('/cdr', [CdrController::class, 'index']);
-    Route::get('/comments/{cdr_id}', [CommentController::class, 'index']);
+    Route::post('/caller-data', [CdrController::class, 'getCallerData']); // New endpoint
+    
+    // Update route definition to properly handle special characters including dots
+    Route::get('/comments/{cdr_id}', [CommentController::class, 'index'])
+         ->where('cdr_id', '.*'); // Allow any character in the cdr_id parameter
+    
     Route::post('/comments', [CommentController::class, 'store']);
     // logout
     Route::post('/logout', [AuthController::class, 'logout']);

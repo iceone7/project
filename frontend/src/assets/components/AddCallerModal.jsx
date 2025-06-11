@@ -14,6 +14,7 @@ function AddCallerModal({ onClose }) {
     contactTel3: '',
     callerName: '',
     callerNumber: '',
+    receiverName: '',  // Added new field
     receiverNumber: '',
     callCount: '',
     callDate: '',
@@ -42,6 +43,7 @@ function AddCallerModal({ onClose }) {
       fields: [
         { label: "Caller Name", name: "callerName" },
         { label: "Caller Number", name: "callerNumber" },
+        { label: "Receiver Name", name: "receiverName" }, // Added new field
         { label: "Receiver Number", name: "receiverNumber" },
         { label: "Call Count", name: "callCount", type: "number" },
         { label: "Call Date", name: "callDate", type: "date" },

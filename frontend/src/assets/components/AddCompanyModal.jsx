@@ -16,6 +16,8 @@ function AddCompanyModal({ onClose, editingItem, editMode }) {
     phone1: '',
     contact2: '',
     phone2: '',
+    contact3: '',
+    phone3: '',
     email: '',
     executor: '',
     idCode: '',
@@ -25,6 +27,7 @@ function AddCompanyModal({ onClose, editingItem, editMode }) {
     contractEndDate: '',
     foundationDate: '',
     manager: '',
+    managerNumber: '',
     status: '',
   });
   const [toast, setToast] = useState({ visible: false, message: '', type: '' });
@@ -42,6 +45,8 @@ function AddCompanyModal({ onClose, editingItem, editMode }) {
         phone1: editingItem.phone1 || '',
         contact2: editingItem.contact2 || '',
         phone2: editingItem.phone2 || '',
+        contact3: editingItem.contact3 || '',
+        phone3: editingItem.phone3 || '',
         email: editingItem.email || '',
         executor: editingItem.executor || '',
         idCode: editingItem.idCode || '',
@@ -51,6 +56,7 @@ function AddCompanyModal({ onClose, editingItem, editMode }) {
         contractEndDate: editingItem.contractEndDate || '',
         foundationDate: editingItem.foundationDate || '',
         manager: editingItem.manager || '',
+        managerNumber: editingItem.managerNumber || '',
         status: editingItem.status || '',
       });
     }
@@ -140,7 +146,10 @@ function AddCompanyModal({ onClose, editingItem, editMode }) {
                 <Input label={t('phone1')} value={formData.phone1} onChange={v => handleChange('phone1', v)} />
                 <Input label={t('contactPerson2')} value={formData.contact2} onChange={v => handleChange('contact2', v)} />
                 <Input label={t('phone2')} value={formData.phone2} onChange={v => handleChange('phone2', v)} />
+                <Input label={t('contactPerson3')} value={formData.contact3} onChange={v => handleChange('contact3', v)} />
+                <Input label={t('phone3')} value={formData.phone3} onChange={v => handleChange('phone3', v)} />
                 <Input label={t('manager')} value={formData.manager} onChange={v => handleChange('manager', v)} />
+                <Input label={t('managerNumber')} value={formData.managerNumber} onChange={v => handleChange('managerNumber', v)} />
               </>
             )}
 

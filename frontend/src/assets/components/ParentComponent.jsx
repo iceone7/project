@@ -33,6 +33,7 @@ const DataTable = ({ activeDashboard, excelData, handleDeleteCompany }) => {
             contractEndDate: row.contractEndDate ?? row.contract_end_date ?? '',
             foundationDate: row.foundationDate ?? row.foundation_date ?? '',
             manager: row.manager ?? '',
+            managerNumber: row.managerNumber ?? row.manager_number ?? '',
             status: row.status ?? '',
             id: row.id,
           }));

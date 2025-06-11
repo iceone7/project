@@ -26,6 +26,7 @@ class CompanyController extends Controller
             'contractEndDate' => 'nullable|string',
             'foundationDate' => 'nullable|string',
             'manager' => 'nullable|string',
+            'managerNumber' => 'nullable|string',
             'status' => 'nullable|string',
         ]);
 

@@ -57,11 +57,28 @@ function App({ dashboardType = 'company' }) {
         .get('/company-excel-uploads')
         .then((response) => {
           const data = response.data.data || [];
+          console.log('Companies loaded successfully:', data.length);
           setCompanies(data);
           setFilteredCompanies(data);
         })
         .catch((error) => {
           console.error('Error loading companies:', error);
+          // Show more detailed error info
+          if (error.response) {
+            // The request was made and the server responded with a status code
+            // that falls out of the range of 2xx
+            console.error('Error data:', error.response.data);
+            console.error('Error status:', error.response.status);
+            alert(`Server error (${error.response.status}): ${error.response.data.message || 'Unknown error'}`);
+          } else if (error.request) {
+            // The request was made but no response was received
+            console.error('Error request:', error.request);
+            alert('No response from server. Please check your connection.');
+          } else {
+            // Something happened in setting up the request that triggered an Error
+            console.error('Error message:', error.message);
+            alert('Request error: ' + error.message);
+          }
         });
     }
   }, [dashboardType]);
@@ -71,25 +88,32 @@ function App({ dashboardType = 'company' }) {
       defaultInstance
         .get(`${import.meta.env.VITE_API_BASE_URL}/get-imported-companies`)
         .then((response) => {
-          console.log('Server response:', response.data);
-          const normalizedData = response.data.data.map((item) => ({
-            id: item.id || Date.now() + Math.random(),
-            companyName: item.company_name || item.companyName || '',
-            identificationCode: item.identification_code || item.identificationCode || '',
-            contactPerson1: item.contact_person1 || item.contactPerson1 || '',
-            tel1: item.tel1 || item.contactTel1 || '',
-            contactPerson2: item.contact_person2 || item.contactPerson2 || '',
-            tel2: item.tel2 || item.contactTel2 || '',
-            contactPerson3: item.contact_person3 || item.contactPerson3 || '',
-            tel3: item.tel3 || item.contactTel3 || '',
-            callerName: item.caller_name || item.callerName || '',
-            callerNumber: item.caller_number || item.callerNumber || '',
-            receiverNumber: item.receiver_number || item.receiverNumber || '',
-            callCount: item.call_count || item.callCount || 0,
-            callDate: item.call_date || item.callDate || '',
-            callDuration: item.call_duration || item.callDuration || '',
-            callStatus: item.call_status || item.callStatus || '',
-          }));
+          console.log('Raw API response:', response.data);
+          
+          const normalizedData = response.data.data.map((item) => {
+            console.log('Processing item:', item);
+            return {
+              id: item.id || Date.now() + Math.random(),
+              companyName: item.company_name || item.companyName || '',
+              identificationCode: item.identification_code || item.identificationCode || '',
+              contactPerson1: item.contact_person1 || item.contactPerson1 || '',
+              tel1: item.tel1 || item.contactTel1 || '',
+              contactPerson2: item.contact_person2 || item.contactPerson2 || '',
+              tel2: item.tel2 || item.contactTel2 || '',
+              contactPerson3: item.contact_person3 || item.contactPerson3 || '',
+              tel3: item.tel3 || item.contactTel3 || '',
+              callerName: item.caller_name || item.callerName || '',
+              callerNumber: item.caller_number || item.callerNumber || '',
+              receiverName: item.receiver_name || item.receiverName || '', // Added new field
+              receiverNumber: item.receiver_number || item.receiverNumber || '',
+              callCount: item.call_count || item.callCount || 0,
+              callDate: item.call_date || item.callDate || '',
+              callDuration: item.call_duration || item.callDuration || '',
+              callStatus: item.call_status || item.callStatus || '',
+            };
+          });
+          
+          console.log('Normalized data:', normalizedData);
           setExcelData(normalizedData);
           setFilteredCompanies(normalizedData);
         })
@@ -125,6 +149,7 @@ function App({ dashboardType = 'company' }) {
       contractEndDate: item.contractEndDate || item.contract_end_date || '',
       foundationDate: item.foundationDate || item.foundation_date || '',
       manager: item.manager || '',
+      managerNumber: item.managerNumber || item.manager_number || '',
       status: item.status || '',
     }));
     
@@ -179,10 +204,10 @@ function App({ dashboardType = 'company' }) {
     setDeleteTargetId(null);
   };
 
-  const handleDownloadExcel = async () => {
+  const handleDownloadExcel = async (dataToDownload = filteredCompanies) => {
     try {
-      console.log('Starting downloadExcel, using filteredCompanies:', filteredCompanies);
-      const dbData = filteredCompanies || [];
+      console.log('Starting downloadExcel, using filteredCompanies:', dataToDownload);
+      const dbData = dataToDownload || [];
       if (!dbData.length) {
         alert('No data to download');
         return;
@@ -206,6 +231,7 @@ function App({ dashboardType = 'company' }) {
         contractEndDate: row.contractEndDate ?? row.contract_end_date ?? '',
         foundationDate: row.foundationDate ?? row.foundation_date ?? '',
         manager: row.manager ?? '',
+        managerNumber: row.managerNumber ?? row.manager_number ?? '',
         status: row.status ?? '',
       }));
 
@@ -227,6 +253,7 @@ function App({ dashboardType = 'company' }) {
         'დაკონტ. საორ. თარიღი',
         'დაფუძ. თარიღი',
         'მენეჯერი',
+        'მენეჯერის ნომერი',
         'სტატუსი',
       ];
 
@@ -248,6 +275,7 @@ function App({ dashboardType = 'company' }) {
         'contractEndDate',
         'foundationDate',
         'manager',
+        'managerNumber',
         'status',
       ];
 
@@ -333,6 +361,7 @@ function App({ dashboardType = 'company' }) {
                           onToggleFilters={() => setShowFilters(!showFilters)}
                           onlyForm={true}
                           dashboardType="company"
+                          onDownloadFiltered={handleDownloadExcel} // Pass the download function
                         />
                       )}
                       {dashboardType === 'caller' && (

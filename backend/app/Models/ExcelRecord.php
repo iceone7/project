@@ -22,6 +22,7 @@ class ExcelRecord extends Model
             $table->string('tel3')->nullable();
             $table->string('caller_name')->nullable();
             $table->string('caller_number')->nullable();
+            $table->string('receiver_name')->nullable(); // Added missing field
             $table->string('receiver_number')->nullable();
             $table->integer('call_count')->default(0);
             $table->string('call_date')->nullable();

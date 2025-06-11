@@ -1,0 +1,29 @@
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.commentButton {
+  background-color: #017cbf;
+  border: none;
+  border-radius: 50%;
+  width: 45px;
+  height: 45px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 10px;
+  cursor: pointer;
+  transition: background-color 0.3s, transform 0.2s;
+}
+
+.commentButton:hover {
+  transform: scale(1.05);
+}
+
+.commentSvgIcon {
+  fill: #fff;
+  width: 18px;
+  height: 18px;
+}

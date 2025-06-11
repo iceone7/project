@@ -1,3 +1,5 @@
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import Header from './Header';
 import AddCallerModal from './AddCallerModal';
 import AddCompanyModal from './AddCompanyModal';
@@ -21,6 +23,37 @@ const DashboardContent = ({
   companyDetails, 
   // companies
 }) => {
+  const fetchCallerData = async () => {
+    try {
+      const response = await axios.get('/api/get-imported-companies');
+      const normalizedData = response.data.data.map((item) => ({
+        id: item.id,
+        companyName: item.company_name || '',
+        identificationCode: item.identification_code || '',
+        contactPerson1: item.contact_person1 || '',
+        tel1: item.tel1 || '',
+        contactPerson2: item.contact_person2 || '',
+        tel2: item.tel2 || '',
+        contactPerson3: item.contact_person3 || '',
+        tel3: item.tel3 || '',
+        callerName: item.caller_name || '',
+        callerNumber: item.caller_number || '',
+        receiverName: item.receiver_name || '', // Ensure this field is included
+        receiverNumber: item.receiver_number || '',
+        callCount: item.call_count || 0,
+        callDate: item.call_date || '',
+        callDuration: item.call_duration || '',
+        callStatus: item.call_status || '',
+      }));
+      
+      console.log('Fetched and normalized caller data:', normalizedData);
+      return normalizedData;
+    } catch (error) {
+      console.error('Error fetching caller data:', error);
+      return [];
+    }
+  };
+
   return (
     <div className="dashboard-wrapper">
       <div className="dashboard-ecommerce">
@@ -71,6 +104,7 @@ const DashboardContent = ({
                               <th>Tel</th>
                               <th>Caller Name</th>
                               <th>Caller Number</th>
+                              <th>Receiver Name</th>
                               <th>Receiver Number</th>
                               <th>Call Count</th>
                               <th>Call Date</th>
@@ -118,6 +152,7 @@ const DashboardContent = ({
                                   <td>{call.tel3}</td>
                                   <td>{call.caller_name}</td>
                                   <td>{call.caller_number}</td>
+                                  <td>{call.receiver_name}</td>
                                   <td>{call.receiver_number}</td>
                                   <td>{call.call_count}</td>
                                   <td>{call.call_date}</td>
@@ -128,7 +163,7 @@ const DashboardContent = ({
                               ))
                             ) : (
                               <tr>
-                                <td colSpan="17" className="text-center">Нет данных</td>
+                                <td colSpan="18" className="text-center">Нет данных</td>
                               </tr>
                             )
                           ) : (

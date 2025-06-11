@@ -27,6 +27,14 @@ class CompanyExcelUpload extends Model
         'contract_end_date',
         'foundation_date',
         'manager',
+        'manager_number',
         'status',
+    ];
+    
+    // Define default attribute values to ensure contact3 and phone3 are never null
+    protected $attributes = [
+        'contact3' => '',
+        'phone3' => '',
+        'manager_number' => '',
     ];
 }

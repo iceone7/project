@@ -120,3 +120,29 @@
   transition: all 0.3s;
 }
 
+/* New styles for filter download button */
+.filterDownloadBtn {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-left: 8px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.filterDownloadBtn:hover {
+  background-color: #218838;
+}
+
+.filterDownloadBtn svg {
+  margin-right: 6px;
+  height: 16px;
+  fill: white;
+}
+

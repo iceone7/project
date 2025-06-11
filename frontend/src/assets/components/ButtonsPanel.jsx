@@ -3,9 +3,11 @@ import download_button from '../css/UploadButton.module.css';
 import FilterForm from './FilterForm';
 import UploadExcel from './UploadExcel';
 import UploadCompanyExcel from './UploadCompanyExcel';
+import * as XLSX from 'xlsx';
+import { useState } from 'react';
+import defaultInstance from '../../api/defaultInstance';
 
 const isDepartamentCraftsmen = localStorage.getItem('department_id') === '2';
-
 
 const ButtonsPanel = ({
   activeDashboard,
@@ -17,9 +19,113 @@ const ButtonsPanel = ({
   onUploadSuccess,
   excelData,
   onCompanyUploadSuccess,
-  // filteredCallerData,
-  setFilteredCallerData,
 }) => {
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState(null);
+
+  // Enhanced download function that ensures data availability
+  const handleDownloadAllData = async () => {
+    setIsExporting(true);
+    setExportError(null);
+    
+    try {
+      // Directly fetch data from API to ensure we have the latest
+      const response = await defaultInstance.get('/company-excel-uploads');
+      const companies = response.data.data || [];
+      
+      if (!companies || companies.length === 0) {
+        alert('No data available to download');
+        setIsExporting(false);
+        return;
+      }
+      
+      console.log(`Fetched ${companies.length} companies for export`);
+      
+      // Define Georgian headers for export
+      const headers = [
+        'ტენდერის N',
+        'შემსყიდველი',
+        'საკ. პირი #1',
+        'ტელ #1',
+        'საკ. პირი #2',
+        'ტელ #2',
+        'საკ. პირი #3',
+        'ტელ #3',
+        'ელ-ფოსტა',
+        'შემსრულებელი',
+        'ს/კ -ID',
+        'ხელშ. ღირებ.',
+        'გორგიაში შესყ. ჯამურ. ღირ',
+        'გორგიაში ბოლო შესყ. თარ.',
+        'დაკონტ. საორ. თარიღი',
+        'დაფუძ. თარიღი',
+        'მენეჯერი',
+        'მენეჯერის ნომერი',
+        'სტატუსი'
+      ];
+      
+      // Map data for export - handle both camelCase and snake_case field names
+      const exportData = companies.map(company => [
+        company.tenderNumber || company.tender_number || '',
+        company.buyer || '',
+        company.contact1 || company.contact_1 || '',
+        company.phone1 || company.phone_1 || '',
+        company.contact2 || company.contact_2 || '',
+        company.phone2 || company.phone_2 || '',
+        company.contact3 || company.contact_3 || '',
+        company.phone3 || company.phone_3 || '',
+        company.email || '',
+        company.executor || '',
+        company.idCode || company.id_code || '',
+        company.contractValue || company.contract_value || '',
+        company.totalValueGorgia || company.total_value_gorgia || '',
+        company.lastPurchaseDateGorgia || company.last_purchase_date_gorgia || '',
+        company.contractEndDate || company.contract_end_date || '',
+        company.foundationDate || company.foundation_date || '',
+        company.manager || '',
+        company.managerNumber || company.manager_number || '',
+        company.status || ''
+      ]);
+      
+      // Create worksheet
+      const worksheet = XLSX.utils.aoa_to_sheet([headers, ...exportData]);
+      
+      // Set column widths
+      const colWidths = headers.map((h, colIndex) => {
+        const maxLength = Math.max(
+          h.length,
+          ...exportData.map(row => (row[colIndex] ? String(row[colIndex]).length : 0))
+        );
+        return { wch: maxLength + 2 }; // Add some padding
+      });
+      worksheet['!cols'] = colWidths;
+      
+      // Create workbook and append worksheet
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Companies');
+      
+      // Generate filename with current date
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      const dateStr = `${dd}-${mm}-${yyyy}`;
+      const fileName = `company_data_${dateStr}.xlsx`;
+      
+      // Write to file and trigger download
+      XLSX.writeFile(workbook, fileName);
+      console.log('Company data export successful');
+    } catch (err) {
+      console.error('Error exporting company data:', err);
+      setExportError('Failed to download data: ' + (err.message || 'Unknown error'));
+    } finally {
+      setIsExporting(false);
+    }
+  };
+  
+  // Use handleDownloadAllData for the main download button, 
+  // and handleDownloadExcel for filtered data
+  
   return (
     <div className="buttons" style={{ marginBottom: '20px' }}>
       {activeDashboard === 'company' && !isDepartamentCraftsmen && (
@@ -37,8 +143,8 @@ const ButtonsPanel = ({
           </div>
           <button
             className={download_button.DownloadButton}
-            onClick={handleDownloadExcel}
-            disabled={!filteredCompanies?.length}
+            onClick={handleDownloadAllData}
+            disabled={isExporting}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -51,13 +157,16 @@ const ButtonsPanel = ({
                 fill="white"
               />
             </svg>
-            Download
+            {isExporting ? 'Downloading...' : 'Download'}
           </button>
           <FilterForm
             onlyButton={true}
             onToggleFilters={() => setShowFilters(!showFilters)}
+            dashboardType="company"
+            onDownloadFiltered={handleDownloadExcel} // Pass download function
           />
           <UploadCompanyExcel onPreviewSuccess={onCompanyUploadSuccess} />
+          {exportError && <div style={{ color: 'red', marginLeft: '10px' }}>{exportError}</div>}
         </div>
       )}
       {activeDashboard === 'caller' && (
@@ -65,7 +174,6 @@ const ButtonsPanel = ({
           <UploadExcel
             onUploadSuccess={onUploadSuccess}
             excelData={excelData}
-            {...(typeof setFilteredCallerData === 'function' ? { setFilteredCallerData } : {})}
           />
         </div>
       )}

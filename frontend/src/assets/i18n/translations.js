@@ -28,6 +28,7 @@ const translations = {
     communicationStartDate: "First Contact Date",
     foundationDate: "Foundation Date",
     manager: "Manager",
+    managerNumber: "Manager Number",
     status: "Status",
     editDelete: "Edit / Delete",
 
@@ -39,6 +40,7 @@ const translations = {
     callerName: "Caller Name",
     callerNumber: "Caller Number",
     receiverNumber: "Receiver Number",
+    receiverName: "Receiver Name",
     callCount: "Call Count",
     callDate: "Call Date",
     callDuration: "Call Duration",
@@ -87,6 +89,12 @@ const translations = {
     contractEndDateEnd: "Contract End End Date",
     foundationDateStart: "Foundation Start Date",
     foundationDateEnd: "Foundation End Date",
+
+    // Company to Caller Transform
+    companyToCallerTransform: "Company to Caller Transform",
+    uploadGeorgianExcel: "Upload Georgian Excel",
+    transformingData: "Transforming data...",
+    georgianToCallerMapping: "Georgian to Caller Format",
   },
   ru: {
     companyDashboard: "Dashboard компании",
@@ -117,6 +125,7 @@ const translations = {
     communicationStartDate: "Дата первого контакта",
     foundationDate: "Дата основания",
     manager: "Менеджер",
+    managerNumber: "Номер менеджера",
     status: "Статус",
     editDelete: "Редактировать / Удалить",
 
@@ -128,6 +137,7 @@ const translations = {
     callerName: "Имя оператора",
     callerNumber: "Номер оператора",
     receiverNumber: "Номер получателя",
+    receiverName: "Имя получателя",
     callCount: "Кол-во звонков",
     callDate: "Дата звонка",
     callDuration: "Длительность звонка",
@@ -169,13 +179,19 @@ const translations = {
     contractValueMin: "Мин. сумма контракта",
     contractValueMax: "Макс. сумма контракта",
     totalValueGorgiaMin: "Мин. общая сумма Горгия",
-    totalValueGorgiaMax: "Макс. общая сумма Горгия",
+    totalValueGorgiaMax: "Макс. общая сумма Горгია",
     lastPurchaseDateStart: "Дата начала последней покупки",
     lastPurchaseDateEnd: "Дата окончания последней покупки",
     contractEndDateStart: "Дата начала окончания контракта",
     contractEndDateEnd: "Дата окончания окончания контракта",
     foundationDateStart: "Дата начала основания",
     foundationDateEnd: "Дата окончания основания",
+
+    // Company to Caller Transform
+    companyToCallerTransform: "Преобразование компании в вызывающий",
+    uploadGeorgianExcel: "Загрузить грузинский Excel",
+    transformingData: "Преобразование данных...",
+    georgianToCallerMapping: "Грузинский в формат вызывающего",
   },
   ka: {
     companyDashboard: "კომპანიის დაფა",
@@ -206,6 +222,7 @@ const translations = {
     communicationStartDate: "დაკონტ. საორ. თარიღი",
     foundationDate: "დაფუძ. თარიღი",
     manager: "მენეჯერი",
+    managerNumber: "მენეჯერის ნომერი",
     status: "სტატუსი",
     editDelete: "რედაქტირება / წაშლა",
 
@@ -217,6 +234,7 @@ const translations = {
     callerName: "დამრეკის სახელი",
     callerNumber: "დამრეკის ნომერი",
     receiverNumber: "მიმღების ნომერი",
+    receiverName: "მიმღების სახელი",
     callCount: "ზარების რაოდენობა",
     callDate: "ზარის თარიღი",
     callDuration: "ზარის ხანგრძლივობა",
@@ -265,6 +283,12 @@ const translations = {
     contractEndDateEnd: "კონტრაქტის დასრულების დასრულების თარიღი",
     foundationDateStart: "დაარსების დაწყების თარიღი",
     foundationDateEnd: "დაარსების დასრულების თარიღი",
+
+    // Company to Caller Transform
+    companyToCallerTransform: "კომპანიიდან დამრეკავში გადაყვანა",
+    uploadGeorgianExcel: "ქართული Excel-ის ატვირთვა",
+    transformingData: "მონაცემების გარდაქმნა...",
+    georgianToCallerMapping: "ქართულიდან დამრეკავის ფორმატში",
   }
 };
 
