@@ -85,3 +85,20 @@ h1, h2, h3, h4, h5, h6 {
     gap: 10px;
 }
 
+.card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.card-header .float-end {
+    background-color: #017cbf;
+    color: #ffffff;
+    border: none;
+}
+
+.card-header .float-end:hover {
+    background-color: #017cbf;
+    color: #ffffff;
+    border: none;
+}

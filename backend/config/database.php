@@ -63,22 +63,23 @@ return [
 
         'asterisk' => [
             'driver' => 'mysql',
-            'url' => env('DATABASE_URL'),
+            'url' => env('ASTERISK_DATABASE_URL'),
             'host' => env('ASTERISK_DB_HOST', '10.150.20.117'),
             'port' => env('ASTERISK_DB_PORT', '3306'),
             'database' => env('ASTERISK_DB_DATABASE', 'asteriskcdrdb'),
             'username' => env('ASTERISK_DB_USERNAME', 'remote_user'),
-            'password' => env('ASTERISK_DB_PASSWORD', 'securepassword'),
-            'unix_socket' => env('DB_SOCKET', ''),
+            'password' => env('ASTERISK_DB_PASSWORD', ''),
+            'unix_socket' => env('ASTERISK_DB_SOCKET', ''),
             'charset' => 'utf8mb4',
             'collation' => 'utf8mb4_unicode_ci',
             'prefix' => '',
             'prefix_indexes' => true,
-            'strict' => false, // Set to false for better compatibility with older Asterisk DB
+            'strict' => true,
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
-                PDO::ATTR_EMULATE_PREPARES => true, // May help with some Asterisk DB issues
+                PDO::ATTR_TIMEOUT => 5, // Set a timeout for slow connections
+                PDO::ATTR_PERSISTENT => false, // Don't use persistent connections for remote database
             ]) : [],
         ],
 

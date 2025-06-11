@@ -11,6 +11,7 @@ use App\Http\Controllers\CompanyExcelImportController;
 use App\Http\Controllers\CompanyExcelUploadController;
 use App\Http\Controllers\CdrController;
 use App\Http\Controllers\CommentController;
+use App\Http\Controllers\CallerExcelUploadController;
 
 
 Route::post('/admin/login', [AdminAuthController::class, 'login']);
@@ -60,8 +61,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/company-excel-preview', [CompanyExcelUploadController::class, 'preview'])->withoutMiddleware('auth:sanctum');
 
 
+    // --- Caller Excel Upload routes ---
+    Route::get('/caller-excel-data', [CallerExcelUploadController::class, 'index']);
+    Route::post('/caller-excel-uploads', [CallerExcelUploadController::class, 'store']);
+    Route::post('/caller-excel-preview', [CallerExcelUploadController::class, 'preview'])->withoutMiddleware('auth:sanctum');
+
+
     Route::get('/cdr', [CdrController::class, 'index']);
     Route::post('/caller-data', [CdrController::class, 'getCallerData']); // New endpoint
+    Route::post('/enhanced-caller-data', [CdrController::class, 'getEnhancedCallerData']); // New endpoint for enhanced caller data
+    Route::get('/live-cdr', [CdrController::class, 'getLiveCdrData']); // New endpoint for live CDR data
+    Route::post('/calls-by-caller', [CdrController::class, 'getCallsByCallerNumber']); // New route for getting calls by caller number from clid field
     
     // Update route definition to properly handle special characters including dots
     Route::get('/comments/{cdr_id}', [CommentController::class, 'index'])
@@ -71,3 +81,6 @@ Route::middleware('auth:sanctum')->group(function () {
     // logout
     Route::post('/logout', [AuthController::class, 'logout']);
 });
+
+// Optionally expose a public endpoint for CDR webhooks from Asterisk
+Route::post('/cdr-webhook', [CdrController::class, 'handleCdrWebhook'])->withoutMiddleware('auth:sanctum');

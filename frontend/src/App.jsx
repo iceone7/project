@@ -124,8 +124,54 @@ function App({ dashboardType = 'company' }) {
   }, [dashboardType]);
 
   const handleCallerUploadSuccess = (data) => {
+    // Extract phone numbers for enhanced data fetching
+    const callerNumbers = data.map(item => item.callerNumber || item.caller_number).filter(Boolean);
+    
+    // First update the state with the basic data
     setExcelData(data);
     setFilteredCompanies(data);
+    
+    // Then fetch enhanced data - this will trigger the auto-refresh in DataTable
+    if (callerNumbers.length > 0) {
+      defaultInstance.post('/enhanced-caller-data', { callerNumbers })
+        .then(response => {
+          if (response.data && response.data.success) {
+            // Enhance the data with CDR information
+            const enhancedData = data.map(item => {
+              const callerNumber = item.callerNumber || item.caller_number;
+              if (callerNumber && response.data.data[callerNumber]) {
+                const cdrInfo = response.data.data[callerNumber];
+                // Find primary receiver (most frequently called)
+                let primaryReceiver = { callCount: 0 };
+                if (cdrInfo.receivers && cdrInfo.receivers.length > 0) {
+                  primaryReceiver = cdrInfo.receivers.reduce(
+                    (max, current) => current.callCount > max.callCount ? current : max,
+                    { callCount: 0 }
+                  );
+                }
+                
+                return {
+                  ...item,
+                  receiverName: primaryReceiver.receiverName || item.receiverName || '',
+                  receiverNumber: primaryReceiver.receiverNumber || item.receiverNumber || '',
+                  callCount: cdrInfo.totalCalls || 0,
+                  callDate: cdrInfo.lastCallDate || '',
+                  callDuration: cdrInfo.formattedTotalDuration || '',
+                  callStatus: primaryReceiver.lastCallStatus || '',
+                  hasRecentCalls: cdrInfo.hasRecentCalls || false
+                };
+              }
+              return item;
+            });
+            
+            setExcelData(enhancedData);
+            setFilteredCompanies(enhancedData);
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching enhanced caller data:', error);
+        });
+    }
   };
 
   const handleCompanyUploadSuccess = async (data) => {
@@ -380,6 +426,7 @@ function App({ dashboardType = 'company' }) {
                         filteredCompanies={filteredCompanies}
                         handleDeleteCompany={handleDeleteCompany}
                         handleEdit={handleEdit}
+                        handleCallerUploadSuccess={handleCallerUploadSuccess}
                       />
                     </div>
                   </div>

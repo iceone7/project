@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import edit_delete from '../css/edit_detele.module.css';
 import button_comments from '../css/button_comments.module.css';
 import EditModal from './EditModal';
-// import FilterForm from './FilterForm';
 import defaultInstance from '../../api/defaultInstance';
 import { useLanguage } from '../i18n/LanguageContext';
 
@@ -10,7 +9,7 @@ const isAdmin = localStorage.getItem('role') === 'super_admin' || localStorage.g
 const isDepartamentVip = localStorage.getItem('department_id') === '1';
 const isDepartamentCraftsmen = localStorage.getItem('department_id') === '2';
 
-const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDeleteCompany, handleEdit }) => {
+const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDeleteCompany, handleEdit, handleCallerUploadSuccess }) => {
   const [editRowId, setEditRowId] = useState(null);
   const [editRowData, setEditRowData] = useState({});
   const [showEditModal, setShowEditModal] = useState(false);
@@ -20,7 +19,11 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [lastUpdateTime, setLastUpdateTime] = useState(null);
+  const [lastExcelDataLength, setLastExcelDataLength] = useState(0);
   const { t } = useLanguage();
+
+  const recordingsBaseUrl = import.meta.env.VITE_RECORDINGS_URL;
 
   // Fetch call history data for craftsmen section
   useEffect(() => {
@@ -36,6 +39,134 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
     }
   }, [activeDashboard]);
 
+  // Add useEffect to detect new data uploads and trigger refresh once
+  useEffect(() => {
+    if (activeDashboard === 'caller' && excelData && excelData.length > 0) {
+      // Only trigger refresh when data actually changes (after upload)
+      if (excelData.length !== lastExcelDataLength) {
+        console.log('New data detected, refreshing CDR data...');
+        setLastExcelDataLength(excelData.length);
+        
+        // Small delay to ensure the data is properly loaded
+        setTimeout(() => {
+          fetchLiveCdrData();
+        }, 500);
+      }
+    }
+  }, [excelData, activeDashboard]);
+
+  // Function to fetch live CDR data and update main table
+  const fetchLiveCdrData = async () => {
+    if (!excelData || excelData.length === 0) return;
+    
+    try {
+      setIsLoading(true);
+      // Only get newer records if we already have data
+      const params = lastUpdateTime ? { since: lastUpdateTime } : {};
+      
+      // Visual indication that refresh is happening
+      console.log('Fetching live CDR data at:', new Date().toLocaleTimeString());
+      
+      const response = await defaultInstance.get('/live-cdr', { params });
+      
+      if (response.data && response.data.success) {
+        // Update the timestamp for next poll
+        setLastUpdateTime(response.data.timestamp);
+        
+        // Create a map of caller numbers to their latest call data
+        const latestCallMap = {};
+        response.data.data.forEach(call => {
+          // Process both src (caller) and dst (receiver) numbers
+          [call.callerNumber, call.receiverNumber].forEach(number => {
+            if (!number) return;
+            
+            // Normalize the phone number for consistent matching
+            const normalizedNumber = normalizePhoneForMatching(number);
+            
+            // If this call is newer than what we have, update the map
+            if (!latestCallMap[normalizedNumber] || 
+                new Date(call.callDate) > new Date(latestCallMap[normalizedNumber].callDate)) {
+              latestCallMap[normalizedNumber] = call;
+            }
+          });
+        });
+        
+        // Update the excel data with the latest call information
+        if (Object.keys(latestCallMap).length > 0) {
+          const updatedData = excelData.map(row => {
+            // Try to find matches for any of the phone numbers in this row
+            const phoneNumbers = [
+              row.callerNumber || row.caller_number,
+              row.tel1 || row.contactTel1,
+              row.tel2 || row.contactTel2,
+              row.tel3 || row.contactTel3,
+              row.receiverNumber || row.receiver_number
+            ].filter(Boolean).map(normalizePhoneForMatching);
+            
+            // Find the most recent call for any of these numbers
+            let mostRecentCall = null;
+            
+            for (const phone of phoneNumbers) {
+              if (latestCallMap[phone] && 
+                  (!mostRecentCall || new Date(latestCallMap[phone].callDate) > new Date(mostRecentCall.callDate))) {
+                mostRecentCall = latestCallMap[phone];
+              }
+            }
+            
+            // If we found a matching call, update the row with its data
+            if (mostRecentCall) {
+              const updatedRow = { ...row };
+              
+              // Update receiver information if this row was the caller
+              if (phoneNumbers.includes(normalizePhoneForMatching(mostRecentCall.callerNumber))) {
+                updatedRow.receiverName = mostRecentCall.receiverName || row.receiverName || '';
+                updatedRow.receiverNumber = mostRecentCall.receiverNumber || row.receiverNumber || '';
+              } 
+              // Update caller information if this row was the receiver
+              else if (phoneNumbers.includes(normalizePhoneForMatching(mostRecentCall.receiverNumber))) {
+                updatedRow.callerName = mostRecentCall.callerName || row.callerName || '';
+                updatedRow.callerNumber = mostRecentCall.callerNumber || row.callerNumber || '';
+              }
+              
+              // Increment call count
+              updatedRow.callCount = (parseInt(row.callCount || row.call_count || 0) + 1).toString();
+              
+              // Update call date and duration
+              updatedRow.callDate = mostRecentCall.callDate || row.callDate || '';
+              updatedRow.callDuration = mostRecentCall.formattedDuration || row.callDuration || '';
+              
+              // Update call status
+              updatedRow.callStatus = mostRecentCall.callStatus || row.callStatus || '';
+              
+              // Highlight recent calls
+              updatedRow.hasRecentCalls = true;
+              
+              return updatedRow;
+            }
+            
+            return row;
+          });
+          
+          // Send the updated data back to the parent component
+          if (typeof handleCallerUploadSuccess === 'function') {
+            handleCallerUploadSuccess(updatedData);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching live CDR data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Helper function to normalize phone numbers for matching
+  const normalizePhoneForMatching = (phoneNumber) => {
+    if (!phoneNumber) return '';
+    // Remove all non-digit characters
+    return phoneNumber.replace(/\D/g, '');
+  };
+
   // Function to get recording path
   const getPath = (recordingfile) => {
     if (!recordingfile) return '';
@@ -48,9 +179,6 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
     const dd = dateStr.substring(6, 8);
     return `${yyyy}/${mm}/${dd}/${recordingfile}`;
   };
-
-  // Get the recordings URL from environment variables
-  const recordingsBaseUrl = import.meta.env.VITE_RECORDINGS_URL;
 
   // Functions for editing
   const startEdit = (row) => {
@@ -76,7 +204,7 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
     }
   };
 
-  // Получение комментариев
+  // Fetch comments for a call
   const fetchComments = async (cdrId) => {
     setIsLoading(true);
     try {
@@ -106,7 +234,7 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
     }
   };
 
-  // Открытие модального окна комментариев
+  // Open comment modal for a call
   const openCommentModal = (cdrId) => {
     if (!cdrId) {
       console.error('No uniqueid provided');
@@ -127,7 +255,7 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
     setShowCommentModal(true);
   };
 
-  // Закрытие модального окна
+  // Close comment modal
   const closeCommentModal = () => {
     setShowCommentModal(false);
     setCurrentCdrId(null);
@@ -135,7 +263,7 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
     setNewComment('');
   };
 
-  // Сохранение комментария
+  // Save new comment
   const saveComment = async () => {
     if (!newComment.trim()) {
       alert('Comment cannot be empty');
@@ -273,13 +401,24 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
           </div>
         </div>
       )}
+      
       {activeDashboard === 'caller' && (
         <div className="ecommerce-widget">
           <div className="row">
             <div className="col-12">
               <div key={activeDashboard} className="animated-section fade-in">
                 <div className="card">
-                  <h5 className="card-header">Caller Dashboard</h5>
+                  <h5 className="card-header">
+                    Caller Dashboard
+                    {isLoading && <span className="spinner-border spinner-border-sm ms-2" role="status"></span>}
+                    <button
+                      className="btn btn-sm btn-outline-primary float-end"
+                      onClick={fetchLiveCdrData}
+                      disabled={isLoading}
+                    >
+                      Refresh Data
+                    </button>
+                  </h5>
                   <div className="card-body p-0">
                     <div className="table-responsive">
                       <table className="table">
@@ -307,7 +446,7 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                         <tbody>
                           {excelData.length > 0 ? (
                             excelData.map((call, index) => (
-                              <tr key={call.id || index}>
+                              <tr key={call.id || index} className={call.hasRecentCalls ? "table-warning" : ""}>
                                 <td>{index + 1}</td>
                                 <td>{call.companyName || call.company_name || 'N/A'}</td>
                                 <td>{call.identificationCode || call.id || 'N/A'}</td>
@@ -322,7 +461,11 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                                 <td>{call.receiverName || call.receiver_name || 'N/A'}</td>
                                 <td>{call.receiverNumber || call.receiver_number || 'N/A'}</td>
                                 <td>{call.callCount || call.call_count || '0'}</td>
-                                <td>{call.callDate || call.call_date || 'N/A'}</td>
+                                <td>
+                                  {call.callDate || call.call_date ? 
+                                    new Date(call.callDate || call.call_date).toLocaleString() : 
+                                    'N/A'}
+                                </td>
                                 <td>{call.callDuration || call.call_duration || 'N/A'}</td>
                                 <td>{call.callStatus || call.call_status || 'N/A'}</td>
                               </tr>
@@ -342,6 +485,7 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
           </div>
         </div>
       )}
+      
       {isDepartamentCraftsmen && activeDashboard === 'company' && (
         <div className="ecommerce-widget">
           <div className="row">
@@ -423,7 +567,8 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
           </div>
         </div>
       )}
-      {/* Модальное окно для комментариев */}
+      
+      {/* Modal components */}
       {showCommentModal && (
         <div className="modal fade show" style={{ display: 'block' }} tabIndex="-1">
           <div className="modal-dialog">
