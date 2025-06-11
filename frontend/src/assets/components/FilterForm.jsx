@@ -41,7 +41,7 @@ const initialFilters = {
   foundationDateEnd: '',
   manager: '',
   status: '',
-  src: '', // A ნომერი (Caller Number for craftsmen)
+  src: '', // A ნომერი (Caller Number for craftsmen)s
   dst: '', // B ნომერი (Receiver Number for craftsmen)
   callDate: '', // თარიღი (Call Date for craftsmen)
   duration: '', // საუბრის დრო (Call Duration for craftsmen)
