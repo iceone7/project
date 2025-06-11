@@ -49,6 +49,9 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
     return `${yyyy}/${mm}/${dd}/${recordingfile}`;
   };
 
+  // Get the recordings URL from environment variables
+  const recordingsBaseUrl = import.meta.env.VITE_RECORDINGS_URL || 'http://10.150.20.117/recordings';
+
   // Functions for editing
   const startEdit = (row) => {
     setEditRowId(row.id);
@@ -385,7 +388,7 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                                       onError={(e) => console.error('Audio error for file:', call.recordingfile, e)}
                                     >
                                       <source
-                                        src={`http://10.150.20.117/recordings/${getPath(call.recordingfile)}`}
+                                        src={`${recordingsBaseUrl}/${getPath(call.recordingfile)}`}
                                         type="audio/wav"
                                       />
                                       Ваш браузер не поддерживает аудио или файл недоступен.
