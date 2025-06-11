@@ -25,7 +25,7 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
   // Fetch call history data for craftsmen section
   useEffect(() => {
     if (isDepartamentCraftsmen && activeDashboard === 'company') {
-      defaultInstance.get(`${import.meta.env.VITE_API_BASE_URL}/cdr`)
+      defaultInstance.get(`/cdr`)
         .then(response => {
           console.log('API response for /cdr:', response.data);
           setCalls(response.data);
@@ -50,7 +50,7 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
   };
 
   // Get the recordings URL from environment variables
-  const recordingsBaseUrl = import.meta.env.VITE_RECORDINGS_URL || 'http://10.150.20.117/recordings';
+  const recordingsBaseUrl = import.meta.env.VITE_RECORDINGS_URL;
 
   // Functions for editing
   const startEdit = (row) => {
@@ -273,13 +273,13 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
           </div>
         </div>
       )}
-      {isDepartamentVip && activeDashboard === 'caller' && (
+      {activeDashboard === 'caller' && (
         <div className="ecommerce-widget">
           <div className="row">
             <div className="col-12">
               <div key={activeDashboard} className="animated-section fade-in">
                 <div className="card">
-                  <h5 className="card-header">Recent Calls</h5>
+                  <h5 className="card-header">Caller Dashboard</h5>
                   <div className="card-body p-0">
                     <div className="table-responsive">
                       <table className="table">

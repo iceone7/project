@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import filterStyles from '../css/FilterModal.module.css';
 import styles from '../css/UploadButton.module.css';
 import { useLanguage } from '../i18n/LanguageContext';
 
+// Initial filter state
 const initialFilters = {
   companyName: '',
   identificationCode: '',
@@ -50,6 +51,18 @@ const initialFilters = {
   duration: '', // საუბრის დრო (Call Duration for craftsmen)
 };
 
+// Utility function for safe property access with multiple alternatives
+const getNestedProperty = (obj, possibleKeys) => {
+  if (!obj) return '';
+  for (const key of possibleKeys) {
+    const value = key.includes('.')
+      ? key.split('.').reduce((o, k) => (o || {})[k], obj)
+      : obj[key];
+    if (value !== undefined && value !== null) return value;
+  }
+  return '';
+};
+
 const FilterForm = ({
   data,
   onFilterApply,
@@ -58,13 +71,31 @@ const FilterForm = ({
   onlyButton = false,
   onlyForm = false,
   dashboardType = 'caller',
-  onDownloadFiltered, // Add new prop for download function
+  onDownloadFiltered,
 }) => {
   const [filters, setFilters] = useState(initialFilters);
+  const [debouncedFilters, setDebouncedFilters] = useState(initialFilters);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
-  const {t} = useLanguage();
+  const { t } = useLanguage();
   
+  // Debounce filter changes
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDebouncedFilters(filters);
+    }, 300); // 300ms debounce
+    
+    return () => clearTimeout(timeoutId);
+  }, [filters]);
+  
+  // Apply filters when debounced values change
+  useEffect(() => {
+    if (!isInitialLoad) {
+      const filteredData = getFilteredData();
+      onFilterApply(filteredData);
+    }
+  }, [debouncedFilters]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Initial data setup
   useEffect(() => {
     if (isInitialLoad && data && data.length > 0) {
       setIsInitialLoad(false);
@@ -72,58 +103,99 @@ const FilterForm = ({
     }
   }, [data, isInitialLoad, onFilterApply]);
 
-  const getFilteredData = () => {
-    const dataArr = Array.isArray(data) ? data : [];
-    return applyFilters(dataArr);
-  };
+  // Normalize string values for case-insensitive comparison
+  const normalizeString = useCallback((value) => {
+    if (value === null || value === undefined) return '';
+    return String(value).toLowerCase().trim();
+  }, []);
 
-  const handleFilterChange = (e) => {
-    const { name, value } = e.target;
-    setFilters((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const matchesText = (field, filter) => {
+  // Check if text matches filter pattern
+  const matchesText = useCallback((field, filter) => {
     if (!filter) return true;
-    if (field == null) return false;
-    return String(field).toLowerCase().includes(filter.toLowerCase().trim());
-  };
+    return normalizeString(field).includes(normalizeString(filter));
+  }, [normalizeString]);
 
-  const matchesNumberRange = (value, min, max) => {
+  // Check if number is within range
+  const matchesNumberRange = useCallback((value, min, max) => {
     if (value == null || value === '') return true;
-    const numValue = Number(value);
+    
+    // Try to convert to number, handling various formats
+    let numValue;
+    if (typeof value === 'string') {
+      // Remove any non-numeric chars except decimal point
+      const cleanValue = value.replace(/[^\d.-]/g, '');
+      numValue = parseFloat(cleanValue);
+    } else {
+      numValue = Number(value);
+    }
+    
+    if (isNaN(numValue)) return false;
+    
     const numMin = min !== '' ? Number(min) : null;
     const numMax = max !== '' ? Number(max) : null;
     
-    if (isNaN(numValue)) return false;
-    if (numMin !== null && numValue < numMin) return false;
-    if (numMax !== null && numValue > numMax) return false;
+    if (numMin !== null && !isNaN(numMin) && numValue < numMin) return false;
+    if (numMax !== null && !isNaN(numMax) && numValue > numMax) return false;
+    
     return true;
-  };
+  }, []);
 
-  const matchesDateRange = (date, start, end) => {
-    if (!date) return true;
-    let dateObj = new Date(date);
-    if (isNaN(dateObj.getTime())) return false;
+  // Check if date is within range (with timezone safety)
+  const matchesDateRange = useCallback((dateValue, start, end) => {
+    if (!dateValue) return true;
+    
+    // Try to parse the date safely
+    let dateObj;
+    try {
+      // Handle different date formats
+      if (typeof dateValue === 'string') {
+        // Try parsing as ISO format first
+        dateObj = new Date(dateValue);
+        
+        // If invalid, try DD/MM/YYYY format
+        if (isNaN(dateObj.getTime()) && dateValue.includes('/')) {
+          const [day, month, year] = dateValue.split('/');
+          dateObj = new Date(`${year}-${month}-${day}`);
+        }
+        
+        // If still invalid, return false
+        if (isNaN(dateObj.getTime())) return false;
+      } else if (dateValue instanceof Date) {
+        dateObj = dateValue;
+      } else {
+        return false;
+      }
+    } catch (e) {
+      console.error('Date parsing error:', e);
+      return false;
+    }
     
     const startDate = start ? new Date(start) : null;
     const endDate = end ? new Date(end) : null;
     
+    // Set hours to beginning/end of day for consistent comparison
+    if (dateObj) dateObj.setHours(12, 0, 0, 0);
+    if (startDate) startDate.setHours(0, 0, 0, 0);
+    
     if (startDate && dateObj < startDate) return false;
+    
     if (endDate) {
-      const endOfDay = new Date(endDate);
-      endOfDay.setHours(23, 59, 59, 999);
-      if (dateObj > endOfDay) return false;
+      endDate.setHours(23, 59, 59, 999);
+      if (dateObj > endDate) return false;
     }
+    
     return true;
-  };
+  }, []);
 
-  const matchesStatus = (status, filter) => {
+  // Check if status matches
+  const matchesStatus = useCallback((status, filter) => {
     if (!filter) return true;
     if (!status) return false;
-    return String(status).toLowerCase().trim() === filter.toLowerCase().trim();
-  };
+    return normalizeString(status) === normalizeString(filter);
+  }, [normalizeString]);
 
-  const formatDuration = (seconds) => {
+  // Format duration string
+  const formatDuration = useCallback((seconds) => {
     if (!seconds || isNaN(seconds)) return 'N/A';
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
@@ -131,83 +203,235 @@ const FilterForm = ({
     return [h, m, s]
       .map(unit => String(unit).padStart(2, '0'))
       .join(':');
-  };
+  }, []);
 
-  const applyFilters = (dataArr) => {
-    if (!Array.isArray(dataArr)) {
-      console.log('applyFilters: dataArr is not an array', dataArr);
-      return [];
-    }
-    const filtered = dataArr.filter((row) => {
+  // Create memoized filter functions for each dashboard type
+  const filterFunctions = useMemo(() => ({
+    caller: (row) => {
       try {
-        if (dashboardType === 'caller') {
-          return (
-            matchesText(row.companyName || row.company_name, filters.companyName) &&
-            matchesText(row.identificationCode || row.identification_code, filters.identificationCode) &&
-            matchesText(row.contactPerson1 || row.contact_person1, filters.contactPerson1) &&
-            matchesText(row.tel1 || row.contactTel1 || row.tel || row.contact_tel1, filters.tel1) &&
-            matchesText(row.contactPerson2 || row.contact_person2, filters.contactPerson2) &&
-            matchesText(row.tel2 || row.contactTel2 || row.tel_2 || row.contact_tel2, filters.tel2) &&
-            matchesText(row.contactPerson3 || row.contact_person3, filters.contactPerson3) &&
-            matchesText(row.tel3 || row.contactTel3 || row.tel_3 || row.contact_tel3, filters.tel3) &&
-            matchesText(row.callerName || row.caller_name, filters.callerName) &&
-            matchesText(row.callerNumber || row.caller_number, filters.callerNumber) &&
-            matchesText(row.receiverNumber || row.receiver_number, filters.receiverNumber) &&
-            matchesNumberRange(row.callCount || row.call_count, filters.callCountMin, filters.callCountMax) &&
-            matchesDateRange(row.callDate || row.call_date, filters.callDateStart, filters.callDateEnd) &&
-            matchesStatus(row.callStatus || row.call_status, filters.callStatus)
-          );
-        } else if (dashboardType === 'company') {
-          return (
-            matchesText(row.tenderNumber || row.tender_number, filters.tenderNumber) &&
-            matchesText(row.buyer, filters.buyer) &&
-            matchesText(row.contact1, filters.contact1) &&
-            matchesText(row.phone1, filters.phone1) &&
-            matchesText(row.contact2, filters.contact2) &&
-            matchesText(row.phone2, filters.phone2) &&
-            matchesText(row.contact3, filters.contact3) &&
-            matchesText(row.phone3, filters.phone3) &&
-            matchesText(row.email, filters.email) &&
-            matchesText(row.executor, filters.executor) &&
-            matchesText(row.idCode || row.id_code, filters.idCode) &&
-            matchesNumberRange(row.contractValue || row.contract_value, filters.contractValueMin, filters.contractValueMax) &&
-            matchesNumberRange(row.totalValueGorgia || row.total_value_gorgia, filters.totalValueGorgiaMin, filters.totalValueGorgiaMax) &&
-            matchesDateRange(row.lastPurchaseDateGorgia || row.last_purchase_date_gorgia, filters.lastPurchaseDateStart, filters.lastPurchaseDateEnd) &&
-            matchesDateRange(row.contractEndDate || row.contract_end_date, filters.contractEndDateStart, filters.contractEndDateEnd) &&
-            matchesDateRange(row.foundationDate || row.foundation_date, filters.foundationDateStart, filters.foundationDateEnd) &&
-            matchesText(row.manager, filters.manager) &&
-             matchesText(row.manager, filters.managerNumber) &&
-            matchesStatus(row.status, filters.status)
-          );
-        } else if (dashboardType === 'craftsmen') {
-          return (
-            matchesText(row.src, filters.src) &&
-            matchesText(row.dst, filters.dst) &&
-            matchesText(row.calldate, filters.callDate) &&
-            (filters.duration === '' || (row.duration && formatDuration(Number(row.duration)).includes(filters.duration)))
-          );
-        }
-        return true;
+        return (
+          matchesText(
+            getNestedProperty(row, ['companyName', 'company_name']), 
+            filters.companyName
+          ) &&
+          matchesText(
+            getNestedProperty(row, ['identificationCode', 'identification_code', 'idCode', 'id_code']), 
+            filters.identificationCode
+          ) &&
+          matchesText(
+            getNestedProperty(row, ['contactPerson1', 'contact_person1', 'contact1', 'contact_1']), 
+            filters.contactPerson1
+          ) &&
+          matchesText(
+            getNestedProperty(row, ['tel1', 'phone1', 'phone_1', 'contactTel1', 'contact_tel1']), 
+            filters.tel1
+          ) &&
+          matchesText(
+            getNestedProperty(row, ['contactPerson2', 'contact_person2', 'contact2', 'contact_2']), 
+            filters.contactPerson2
+          ) &&
+          matchesText(
+            getNestedProperty(row, ['tel2', 'phone2', 'phone_2', 'contactTel2', 'contact_tel2']), 
+            filters.tel2
+          ) &&
+          matchesText(
+            getNestedProperty(row, ['contactPerson3', 'contact_person3', 'contact3', 'contact_3']), 
+            filters.contactPerson3
+          ) &&
+          matchesText(
+            getNestedProperty(row, ['tel3', 'phone3', 'phone_3', 'contactTel3', 'contact_tel3']), 
+            filters.tel3
+          ) &&
+          matchesText(
+            getNestedProperty(row, ['callerName', 'caller_name']), 
+            filters.callerName
+          ) &&
+          matchesText(
+            getNestedProperty(row, ['callerNumber', 'caller_number']), 
+            filters.callerNumber
+          ) &&
+          matchesText(
+            getNestedProperty(row, ['receiverNumber', 'receiver_number']), 
+            filters.receiverNumber
+          ) &&
+          matchesNumberRange(
+            getNestedProperty(row, ['callCount', 'call_count']), 
+            filters.callCountMin, 
+            filters.callCountMax
+          ) &&
+          matchesDateRange(
+            getNestedProperty(row, ['callDate', 'call_date']), 
+            filters.callDateStart, 
+            filters.callDateEnd
+          ) &&
+          matchesStatus(
+            getNestedProperty(row, ['callStatus', 'call_status']), 
+            filters.callStatus
+          )
+        );
       } catch (err) {
-        console.error('Filter error for row:', row, err);
+        console.error('Filter error for caller row:', row, err);
         return false;
       }
-    });
-    console.log('Filtered data:', filtered);
+    },
+    company: (row) => {
+      try {
+        return (
+          matchesText(
+            getNestedProperty(row, ['tenderNumber', 'tender_number']), 
+            filters.tenderNumber
+          ) &&
+          matchesText(
+            getNestedProperty(row, ['buyer']), 
+            filters.buyer
+          ) &&
+          matchesText(
+            getNestedProperty(row, ['contact1', 'contact_1']), 
+            filters.contact1
+          ) &&
+          matchesText(
+            getNestedProperty(row, ['phone1', 'phone_1']), 
+            filters.phone1
+          ) &&
+          matchesText(
+            getNestedProperty(row, ['contact2', 'contact_2']), 
+            filters.contact2
+          ) &&
+          matchesText(
+            getNestedProperty(row, ['phone2', 'phone_2']), 
+            filters.phone2
+          ) &&
+          matchesText(
+            getNestedProperty(row, ['contact3', 'contact_3']), 
+            filters.contact3
+          ) &&
+          matchesText(
+            getNestedProperty(row, ['phone3', 'phone_3']), 
+            filters.phone3
+          ) &&
+          matchesText(
+            getNestedProperty(row, ['email']), 
+            filters.email
+          ) &&
+          matchesText(
+            getNestedProperty(row, ['executor']), 
+            filters.executor
+          ) &&
+          matchesText(
+            getNestedProperty(row, ['idCode', 'id_code']), 
+            filters.idCode
+          ) &&
+          matchesNumberRange(
+            getNestedProperty(row, ['contractValue', 'contract_value']), 
+            filters.contractValueMin, 
+            filters.contractValueMax
+          ) &&
+          matchesNumberRange(
+            getNestedProperty(row, ['totalValueGorgia', 'total_value_gorgia']), 
+            filters.totalValueGorgiaMin, 
+            filters.totalValueGorgiaMax
+          ) &&
+          matchesDateRange(
+            getNestedProperty(row, ['lastPurchaseDateGorgia', 'last_purchase_date_gorgia']), 
+            filters.lastPurchaseDateStart, 
+            filters.lastPurchaseDateEnd
+          ) &&
+          matchesDateRange(
+            getNestedProperty(row, ['contractEndDate', 'contract_end_date']), 
+            filters.contractEndDateStart, 
+            filters.contractEndDateEnd
+          ) &&
+          matchesDateRange(
+            getNestedProperty(row, ['foundationDate', 'foundation_date']), 
+            filters.foundationDateStart, 
+            filters.foundationDateEnd
+          ) &&
+          matchesText(
+            getNestedProperty(row, ['manager']), 
+            filters.manager
+          ) &&
+          matchesText(
+            getNestedProperty(row, ['managerNumber', 'manager_number']), 
+            filters.managerNumber
+          ) &&
+          matchesStatus(
+            getNestedProperty(row, ['status']), 
+            filters.status
+          )
+        );
+      } catch (err) {
+        console.error('Filter error for company row:', row, err);
+        return false;
+      }
+    },
+    craftsmen: (row) => {
+      try {
+        return (
+          matchesText(row.src, filters.src) &&
+          matchesText(row.dst, filters.dst) &&
+          matchesText(row.calldate, filters.callDate) &&
+          (filters.duration === '' || 
+           (row.duration && formatDuration(Number(row.duration)).includes(filters.duration)))
+        );
+      } catch (err) {
+        console.error('Filter error for craftsmen row:', row, err);
+        return false;
+      }
+    }
+  }), [
+    filters, matchesText, matchesNumberRange, matchesDateRange, 
+    matchesStatus, formatDuration
+  ]);
+
+  // Get filtered data based on current filters
+  const getFilteredData = useCallback(() => {
+    if (!Array.isArray(data)) {
+      console.log('getFilteredData: data is not an array', data);
+      return [];
+    }
+    
+    console.log(`Filtering ${data.length} ${dashboardType} records...`);
+    const filterFunction = filterFunctions[dashboardType] || (() => true);
+    
+    // Use efficient array filtering
+    const startTime = performance.now();
+    const filtered = data.filter(filterFunction);
+    const endTime = performance.now();
+    
+    console.log(`Filtering completed in ${(endTime - startTime).toFixed(2)}ms. Found ${filtered.length} matching records.`);
     return filtered;
+  }, [data, dashboardType, filterFunctions]);
+
+  // Handle input changes with validation
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    
+    // For number inputs, validate to prevent invalid entries that could break comparisons
+    if (name.includes('Min') || name.includes('Max')) {
+      // Allow empty string or valid numbers only
+      if (value === '' || !isNaN(value)) {
+        setFilters((prev) => ({ ...prev, [name]: value }));
+      }
+    } else {
+      setFilters((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
+  // Apply filters immediately (bypass debounce) when clicking Apply
   const handleApplyFilters = () => {
     const filteredData = getFilteredData();
-    console.log('Filtered data:', filteredData);
+    setDebouncedFilters(filters); // Update debounced state
     onFilterApply(filteredData);
   };
 
+  // Clear all filters
   const handleClearFilters = () => {
     setFilters(initialFilters);
+    setDebouncedFilters(initialFilters);
     onFilterApply(Array.isArray(data) ? data : []);
   };
 
+  // Handle download of filtered data
   const handleDownloadFiltered = () => {
     const filteredData = getFilteredData();
     if (filteredData.length > 0) {
@@ -217,6 +441,7 @@ const FilterForm = ({
     }
   };
 
+  // Only button mode (just show filter toggle)
   if (onlyButton) {
     return (
       <button
@@ -231,8 +456,11 @@ const FilterForm = ({
     );
   }
 
+  // Only form mode (just show filter form if enabled)
   if (onlyForm) {
     if (!showFilters) return null;
+    
+    // Return the filter form - the rest of the component remains the same
     return (
       <div className={filterStyles.filterContainer} style={{ marginBottom: '20px' }}>
         <h3 className={filterStyles.filterTitle}>
@@ -665,6 +893,7 @@ const FilterForm = ({
     );
   }
 
+  // Full component (both button and form)
   return (
     <>
       <button
@@ -744,14 +973,36 @@ const FilterForm = ({
                   <input type="date" name="foundationDateStart" placeholder="Foundation Start Date" value={filters.foundationDateStart} onChange={handleFilterChange} className={filterStyles.input} />
                   <input type="date" name="foundationDateEnd" placeholder="Foundation End Date" value={filters.foundationDateEnd} onChange={handleFilterChange} className={filterStyles.input} />
                 </div>
-                <input type="text" name="manager" placeholder="Manager" value={filters.manager} onChange={handleFilterChange} className={filterStyles.input} />
-                <input type="text" name="manager" placeholder="Manager" value={filters.managerNumber} onChange={handleFilterChange} className={filterStyles.input} />
-                <select name="status" value={filters.status} onChange={handleFilterChange} className={filterStyles.select}>
-                  <option value="">All Statuses</option>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                  <option value="pending">Pending</option>
+                <input
+                  type="text"
+                  name="manager"
+                  placeholder={t('manager')}
+                  value={filters.manager}
+                  onChange={handleFilterChange}
+                  className={filterStyles.input}
+                />
+
+                <input
+                  type="text"
+                  name="manager number"
+                  placeholder={t('manager number')}
+                  value={filters.managerNumber}
+                  onChange={handleFilterChange}
+                  className={filterStyles.input}
+                />
+
+                <select
+                  name="status"
+                  value={filters.status}
+                  onChange={handleFilterChange}
+                  className={filterStyles.select}
+                >
+                  <option value="">{t('allStatuses')}</option>
+                  <option value="შესრულებულია">{t('შესრულებულია')}</option>
+                  <option value="მიმდინარეა">{t('მიმდინარეა')}</option>
+                  <option value="გაუქმებულია">{t('გაუქმებულია')}</option>
                 </select>
+
               </>
             ) : dashboardType === 'craftsmen' ? (
               <>

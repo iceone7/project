@@ -79,11 +79,11 @@ const Sidebar = () => {
           </div>
         </div>
         <hr />
-        <div style={{ marginTop: 38, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px' }}>
+        <div style={{ marginTop: 38, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px' }} className="fade-in">
           <button
             style={langBtnStyle(language === 'en')}
             onClick={() => setLanguage('en')}
-            aria-label="Switch to English"
+            aria-label="Switch to English"            
           >
             <img src="https://flagcdn.com/w40/gb.png" alt="EN" style={{ width: 24, height: 16, display: 'block'}} />
           </button>

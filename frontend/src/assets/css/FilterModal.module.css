@@ -122,8 +122,10 @@
 }
 
 .clearButton {
-  background-color: #e5e7eb;
+  background-color: rgb(255, 69, 69);
   color: #71797E;
+  font-size: 20px;
+  font-weight: bold;
 }
 
 .applyButton:hover, .clearButton:hover {
