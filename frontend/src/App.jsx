@@ -50,6 +50,7 @@ function App({ dashboardType = 'company' }) {
   const [previewData, setPreviewData] = useState([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (dashboardType === 'company') {
@@ -131,45 +132,38 @@ function App({ dashboardType = 'company' }) {
     setExcelData(data);
     setFilteredCompanies(data);
     
-    // Then fetch enhanced data - this will trigger the auto-refresh in DataTable
-    if (callerNumbers.length > 0) {
-      defaultInstance.post('/enhanced-caller-data', { callerNumbers })
+    // Then fetch enhanced data using the dedicated CDR matching endpoint
+    if (data.length > 0) {
+      console.log('Sending data to process-cdr-data for enhanced matching...');
+      setIsLoading(true);
+      
+      // Define date range (last 3 months by default)
+      const endDate = new Date().toISOString().split('T')[0];
+      const startDate = new Date();
+      startDate.setMonth(startDate.getMonth() - 3);
+      const startDateStr = startDate.toISOString().split('T')[0];
+      
+      // Send all record data for comprehensive matching
+      defaultInstance.post('/process-cdr-data', { 
+        data: data,
+        start_date: startDateStr,
+        end_date: endDate
+      })
         .then(response => {
-          if (response.data && response.data.success) {
-            // Enhance the data with CDR information
-            const enhancedData = data.map(item => {
-              const callerNumber = item.callerNumber || item.caller_number;
-              if (callerNumber && response.data.data[callerNumber]) {
-                const cdrInfo = response.data.data[callerNumber];
-                // Find primary receiver (most frequently called)
-                let primaryReceiver = { callCount: 0 };
-                if (cdrInfo.receivers && cdrInfo.receivers.length > 0) {
-                  primaryReceiver = cdrInfo.receivers.reduce(
-                    (max, current) => current.callCount > max.callCount ? current : max,
-                    { callCount: 0 }
-                  );
-                }
-                
-                return {
-                  ...item,
-                  receiverName: primaryReceiver.receiverName || item.receiverName || '',
-                  receiverNumber: primaryReceiver.receiverNumber || item.receiverNumber || '',
-                  callCount: cdrInfo.totalCalls || 0,
-                  callDate: cdrInfo.lastCallDate || '',
-                  callDuration: cdrInfo.formattedTotalDuration || '',
-                  callStatus: primaryReceiver.lastCallStatus || '',
-                  hasRecentCalls: cdrInfo.hasRecentCalls || false
-                };
-              }
-              return item;
-            });
+          if (response.data && response.data.status === 'success') {
+            console.log('Received enhanced data with call records:', 
+                       response.data.data.filter(item => item.call_count > 0).length);
             
-            setExcelData(enhancedData);
-            setFilteredCompanies(enhancedData);
+            // Update the data with enhanced information
+            setExcelData(response.data.data);
+            setFilteredCompanies(response.data.data);
           }
         })
         .catch(error => {
           console.error('Error fetching enhanced caller data:', error);
+        })
+        .finally(() => {
+          setIsLoading(false);
         });
     }
   };

@@ -66,8 +66,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/caller-excel-uploads', [CallerExcelUploadController::class, 'store']);
     Route::post('/caller-excel-preview', [CallerExcelUploadController::class, 'preview'])->withoutMiddleware('auth:sanctum');
     
-    // New route for CDR data processing
+    // Enhanced CDR data processing endpoints
     Route::post('/process-cdr-data', [CallerExcelUploadController::class, 'processCdrData']);
+    Route::post('/match-caller-records', [CallerExcelUploadController::class, 'processCdrData']); // Alias for clarity
 
 
     Route::get('/cdr', [CdrController::class, 'index']);

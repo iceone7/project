@@ -142,23 +142,27 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
     
     try {
       setIsLoading(true);
-      // Include date filters in params with proper formatting
-      const params = lastUpdateTime ? { since: lastUpdateTime } : {};
-      if (startDate) params.start_date = formatDateForApi(startDate);
-      if (endDate) params.end_date = formatDateForApi(endDate);
+      // Always include date filters in params
+      const params = {
+        start_date: formatDateForApi(startDate),
+        end_date: formatDateForApi(endDate)
+      };
       
-      console.log('Fetching live CDR data at:', new Date().toLocaleTimeString(), 'with filters:', params);
+      if (lastUpdateTime) {
+        params.since = lastUpdateTime;
+      }
+      
+      console.log('Fetching live CDR data with filters:', params);
       
       const response = await defaultInstance.get('/live-cdr', { params });
       
       if (response.data && response.data.success) {
-        // Update the timestamp for next poll
         setLastUpdateTime(response.data.timestamp);
+        console.log(`Received ${response.data.data.length} CDR records with date range:`, response.data.date_range);
         
-        // Process the CDR data to update the Excel data
+        // Process the CDR data
         const updatedData = processCdrDataWithExcel(excelData, response.data.data);
         
-        // Send the updated data back to the parent component
         if (typeof handleCallerUploadSuccess === 'function') {
           handleCallerUploadSuccess(updatedData);
         }
@@ -170,97 +174,91 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
     }
   };
   
-  // Process CDR data with Excel data
+  // Process CDR data with Excel data - enhanced for accurate call counts
   const processCdrDataWithExcel = (excelData, cdrData) => {
-    // Create a map of all phone numbers in the Excel data
-    const phoneMap = {};
-    const result = [...excelData];
+    console.log('Processing', cdrData.length, 'CDR records for', excelData.length, 'Excel rows');
     
-    // First pass: index all phone numbers in the Excel data
+    const result = [...excelData];
+    const phoneToRowsMap = {};
+    
+    // First pass: create a lookup map of all phone numbers in the Excel data
     excelData.forEach((row, index) => {
-      // Collect all phone numbers in this row
       const phones = [
+        normalizePhoneForMatching(row.caller_number || row.callerNumber),
         normalizePhoneForMatching(row.tel1 || row.phone1),
         normalizePhoneForMatching(row.tel2 || row.phone2),
-        normalizePhoneForMatching(row.tel3 || row.phone3),
-        normalizePhoneForMatching(row.caller_number || row.callerNumber),
-        normalizePhoneForMatching(row.receiver_number || row.receiverNumber)
+        normalizePhoneForMatching(row.tel3 || row.phone3)
       ].filter(Boolean);
       
-      // Map each phone to this row index
+      // Map each phone to this row index for quick lookup
       phones.forEach(phone => {
-        if (!phoneMap[phone]) phoneMap[phone] = [];
-        phoneMap[phone].push(index);
+        if (!phoneToRowsMap[phone]) phoneToRowsMap[phone] = [];
+        phoneToRowsMap[phone].push(index);
       });
     });
     
-    // Create a map of caller-receiver pairs from CDR data
-    const pairMap = {};
+    // Group CDR data by unique caller-receiver pairs
+    const pairToCDRMap = {};
     
-    // Process CDR data
     cdrData.forEach(cdr => {
       const callerNumber = normalizePhoneForMatching(cdr.callerNumber);
       const receiverNumber = normalizePhoneForMatching(cdr.receiverNumber);
       const pairKey = `${callerNumber}_${receiverNumber}`;
       
-      // Initialize or update the pair data
-      if (!pairMap[pairKey]) {
-        pairMap[pairKey] = {
-          count: 1,
-          lastCall: cdr,
-          calls: [cdr]
+      // Store the CDR data by pair key - use server-provided values
+      if (!pairToCDRMap[pairKey]) {
+        pairToCDRMap[pairKey] = {
+          count: cdr.callCount || 1, // Use the count from server
+          data: cdr
         };
-      } else {
-        pairMap[pairKey].count++;
-        pairMap[pairKey].calls.push(cdr);
-        
-        // Update the last call if this one is newer
-        if (new Date(cdr.callDate) > new Date(pairMap[pairKey].lastCall.callDate)) {
-          pairMap[pairKey].lastCall = cdr;
-        }
+      } else if (new Date(cdr.callDate) > new Date(pairToCDRMap[pairKey].data.callDate)) {
+        // Update if this cdr is newer, but keep the pair's total count
+        pairToCDRMap[pairKey].data = cdr;
       }
     });
     
-    // Second pass: update rows with matched CDR data
-    Object.keys(pairMap).forEach(pairKey => {
+    console.log('Found', Object.keys(pairToCDRMap).length, 'unique caller-receiver pairs');
+    
+    // Update Excel rows with the matching CDR data
+    Object.entries(pairToCDRMap).forEach(([pairKey, cdrInfo]) => {
       const [callerNumber, receiverNumber] = pairKey.split('_');
-      const pairData = pairMap[pairKey];
       
-      // Find rows that contain either the caller or receiver number
-      const matchingRowIndices = new Set([
-        ...(phoneMap[callerNumber] || []),
-        ...(phoneMap[receiverNumber] || [])
-      ]);
+      // Find rows with this caller number
+      const callerRowIndices = phoneToRowsMap[callerNumber] || [];
       
-      // Update each matching row
-      matchingRowIndices.forEach(index => {
-        const row = result[index];
+      callerRowIndices.forEach(rowIndex => {
+        const row = result[rowIndex];
         const rowCallerNumber = normalizePhoneForMatching(row.caller_number || row.callerNumber);
-        const rowReceiverNumber = normalizePhoneForMatching(row.receiver_number || row.receiverNumber);
         
-        // Check if this row's caller/receiver match our pair
-        if (rowCallerNumber === callerNumber && 
-           (rowReceiverNumber === receiverNumber || !rowReceiverNumber)) {
-          // This is an exact match or we're filling in missing receiver info
-          result[index] = {
+        // Verify the caller number matches
+        if (rowCallerNumber !== callerNumber) return;
+        
+        // Check if any contact number in this row matches the receiver number
+        const contactNumbers = [
+          normalizePhoneForMatching(row.tel1 || row.phone1),
+          normalizePhoneForMatching(row.tel2 || row.phone2),
+          normalizePhoneForMatching(row.tel3 || row.phone3)
+        ];
+        
+        if (contactNumbers.includes(receiverNumber)) {
+          // Find which contact matched to get the correct name
+          const contactIndex = contactNumbers.findIndex(phone => phone === receiverNumber);
+          const contactNameKey = contactIndex === 0 ? 'contact_person1' : 
+                                 contactIndex === 1 ? 'contact_person2' : 'contact_person3';
+          const contactNameCamelKey = contactIndex === 0 ? 'contactPerson1' : 
+                                   contactIndex === 1 ? 'contactPerson2' : 'contactPerson3';
+          
+          const contactName = row[contactNameKey] || row[contactNameCamelKey] || '';
+          
+          // Update this row with the call data
+          result[rowIndex] = {
             ...row,
-            receiver_number: pairData.lastCall.receiverNumber,
-            receiver_name: pairData.lastCall.receiverName || row.receiver_name || '',
-            call_count: pairData.count,
-            call_date: pairData.lastCall.callDate,
-            call_duration: pairData.lastCall.formattedDuration,
-            call_status: pairData.lastCall.callStatus,
-            hasRecentCalls: true
-          };
-        } 
-        else if (rowReceiverNumber === receiverNumber && rowCallerNumber === callerNumber) {
-          // Both match - update with latest data
-          result[index] = {
-            ...row,
-            call_count: pairData.count,
-            call_date: pairData.lastCall.callDate,
-            call_duration: pairData.lastCall.formattedDuration,
-            call_status: pairData.lastCall.callStatus,
+            receiver_name: contactName || cdrInfo.data.receiverName || '',
+            receiver_number: cdrInfo.data.receiverNumber,
+            call_count: cdrInfo.count,
+            call_date: cdrInfo.data.callDate,
+            call_duration: cdrInfo.data.formattedDuration,
+            call_status: cdrInfo.data.callStatus,
             hasRecentCalls: true
           };
         }
@@ -528,33 +526,6 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                     >
                       Refresh Data
                     </button>
-                    
-                    {/* Date Filter Controls */}
-                    <div className="float-end me-3 d-flex align-items-center">
-                      <span className="me-2">Filter:</span>
-                      <input 
-                        type="date" 
-                        className="form-control form-control-sm me-2" 
-                        value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
-                        placeholder="Start Date" 
-                      />
-                      <span className="me-2">to</span>
-                      <input 
-                        type="date" 
-                        className="form-control form-control-sm me-2" 
-                        value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
-                        placeholder="End Date" 
-                      />
-                      <button 
-                        className="btn btn-sm btn-outline-secondary"
-                        onClick={handleDateFilterChange}
-                        disabled={isLoading}
-                      >
-                        Apply
-                      </button>
-                    </div>
                   </h5>
                   <div className="card-body p-0">
                     <div className="table-responsive">
