@@ -21,6 +21,8 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
   const [isLoading, setIsLoading] = useState(false);
   const [lastUpdateTime, setLastUpdateTime] = useState(null);
   const [lastExcelDataLength, setLastExcelDataLength] = useState(0);
+  // const [startDate, setStartDate] = useState('');
+  // const [endDate, setEndDate] = useState('');
   const { t } = useLanguage();
 
   const recordingsBaseUrl = import.meta.env.VITE_RECORDINGS_URL;
@@ -55,17 +57,97 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
     }
   }, [excelData, activeDashboard]);
 
+  // Function to format date for API requests (YYYY-MM-DD)
+  const formatDateForApi = (dateString) => {
+    if (!dateString) return '';
+    
+    // Check if it's already in YYYY-MM-DD format
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+      return dateString;
+    }
+    
+    try {
+      const date = new Date(dateString);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return dateString;
+    }
+  };
+
+  // Initialize date filters to last month by default
+  const getDefaultStartDate = () => {
+    const date = new Date();
+    date.setMonth(date.getMonth() - 1);
+    date.setDate(1); // First day of last month
+    return date.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+  };
+  
+  const getDefaultEndDate = () => {
+    return new Date().toISOString().split('T')[0]; // Today formatted as YYYY-MM-DD
+  };
+  
+  const [startDate, setStartDate] = useState(getDefaultStartDate());
+  const [endDate, setEndDate] = useState(getDefaultEndDate());
+
+  // Call this function when component mounts - forces initial load with date filters
+  useEffect(() => {
+    if (activeDashboard === 'caller') {
+      fetchCallerData();
+    }
+  }, [activeDashboard]); // Don't add fetchCallerData as dependency to avoid infinite loop
+
+  // Function to fetch caller data with date filters
+  const fetchCallerData = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Build query parameters with correctly formatted date filters
+      const params = {};
+      if (startDate) params.start_date = formatDateForApi(startDate);
+      if (endDate) params.end_date = formatDateForApi(endDate);
+      
+      console.log('Fetching caller data with filters:', params);
+      
+      const response = await defaultInstance.get('/caller-excel-data', { params });
+      
+      if (response.data && response.data.status === 'success') {
+        console.log('Received filtered data:', response.data.data.length, 'records');
+        // Update the data through the parent component
+        if (typeof handleCallerUploadSuccess === 'function') {
+          handleCallerUploadSuccess(response.data.data);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching filtered caller data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle date filter changes
+  const handleDateFilterChange = () => {
+    console.log('Applying date filters:', { startDate, endDate });
+    if (activeDashboard === 'caller') {
+      fetchCallerData();
+    }
+  };
+
   // Function to fetch live CDR data and update main table
   const fetchLiveCdrData = async () => {
     if (!excelData || excelData.length === 0) return;
     
     try {
       setIsLoading(true);
-      // Only get newer records if we already have data
+      // Include date filters in params with proper formatting
       const params = lastUpdateTime ? { since: lastUpdateTime } : {};
+      if (startDate) params.start_date = formatDateForApi(startDate);
+      if (endDate) params.end_date = formatDateForApi(endDate);
       
-      // Visual indication that refresh is happening
-      console.log('Fetching live CDR data at:', new Date().toLocaleTimeString());
+      console.log('Fetching live CDR data at:', new Date().toLocaleTimeString(), 'with filters:', params);
       
       const response = await defaultInstance.get('/live-cdr', { params });
       
@@ -73,84 +155,12 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
         // Update the timestamp for next poll
         setLastUpdateTime(response.data.timestamp);
         
-        // Create a map of caller numbers to their latest call data
-        const latestCallMap = {};
-        response.data.data.forEach(call => {
-          // Process both src (caller) and dst (receiver) numbers
-          [call.callerNumber, call.receiverNumber].forEach(number => {
-            if (!number) return;
-            
-            // Normalize the phone number for consistent matching
-            const normalizedNumber = normalizePhoneForMatching(number);
-            
-            // If this call is newer than what we have, update the map
-            if (!latestCallMap[normalizedNumber] || 
-                new Date(call.callDate) > new Date(latestCallMap[normalizedNumber].callDate)) {
-              latestCallMap[normalizedNumber] = call;
-            }
-          });
-        });
+        // Process the CDR data to update the Excel data
+        const updatedData = processCdrDataWithExcel(excelData, response.data.data);
         
-        // Update the excel data with the latest call information
-        if (Object.keys(latestCallMap).length > 0) {
-          const updatedData = excelData.map(row => {
-            // Try to find matches for any of the phone numbers in this row
-            const phoneNumbers = [
-              row.callerNumber || row.caller_number,
-              row.tel1 || row.contactTel1,
-              row.tel2 || row.contactTel2,
-              row.tel3 || row.contactTel3,
-              row.receiverNumber || row.receiver_number
-            ].filter(Boolean).map(normalizePhoneForMatching);
-            
-            // Find the most recent call for any of these numbers
-            let mostRecentCall = null;
-            
-            for (const phone of phoneNumbers) {
-              if (latestCallMap[phone] && 
-                  (!mostRecentCall || new Date(latestCallMap[phone].callDate) > new Date(mostRecentCall.callDate))) {
-                mostRecentCall = latestCallMap[phone];
-              }
-            }
-            
-            // If we found a matching call, update the row with its data
-            if (mostRecentCall) {
-              const updatedRow = { ...row };
-              
-              // Update receiver information if this row was the caller
-              if (phoneNumbers.includes(normalizePhoneForMatching(mostRecentCall.callerNumber))) {
-                updatedRow.receiverName = mostRecentCall.receiverName || row.receiverName || '';
-                updatedRow.receiverNumber = mostRecentCall.receiverNumber || row.receiverNumber || '';
-              } 
-              // Update caller information if this row was the receiver
-              else if (phoneNumbers.includes(normalizePhoneForMatching(mostRecentCall.receiverNumber))) {
-                updatedRow.callerName = mostRecentCall.callerName || row.callerName || '';
-                updatedRow.callerNumber = mostRecentCall.callerNumber || row.callerNumber || '';
-              }
-              
-              // Increment call count
-              updatedRow.callCount = (parseInt(row.callCount || row.call_count || 0) + 1).toString();
-              
-              // Update call date and duration
-              updatedRow.callDate = mostRecentCall.callDate || row.callDate || '';
-              updatedRow.callDuration = mostRecentCall.formattedDuration || row.callDuration || '';
-              
-              // Update call status
-              updatedRow.callStatus = mostRecentCall.callStatus || row.callStatus || '';
-              
-              // Highlight recent calls
-              updatedRow.hasRecentCalls = true;
-              
-              return updatedRow;
-            }
-            
-            return row;
-          });
-          
-          // Send the updated data back to the parent component
-          if (typeof handleCallerUploadSuccess === 'function') {
-            handleCallerUploadSuccess(updatedData);
-          }
+        // Send the updated data back to the parent component
+        if (typeof handleCallerUploadSuccess === 'function') {
+          handleCallerUploadSuccess(updatedData);
         }
       }
     } catch (error) {
@@ -158,6 +168,106 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
     } finally {
       setIsLoading(false);
     }
+  };
+  
+  // Process CDR data with Excel data
+  const processCdrDataWithExcel = (excelData, cdrData) => {
+    // Create a map of all phone numbers in the Excel data
+    const phoneMap = {};
+    const result = [...excelData];
+    
+    // First pass: index all phone numbers in the Excel data
+    excelData.forEach((row, index) => {
+      // Collect all phone numbers in this row
+      const phones = [
+        normalizePhoneForMatching(row.tel1 || row.phone1),
+        normalizePhoneForMatching(row.tel2 || row.phone2),
+        normalizePhoneForMatching(row.tel3 || row.phone3),
+        normalizePhoneForMatching(row.caller_number || row.callerNumber),
+        normalizePhoneForMatching(row.receiver_number || row.receiverNumber)
+      ].filter(Boolean);
+      
+      // Map each phone to this row index
+      phones.forEach(phone => {
+        if (!phoneMap[phone]) phoneMap[phone] = [];
+        phoneMap[phone].push(index);
+      });
+    });
+    
+    // Create a map of caller-receiver pairs from CDR data
+    const pairMap = {};
+    
+    // Process CDR data
+    cdrData.forEach(cdr => {
+      const callerNumber = normalizePhoneForMatching(cdr.callerNumber);
+      const receiverNumber = normalizePhoneForMatching(cdr.receiverNumber);
+      const pairKey = `${callerNumber}_${receiverNumber}`;
+      
+      // Initialize or update the pair data
+      if (!pairMap[pairKey]) {
+        pairMap[pairKey] = {
+          count: 1,
+          lastCall: cdr,
+          calls: [cdr]
+        };
+      } else {
+        pairMap[pairKey].count++;
+        pairMap[pairKey].calls.push(cdr);
+        
+        // Update the last call if this one is newer
+        if (new Date(cdr.callDate) > new Date(pairMap[pairKey].lastCall.callDate)) {
+          pairMap[pairKey].lastCall = cdr;
+        }
+      }
+    });
+    
+    // Second pass: update rows with matched CDR data
+    Object.keys(pairMap).forEach(pairKey => {
+      const [callerNumber, receiverNumber] = pairKey.split('_');
+      const pairData = pairMap[pairKey];
+      
+      // Find rows that contain either the caller or receiver number
+      const matchingRowIndices = new Set([
+        ...(phoneMap[callerNumber] || []),
+        ...(phoneMap[receiverNumber] || [])
+      ]);
+      
+      // Update each matching row
+      matchingRowIndices.forEach(index => {
+        const row = result[index];
+        const rowCallerNumber = normalizePhoneForMatching(row.caller_number || row.callerNumber);
+        const rowReceiverNumber = normalizePhoneForMatching(row.receiver_number || row.receiverNumber);
+        
+        // Check if this row's caller/receiver match our pair
+        if (rowCallerNumber === callerNumber && 
+           (rowReceiverNumber === receiverNumber || !rowReceiverNumber)) {
+          // This is an exact match or we're filling in missing receiver info
+          result[index] = {
+            ...row,
+            receiver_number: pairData.lastCall.receiverNumber,
+            receiver_name: pairData.lastCall.receiverName || row.receiver_name || '',
+            call_count: pairData.count,
+            call_date: pairData.lastCall.callDate,
+            call_duration: pairData.lastCall.formattedDuration,
+            call_status: pairData.lastCall.callStatus,
+            hasRecentCalls: true
+          };
+        } 
+        else if (rowReceiverNumber === receiverNumber && rowCallerNumber === callerNumber) {
+          // Both match - update with latest data
+          result[index] = {
+            ...row,
+            call_count: pairData.count,
+            call_date: pairData.lastCall.callDate,
+            call_duration: pairData.lastCall.formattedDuration,
+            call_status: pairData.lastCall.callStatus,
+            hasRecentCalls: true
+          };
+        }
+      });
+    });
+    
+    return result;
   };
   
   // Helper function to normalize phone numbers for matching
@@ -412,12 +522,39 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                     Caller Dashboard
                     {isLoading && <span className="spinner-border spinner-border-sm ms-2" role="status"></span>}
                     <button
-                      className="btn btn-sm btn-outline-primary float-end"
+                      className="btn btn-sm btn-outline-primary float-end ms-2"
                       onClick={fetchLiveCdrData}
                       disabled={isLoading}
                     >
                       Refresh Data
                     </button>
+                    
+                    {/* Date Filter Controls */}
+                    <div className="float-end me-3 d-flex align-items-center">
+                      <span className="me-2">Filter:</span>
+                      <input 
+                        type="date" 
+                        className="form-control form-control-sm me-2" 
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        placeholder="Start Date" 
+                      />
+                      <span className="me-2">to</span>
+                      <input 
+                        type="date" 
+                        className="form-control form-control-sm me-2" 
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        placeholder="End Date" 
+                      />
+                      <button 
+                        className="btn btn-sm btn-outline-secondary"
+                        onClick={handleDateFilterChange}
+                        disabled={isLoading}
+                      >
+                        Apply
+                      </button>
+                    </div>
                   </h5>
                   <div className="card-body p-0">
                     <div className="table-responsive">

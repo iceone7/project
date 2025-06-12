@@ -317,24 +317,121 @@ class CdrController extends Controller
             // Get parameters
             $limit = $request->input('limit', 50);
             $since = $request->input('since'); // Optional timestamp to only get newer records
+            $startDate = $request->input('start_date'); // Filter by start date
+            $endDate = $request->input('end_date'); // Filter by end date
+            
+            // Debug the received date parameters
+            Log::info('Getting live CDR data with filters:', [
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'since' => $since,
+                'limit' => $limit
+            ]);
+            
+            // If no dates provided, default to last month
+            $hasDateFilters = $startDate || $endDate;
+            
+            if (!$hasDateFilters && !$since) {
+                $startDate = now()->subMonth()->startOfMonth()->format('Y-m-d');
+                $endDate = now()->format('Y-m-d');
+                
+                Log::info('No date filters provided. Using default range:', [
+                    'start_date' => $startDate,
+                    'end_date' => $endDate
+                ]);
+            }
+            
+            // Format dates if needed
+            if ($startDate && preg_match('/^\d{2}\/\d{2}\/\d{2}$/', $startDate)) {
+                $parsedDate = \DateTime::createFromFormat('m/d/y', $startDate);
+                if ($parsedDate) {
+                    $startDate = $parsedDate->format('Y-m-d');
+                    Log::info('Converted start_date to: ' . $startDate);
+                }
+            }
+            
+            if ($endDate && preg_match('/^\d{2}\/\d{2}\/\d{2}$/', $endDate)) {
+                $parsedDate = \DateTime::createFromFormat('m/d/y', $endDate);
+                if ($parsedDate) {
+                    $endDate = $parsedDate->format('Y-m-d');
+                    Log::info('Converted end_date to: ' . $endDate);
+                }
+            }
             
             // Build query
             $query = DB::connection('asterisk')
                     ->table('cdr')
-                    ->orderBy('calldate', 'desc')
-                    ->limit($limit);
+                    ->orderBy('calldate', 'desc');
             
             // Only get calls newer than the provided timestamp
             if ($since) {
                 $query->where('calldate', '>', $since);
             }
             
+            // Apply date range filters if provided
+            if ($startDate) {
+                $query->whereDate('calldate', '>=', $startDate);
+                Log::info('Filtering CDR by start date: ' . $startDate);
+            }
+            
+            if ($endDate) {
+                $query->whereDate('calldate', '<=', $endDate);
+                Log::info('Filtering CDR by end date: ' . $endDate);
+            }
+            
+            // Apply limit to query
+            $query->limit($limit);
+            
+            // Log the SQL query being executed
+            $querySql = $query->toSql();
+            $bindings = $query->getBindings();
+            Log::info("CDR query: $querySql", ['bindings' => $bindings]);
+            
             // Get the CDR records
             $records = $query->get();
+            Log::info('Found ' . count($records) . ' CDR records');
+            
+            // Process records to avoid duplicates
+            // Group by caller+receiver+date to deduplicate matching calls
+            $uniqueCalls = [];
+            $callCountByNumber = []; // Track call count for each number pair
+            
+            foreach ($records as $record) {
+                $callerNumber = $record->src;
+                if (preg_match('/".*" <(.+)>/', $record->clid, $matches)) {
+                    $callerNumber = $matches[1];
+                }
+                
+                // Create a unique key for each call based on caller+receiver+approximate time
+                // Round time to nearest minute to avoid duplicate entries for same call
+                $timeKey = date('Y-m-d H:i', strtotime($record->calldate));
+                $uniqueKey = $callerNumber . '_' . $record->dst . '_' . $timeKey;
+                $pairKey = $callerNumber . '_' . $record->dst;
+                
+                // Only keep the longest call if there are duplicates at the same minute
+                if (!isset($uniqueCalls[$uniqueKey]) || $record->duration > $uniqueCalls[$uniqueKey]->duration) {
+                    $uniqueCalls[$uniqueKey] = $record;
+                    
+                    // Update call count for this caller-receiver pair
+                    if (!isset($callCountByNumber[$pairKey])) {
+                        $callCountByNumber[$pairKey] = 1;
+                    } else {
+                        $callCountByNumber[$pairKey]++;
+                    }
+                }
+            }
+            
+            // Convert to array and sort again (as we've grouped unique calls)
+            $records = array_values($uniqueCalls);
+            usort($records, function($a, $b) {
+                return strtotime($b->calldate) - strtotime($a->calldate);
+            });
+            
             $formattedRecords = [];
             
             // Format the records with additional data
             foreach ($records as $record) {
+                // Look up receiver name with detailed logging
                 $receiverName = $this->lookupReceiverNameFromContacts($record->dst);
                 $callerName = $this->lookupReceiverNameFromContacts($record->src);
                 
@@ -343,6 +440,13 @@ class CdrController extends Controller
                 if (preg_match('/".*" <(.+)>/', $record->clid, $matches)) {
                     $callerNumber = $matches[1];
                 }
+                
+                // Get the accurate call count for this caller-receiver pair
+                $pairKey = $callerNumber . '_' . $record->dst;
+                $callCount = $callCountByNumber[$pairKey] ?? 1;
+                
+                // Log the mapping for debugging
+                Log::debug("Mapping: dst={$record->dst} -> receiverName={$receiverName}, src={$record->src} -> callerName={$callerName}, callCount={$callCount}");
                 
                 $formattedRecords[] = [
                     'id' => $record->uniqueid,
@@ -356,7 +460,8 @@ class CdrController extends Controller
                     'callStatus' => $record->disposition,
                     'recordingFile' => $record->recordingfile ?? null,
                     'billsec' => (int)$record->billsec,
-                    'timestamp' => strtotime($record->calldate)
+                    'timestamp' => strtotime($record->calldate),
+                    'callCount' => $callCount, // Add accurate call count here
                 ];
             }
             
@@ -373,6 +478,7 @@ class CdrController extends Controller
             
         } catch (\Exception $e) {
             Log::error('Error getting live CDR data: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
             return response()->json([
                 'success' => false, 
                 'error' => 'Failed to fetch live CDR data: ' . $e->getMessage()
@@ -380,6 +486,9 @@ class CdrController extends Controller
         }
     }
 
+    /**
+     * Improved function to lookup contact names from phone numbers
+     */
     private function lookupReceiverNameFromContacts($phoneNumber)
     {
         if (empty($phoneNumber)) {
@@ -387,74 +496,114 @@ class CdrController extends Controller
         }
         
         try {
-            // Clean the number for consistent matching
+            \Log::info("Looking up contact name for phone: $phoneNumber");
+            
+            // Нормализуем номер телефона
             $cleanNumber = $this->normalizePhoneNumber($phoneNumber);
+            if (empty($cleanNumber)) {
+                \Log::info("Phone number normalized to empty string: $phoneNumber");
+                return '';
+            }
+            
+            \Log::info("Normalized phone: $cleanNumber");
             $possibleFormats = $this->generatePhoneFormats($cleanNumber);
+            \Log::info("Generated formats:", $possibleFormats);
             
-            // Build query to match any of the possible formats with contact phones
-            $query = DB::table('company_excel_uploads')->whereRaw('1=0');
-            
-            foreach ($possibleFormats as $format) {
-                $query->orWhere('phone1', 'LIKE', '%' . $format . '%')
-                      ->orWhere('phone2', 'LIKE', '%' . $format . '%')
-                      ->orWhere('phone3', 'LIKE', '%' . $format . '%');
-            }
-            
-            $contact = $query->first();
-            
-            if ($contact) {
-                // Return the matching contact person based on which phone field matched
-                foreach ($possibleFormats as $format) {
-                    if (strpos($contact->phone1, $format) !== false) {
-                        return $contact->contact1 ?: $contact->buyer;
-                    }
-                    if (strpos($contact->phone2, $format) !== false) {
-                        return $contact->contact2 ?: $contact->buyer;
-                    }
-                    if (strpos($contact->phone3, $format) !== false) {
-                        return $contact->contact3 ?: $contact->buyer;
-                    }
-                }
-                return $contact->buyer; // Default to buyer name if we can't determine which contact matched
-            }
-            
-            // Also try caller data table
-            $query = DB::table('import_companies')->whereRaw('1=0');
-            
-            foreach ($possibleFormats as $format) {
-                $query->orWhere('tel1', 'LIKE', '%' . $format . '%')
-                      ->orWhere('tel2', 'LIKE', '%' . $format . '%')
-                      ->orWhere('tel3', 'LIKE', '%' . $format . '%');
-            }
-            
-            $callerData = $query->first();
+            // Проверяем таблицу import_companies
+            $callerData = $this->findContactInTable('import_companies', $possibleFormats, [
+                'tel1' => 'contact_person1', 
+                'tel2' => 'contact_person2', 
+                'tel3' => 'contact_person3'
+            ], 'company_name');
             
             if ($callerData) {
-                foreach ($possibleFormats as $format) {
-                    if (strpos($callerData->tel1, $format) !== false) {
-                        return $callerData->contact_person1 ?: '';
-                    }
-                    if (strpos($callerData->tel2, $format) !== false) {
-                        return $callerData->contact_person2 ?: '';
-                    }
-                    if (strpos($callerData->tel3, $format) !== false) {
-                        return $callerData->contact_person3 ?: '';
-                    }
-                }
-                return $callerData->company_name ?? '';
+                \Log::info("Found match in import_companies: " . json_encode($callerData));
+                return $callerData['name'];
             }
             
+            \Log::info("No contact name found for $phoneNumber");
             return '';
         } catch (\Exception $e) {
-            Log::error('Error in lookupReceiverNameFromContacts: ' . $e->getMessage());
+            \Log::error('Error in lookupReceiverNameFromContacts: ' . $e->getMessage());
+            \Log::error('Stack trace: ' . $e->getTraceAsString());
             return '';
         }
     }
+    
+    /**
+     * Helper method to find a contact in a specific table
+     */
+    private function findContactInTable($tableName, $phoneFormats, $fieldMapping, $fallbackField)
+    {
+        // Create SQL with OR conditions for each phone format and field
+        $query = DB::table($tableName);
+        
+        $conditions = [];
+        foreach ($phoneFormats as $format) {
+            foreach (array_keys($fieldMapping) as $phoneField) {
+                $conditions[] = "`$phoneField` LIKE '%$format%'";
+            }
+        }
+        
+        if (empty($conditions)) {
+            return null;
+        }
+        
+        $conditionSql = implode(' OR ', $conditions);
+        $result = DB::select("SELECT * FROM `$tableName` WHERE $conditionSql LIMIT 1");
+        
+        if (empty($result)) {
+            return null;
+        }
+        
+        $record = $result[0];
+        
+        // Figure out which phone field matched to get the right name
+        foreach ($phoneFormats as $format) {
+            foreach ($fieldMapping as $phoneField => $nameField) {
+                if (property_exists($record, $phoneField) && 
+                    $record->$phoneField && 
+                    stripos($record->$phoneField, $format) !== false) {
+                    
+                    // Return the corresponding name
+                    $name = property_exists($record, $nameField) ? $record->$nameField : '';
+                    if (empty($name) && property_exists($record, $fallbackField)) {
+                        $name = $record->$fallbackField;
+                    }
+                    
+                    return [
+                        'field' => $phoneField,
+                        'name' => $name ?: '',
+                        'record_id' => $record->id ?? ''
+                    ];
+                }
+            }
+        }
+        
+        // If we found a record but couldn't match the specific field, return the fallback
+        if (property_exists($record, $fallbackField)) {
+            return [
+                'field' => 'fallback',
+                'name' => $record->$fallbackField ?? '',
+                'record_id' => $record->id ?? ''
+            ];
+        }
+        
+        return null;
+    }
 
-    // Generate possible formats of a phone number
+    // Generate possible formats of a phone number - enhanced version
     private function generatePhoneFormats($number)
     {
         $formats = [$number]; // Original cleaned number
+        
+        // Extract the last digits for fuzzy matching
+        if (strlen($number) >= 7) {
+            $formats[] = substr($number, -7); // Last 7 digits
+        }
+        if (strlen($number) >= 9) {
+            $formats[] = substr($number, -9); // Last 9 digits
+        }
         
         // Remove country code if present (e.g., +995, 995)
         if (strlen($number) > 9 && (substr($number, 0, 4) === '+995' || substr($number, 0, 3) === '995')) {
@@ -465,6 +614,13 @@ class CdrController extends Controller
         if (strlen($number) <= 9 && !in_array('995' . $number, $formats)) {
             $formats[] = '995' . $number;
             $formats[] = '+995' . $number;
+        }
+        
+        // Add spaces variations (common in human-entered phone numbers)
+        $digits = preg_replace('/\D/', '', $number);
+        if (strlen($digits) === 9) {
+            $formats[] = substr($digits, 0, 3) . ' ' . substr($digits, 3, 3) . ' ' . substr($digits, 6);
+            $formats[] = substr($digits, 0, 3) . '-' . substr($digits, 3, 3) . '-' . substr($digits, 6);
         }
         
         return array_unique($formats);
