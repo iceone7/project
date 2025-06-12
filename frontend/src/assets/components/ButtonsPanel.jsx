@@ -23,6 +23,20 @@ const ButtonsPanel = ({
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState(null);
 
+  // Handle data download based on active dashboard - this function was missing
+  const handleExportData = () => {
+    console.log('Export Data clicked, dashboard type:', activeDashboard);
+    console.log('Data to export:', activeDashboard === 'caller' ? excelData?.length : filteredCompanies?.length, 'records');
+    
+    if (activeDashboard === 'caller') {
+      // For caller dashboard, use excelData
+      handleDownloadExcel(excelData);
+    } else {
+      // For company dashboard, use filteredCompanies
+      handleDownloadExcel(filteredCompanies);
+    }
+  };
+
   // Enhanced download function that ensures data availability
   const handleDownloadAllData = async () => {
     setIsExporting(true);
@@ -136,232 +150,68 @@ const ButtonsPanel = ({
         return;
       }
       
-      console.log(`Exporting ${excelData.length} caller records`);
+      console.log(`Preparing to export ${excelData.length} caller records`);
       
-      // Define headers for caller export - adding more comprehensive headers
-      const headers = [
-        'Company Name', 'ID Code', 'Contact Person #1', 'Phone #1',
-        'Contact Person #2', 'Phone #2', 'Contact Person #3', 'Phone #3',
-        'Caller Name', 'Caller Number', 'Receiver Name', 'Receiver Number',
-        'Call Count', 'Call Date', 'Call Duration', 'Call Status'
-      ];
-      
-      // Enhanced helper function to safely extract values with better fallbacks
-      const extractValue = (item, possibleKeys, defaultValue = '') => {
-        if (!item) return defaultValue;
-        
-        // Try all possible keys including nested objects
-        for (const key of possibleKeys) {
-          if (item[key] !== undefined && item[key] !== null && item[key] !== 'undefined') {
-            return item[key];
-          }
-        }
-        
-        return defaultValue;
-      };
-      
-      // First get the complete state data
-      const localData = excelData.map(item => ({...item}));
-      
-      // Then fetch API data to ensure we have all records including recent calls
+      // First fetch fresh data from the API to ensure we have the latest
       defaultInstance.get('/caller-excel-data')
         .then(response => {
           let apiData = [];
           
-          if (response.data && Array.isArray(response.data.data)) {
+          if (response.data && response.data.status === 'success') {
             apiData = response.data.data;
-            console.log(`Fetched ${apiData.length} records from API`);
+            console.log(`Fetched ${apiData.length} fresh records from API for export`);
           }
           
-          // Merge API data with local data to get the most complete dataset
-          let mergedData = [...localData];
+          // Use the most complete dataset available
+          const dataToExport = apiData.length > 0 ? apiData : excelData;
           
-          // Add any API records not present in local data (based on ID or similar field)
-          apiData.forEach(apiItem => {
-            const apiId = apiItem.id || apiItem.identificationCode || apiItem.identification_code;
-            const exists = mergedData.some(localItem => 
-              (localItem.id === apiId) || 
-              (localItem.identificationCode === apiId) ||
-              (localItem.identification_code === apiId)
-            );
+          // Continue with export logic using dataToExport instead of merging
+          // Define headers for caller export
+          const headers = [
+            'Company Name', 'ID Code', 'Contact Person #1', 'Phone #1',
+            'Contact Person #2', 'Phone #2', 'Contact Person #3', 'Phone #3',
+            'Caller Name', 'Caller Number', 'Receiver Name', 'Receiver Number',
+            'Call Count', 'Answered Calls', 'No Answer Calls', 'Busy Calls',
+            'Call Date', 'Call Duration'
+          ];
+          
+          // Enhanced helper function to safely extract values
+          const extractValue = (item, possibleKeys, defaultValue = '') => {
+            if (!item) return defaultValue;
             
-            if (!exists) {
-              mergedData.push(apiItem);
-            }
-          });
-          
-          console.log(`Merged dataset contains ${mergedData.length} records`);
-          
-          // Also fetch any additional call data from PBX
-          defaultInstance.post('/enhanced-caller-data', { 
-            callerNumbers: mergedData
-              .map(item => extractValue(item, ['callerNumber', 'caller_number']))
-              .filter(Boolean)
-          })
-          .then(cdrResponse => {
-            const cdrData = cdrResponse.data?.success ? cdrResponse.data.data : {};
-            
-            // Enhanced mapping function with exhaustive field checking
-            const exportData = mergedData.map(call => {
-              // Ensure item is an object
-              const item = typeof call === 'object' ? call : {};
-              
-              // Try to find PBX data for this caller
-              const callerNumber = extractValue(item, ['callerNumber', 'caller_number']);
-              const pbxData = callerNumber ? cdrData[callerNumber] : null;
-              
-              // Get the primary receiver if available
-              let primaryReceiver = null;
-              if (pbxData && pbxData.receivers && pbxData.receivers.length > 0) {
-                primaryReceiver = pbxData.receivers.reduce(
-                  (max, current) => current.callCount > max.callCount ? current : max,
-                  { callCount: 0 }
-                );
+            // Try all possible keys including nested objects
+            for (const key of possibleKeys) {
+              if (item[key] !== undefined && item[key] !== null && item[key] !== 'undefined') {
+                return item[key];
               }
-              
-              // Extract values with multiple fallback options
-              return [
-                extractValue(item, ['companyName', 'company_name', 'Company Name']),
-                extractValue(item, ['identificationCode', 'identification_code', 'idCode', 'id_code', 'ID Code', 'id']),
-                extractValue(item, ['contactPerson1', 'contact_person1', 'Contact Person #1', 'contact1', 'contact_1']),
-                extractValue(item, ['tel1', 'phone1', 'Phone #1', 'contactTel1', 'contact_tel1']),
-                extractValue(item, ['contactPerson2', 'contact_person2', 'Contact Person #2', 'contact2', 'contact_2']),
-                extractValue(item, ['tel2', 'phone2', 'Phone #2', 'contactTel2', 'contact_tel2']),
-                extractValue(item, ['contactPerson3', 'contact_person3', 'Contact Person #3', 'contact3', 'contact_3']),
-                extractValue(item, ['tel3', 'phone3', 'Phone #3', 'contactTel3', 'contact_tel3']),
-                extractValue(item, ['callerName', 'caller_name', 'Caller Name']),
-                extractValue(item, ['callerNumber', 'caller_number', 'Caller Number']),
-                
-                // Use PBX data for receiver info if available
-                primaryReceiver?.receiverName || extractValue(item, ['receiverName', 'receiver_name', 'Receiver Name']),
-                primaryReceiver?.receiverNumber || extractValue(item, ['receiverNumber', 'receiver_number', 'Receiver Number']),
-                
-                // Call details - prefer PBX data, then fall back to item data
-                pbxData?.totalCalls || extractValue(item, ['callCount', 'call_count', 'Call Count'], '0'),
-                pbxData?.lastCallDate || extractValue(item, ['callDate', 'call_date', 'Call Date']),
-                pbxData?.formattedTotalDuration || extractValue(item, ['callDuration', 'call_duration', 'Call Duration']),
-                primaryReceiver?.lastCallStatus || extractValue(item, ['callStatus', 'call_status', 'Call Status'])
-              ];
-            });
+            }
             
-            // Create worksheet with headers and data
-            const worksheet = XLSX.utils.aoa_to_sheet([headers, ...exportData]);
-            
-            // Set column widths
-            const colWidths = headers.map((h, colIndex) => {
-              const maxLength = Math.max(
-                h.length,
-                ...exportData.map(row => (row[colIndex] ? String(row[colIndex]).length : 0))
-              );
-              return { wch: maxLength + 2 }; // Add some padding
-            });
-            worksheet['!cols'] = colWidths;
-            
-            // Create workbook and append worksheet
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, 'Caller Data');
-            
-            // Generate filename with current date
-            const today = new Date();
-            const yyyy = today.getFullYear();
-            const mm = String(today.getMonth() + 1).padStart(2, '0');
-            const dd = String(today.getDate()).padStart(2, '0');
-            const dateStr = `${dd}-${mm}-${yyyy}`;
-            const fileName = `caller_data_${dateStr}.xlsx`;
-            
-            // Write to file and trigger download
-            XLSX.writeFile(workbook, fileName);
-            console.log('Caller data export successful with CDR integration');
-            setIsExporting(false);
-          })
-          .catch(cdrErr => {
-            console.error('Failed to fetch CDR data:', cdrErr);
-            // Continue with export without CDR data
-            
-            // Normalize and map data for export with enhanced property extraction
-            const exportData = mergedData.map(call => {
-              // Ensure item is an object
-              const item = typeof call === 'object' ? call : {};
-              
-              return [
-                extractValue(item, ['companyName', 'company_name', 'Company Name']),
-                extractValue(item, ['identificationCode', 'identification_code', 'idCode', 'id_code', 'ID Code', 'id']),
-                extractValue(item, ['contactPerson1', 'contact_person1', 'Contact Person #1', 'contact1', 'contact_1']),
-                extractValue(item, ['tel1', 'phone1', 'Phone #1', 'contactTel1', 'contact_tel1']),
-                extractValue(item, ['contactPerson2', 'contact_person2', 'Contact Person #2', 'contact2', 'contact_2']),
-                extractValue(item, ['tel2', 'phone2', 'Phone #2', 'contactTel2', 'contact_tel2']),
-                extractValue(item, ['contactPerson3', 'contact_person3', 'Contact Person #3', 'contact3', 'contact_3']),
-                extractValue(item, ['tel3', 'phone3', 'Phone #3', 'contactTel3', 'contact_tel3']),
-                extractValue(item, ['callerName', 'caller_name', 'Caller Name']),
-                extractValue(item, ['callerNumber', 'caller_number', 'Caller Number']),
-                extractValue(item, ['receiverName', 'receiver_name', 'Receiver Name']),
-                extractValue(item, ['receiverNumber', 'receiver_number', 'Receiver Number']),
-                extractValue(item, ['callCount', 'call_count', 'Call Count'], '0'),
-                extractValue(item, ['callDate', 'call_date', 'Call Date']),
-                extractValue(item, ['callDuration', 'call_duration', 'Call Duration']),
-                extractValue(item, ['callStatus', 'call_status', 'Call Status'])
-              ];
-            });
-            
-            // Create worksheet with headers and data
-            const worksheet = XLSX.utils.aoa_to_sheet([headers, ...exportData]);
-            
-            // Set column widths
-            const colWidths = headers.map((h, colIndex) => {
-              const maxLength = Math.max(
-                h.length,
-                ...exportData.map(row => (row[colIndex] ? String(row[colIndex]).length : 0))
-              );
-              return { wch: maxLength + 2 }; // Add some padding
-            });
-            worksheet['!cols'] = colWidths;
-            
-            // Create workbook and append worksheet
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, 'Caller Data');
-            
-            // Generate filename with current date
-            const today = new Date();
-            const yyyy = today.getFullYear();
-            const mm = String(today.getMonth() + 1).padStart(2, '0');
-            const dd = String(today.getDate()).padStart(2, '0');
-            const dateStr = `${dd}-${mm}-${yyyy}`;
-            const fileName = `caller_data_${dateStr}.xlsx`;
-            
-            // Write to file and trigger download
-            XLSX.writeFile(workbook, fileName);
-            console.log('Caller data export successful (without CDR integration)');
-            setIsExporting(false);
-          });
-        })
-        .catch(err => {
-          console.error('Error fetching latest caller data:', err);
+            return defaultValue;
+          };
           
-          // Fall back to using local data only
-          const exportData = localData.map(call => {
-            // Ensure item is an object
-            const item = typeof call === 'object' ? call : {};
-            
-            return [
-              extractValue(item, ['companyName', 'company_name', 'Company Name']),
-              extractValue(item, ['identificationCode', 'identification_code', 'idCode', 'id_code', 'ID Code', 'id']),
-              extractValue(item, ['contactPerson1', 'contact_person1', 'Contact Person #1', 'contact1', 'contact_1']),
-              extractValue(item, ['tel1', 'phone1', 'Phone #1', 'contactTel1', 'contact_tel1']),
-              extractValue(item, ['contactPerson2', 'contact_person2', 'Contact Person #2', 'contact2', 'contact_2']),
-              extractValue(item, ['tel2', 'phone2', 'Phone #2', 'contactTel2', 'contact_tel2']),
-              extractValue(item, ['contactPerson3', 'contact_person3', 'Contact Person #3', 'contact3', 'contact_3']),
-              extractValue(item, ['tel3', 'phone3', 'Phone #3', 'contactTel3', 'contact_tel3']),
-              extractValue(item, ['callerName', 'caller_name', 'Caller Name']),
-              extractValue(item, ['callerNumber', 'caller_number', 'Caller Number']),
-              extractValue(item, ['receiverName', 'receiver_name', 'Receiver Name']),
-              extractValue(item, ['receiverNumber', 'receiver_number', 'Receiver Number']),
-              extractValue(item, ['callCount', 'call_count', 'Call Count'], '0'),
-              extractValue(item, ['callDate', 'call_date', 'Call Date']),
-              extractValue(item, ['callDuration', 'call_duration', 'Call Duration']),
-              extractValue(item, ['callStatus', 'call_status', 'Call Status'])
-            ];
-          });
+          // Create export data with the freshly fetched data
+          const exportData = dataToExport.map(item => [
+            extractValue(item, ['companyName', 'company_name']),
+            extractValue(item, ['identificationCode', 'identification_code', 'idCode', 'id_code', 'id']),
+            extractValue(item, ['contactPerson1', 'contact_person1']),
+            extractValue(item, ['tel1', 'phone1']),
+            extractValue(item, ['contactPerson2', 'contact_person2']),
+            extractValue(item, ['tel2', 'phone2']),
+            extractValue(item, ['contactPerson3', 'contact_person3']),
+            extractValue(item, ['tel3', 'phone3']),
+            extractValue(item, ['callerName', 'caller_name']),
+            extractValue(item, ['callerNumber', 'caller_number']),
+            extractValue(item, ['receiverName', 'receiver_name']),
+            extractValue(item, ['receiverNumber', 'receiver_number']),
+            extractValue(item, ['callCount', 'call_count'], '0'),
+            extractValue(item, ['answeredCalls', 'answered_calls'], '0'),
+            extractValue(item, ['noAnswerCalls', 'no_answer_calls'], '0'),
+            extractValue(item, ['busyCalls', 'busy_calls'], '0'),
+            extractValue(item, ['callDate', 'call_date']),
+            extractValue(item, ['callDuration', 'call_duration'])
+          ]);
           
+          // Create worksheet with headers and data
           const worksheet = XLSX.utils.aoa_to_sheet([headers, ...exportData]);
           
           // Set column widths
@@ -370,23 +220,80 @@ const ButtonsPanel = ({
               h.length,
               ...exportData.map(row => (row[colIndex] ? String(row[colIndex]).length : 0))
             );
-            return { wch: maxLength + 2 };
+            return { wch: maxLength + 2 }; // Add some padding
           });
           worksheet['!cols'] = colWidths;
           
+          // Create workbook and append worksheet
           const workbook = XLSX.utils.book_new();
           XLSX.utils.book_append_sheet(workbook, worksheet, 'Caller Data');
           
+          // Generate filename with current date
           const today = new Date();
-          const fileName = `caller_data_${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}.xlsx`;
+          const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+          const fileName = `caller_data_${dateStr}.xlsx`;
           
+          // Write to file and trigger download
           XLSX.writeFile(workbook, fileName);
-          console.log('Caller data export successful (using local data only)');
+          console.log('Caller data export successful with latest data');
+        })
+        .catch(err => {
+          console.error('Error fetching latest data for export:', err);
+          
+          // Fall back to using the existing data if API call fails
+          const exportData = excelData.map(item => [
+            extractValue(item, ['companyName', 'company_name']),
+            extractValue(item, ['identificationCode', 'identification_code', 'idCode', 'id_code', 'id']),
+            extractValue(item, ['contactPerson1', 'contact_person1']),
+            extractValue(item, ['tel1', 'phone1']),
+            extractValue(item, ['contactPerson2', 'contact_person2']),
+            extractValue(item, ['tel2', 'phone2']),
+            extractValue(item, ['contactPerson3', 'contact_person3']),
+            extractValue(item, ['tel3', 'phone3']),
+            extractValue(item, ['callerName', 'caller_name']),
+            extractValue(item, ['callerNumber', 'caller_number']),
+            extractValue(item, ['receiverName', 'receiver_name']),
+            extractValue(item, ['receiverNumber', 'receiver_number']),
+            extractValue(item, ['callCount', 'call_count'], '0'),
+            extractValue(item, ['answeredCalls', 'answered_calls'], '0'),
+            extractValue(item, ['noAnswerCalls', 'no_answer_calls'], '0'),
+            extractValue(item, ['busyCalls', 'busy_calls'], '0'),
+            extractValue(item, ['callDate', 'call_date']),
+            extractValue(item, ['callDuration', 'call_duration'])
+          ]);
+          
+          // Create worksheet with headers and data
+          const worksheet = XLSX.utils.aoa_to_sheet([headers, ...exportData]);
+          
+          // Set column widths
+          const colWidths = headers.map((h, colIndex) => {
+            const maxLength = Math.max(
+              h.length,
+              ...exportData.map(row => (row[colIndex] ? String(row[colIndex]).length : 0))
+            );
+            return { wch: maxLength + 2 }; // Add some padding
+          });
+          worksheet['!cols'] = colWidths;
+          
+          // Create workbook and append worksheet
+          const workbook = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(workbook, worksheet, 'Caller Data');
+          
+          // Generate filename with current date
+          const today = new Date();
+          const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+          const fileName = `caller_data_${dateStr}.xlsx`;
+          
+          // Write to file and trigger download
+          XLSX.writeFile(workbook, fileName);
+          console.log('Caller data export successful (using fallback data)');
+        })
+        .finally(() => {
           setIsExporting(false);
         });
     } catch (err) {
-      console.error('Error in export process:', err);
-      setExportError('Failed to export caller data: ' + (err.message || 'Unknown error'));
+      console.error('Error starting export process:', err);
+      setExportError('Failed to export data: ' + (err.message || 'Unknown error'));
       setIsExporting(false);
     }
   };
@@ -417,7 +324,6 @@ const ButtonsPanel = ({
         headerObj['Call Count'] = '';
         headerObj['Call Date'] = '';
         headerObj['Call Duration'] = '';
-        headerObj['Call Status'] = '';
       } else {
         // Headers for company dashboard template (Georgian)
         headerObj['ტენდერის N'] = '';

@@ -197,27 +197,48 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
       });
     });
     
-    // Group CDR data by unique caller-receiver pairs
+    // Group CDR data by unique caller-receiver pairs with status breakdowns
     const pairToCDRMap = {};
     
     cdrData.forEach(cdr => {
       const callerNumber = normalizePhoneForMatching(cdr.callerNumber);
       const receiverNumber = normalizePhoneForMatching(cdr.receiverNumber);
       const pairKey = `${callerNumber}_${receiverNumber}`;
+      const callStatus = cdr.callStatus || 'UNKNOWN';
       
-      // Store the CDR data by pair key - use server-provided values
+      // Initialize counter structure if this is a new pair
       if (!pairToCDRMap[pairKey]) {
         pairToCDRMap[pairKey] = {
-          count: cdr.callCount || 1, // Use the count from server
+          count: 0,
+          answeredCalls: 0,
+          noAnswerCalls: 0,
+          busyCalls: 0,
           data: cdr
         };
-      } else if (new Date(cdr.callDate) > new Date(pairToCDRMap[pairKey].data.callDate)) {
-        // Update if this cdr is newer, but keep the pair's total count
+      }
+      
+      // Increment total count
+      pairToCDRMap[pairKey].count++;
+      
+      // Increment specific status counter
+      if (callStatus === 'ANSWERED') {
+        pairToCDRMap[pairKey].answeredCalls++;
+      } else if (callStatus === 'NO ANSWER') {
+        pairToCDRMap[pairKey].noAnswerCalls++;
+      } else if (callStatus === 'BUSY') {
+        pairToCDRMap[pairKey].busyCalls++;
+      }
+      
+      // Update latest call if this one is newer
+      if (new Date(cdr.callDate) > new Date(pairToCDRMap[pairKey].data.callDate)) {
         pairToCDRMap[pairKey].data = cdr;
       }
     });
     
     console.log('Found', Object.keys(pairToCDRMap).length, 'unique caller-receiver pairs');
+    
+    // Create a map to store matched contacts for each row
+    const rowContactMatches = {};
     
     // Update Excel rows with the matching CDR data
     Object.entries(pairToCDRMap).forEach(([pairKey, cdrInfo]) => {
@@ -244,25 +265,58 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
           // Find which contact matched to get the correct name
           const contactIndex = contactNumbers.findIndex(phone => phone === receiverNumber);
           const contactNameKey = contactIndex === 0 ? 'contact_person1' : 
-                                 contactIndex === 1 ? 'contact_person2' : 'contact_person3';
+                                contactIndex === 1 ? 'contact_person2' : 'contact_person3';
           const contactNameCamelKey = contactIndex === 0 ? 'contactPerson1' : 
-                                   contactIndex === 1 ? 'contactPerson2' : 'contactPerson3';
+                                  contactIndex === 1 ? 'contactPerson2' : 'contactPerson3';
           
           const contactName = row[contactNameKey] || row[contactNameCamelKey] || '';
           
-          // Update this row with the call data
-          result[rowIndex] = {
-            ...row,
-            receiver_name: contactName || cdrInfo.data.receiverName || '',
-            receiver_number: cdrInfo.data.receiverNumber,
-            call_count: cdrInfo.count,
-            call_date: cdrInfo.data.callDate,
-            call_duration: cdrInfo.data.formattedDuration,
-            call_status: cdrInfo.data.callStatus,
-            hasRecentCalls: true
-          };
+          // Initialize contact matches for this row if needed
+          if (!rowContactMatches[rowIndex]) {
+            rowContactMatches[rowIndex] = [];
+          }
+          
+          // Store this match
+          rowContactMatches[rowIndex].push({
+            contactName,
+            receiverNumber: cdrInfo.data.receiverNumber,
+            callCount: cdrInfo.count,
+            answeredCalls: cdrInfo.answeredCalls,
+            noAnswerCalls: cdrInfo.noAnswerCalls,
+            busyCalls: cdrInfo.busyCalls,
+            callDate: cdrInfo.data.callDate,
+            callDuration: cdrInfo.data.formattedDuration,
+            callStatus: cdrInfo.data.callStatus
+          });
         }
       });
+    });
+    
+    // Update rows with their best matching contact
+    Object.entries(rowContactMatches).forEach(([rowIndex, matches]) => {
+      rowIndex = parseInt(rowIndex);
+      
+      // Sort matches by total call count (highest first)
+      matches.sort((a, b) => b.callCount - a.callCount);
+      
+      // Use the contact with most calls as primary
+      const primaryMatch = matches[0];
+      
+      // Update this row with the call data
+      result[rowIndex] = {
+        ...result[rowIndex],
+        receiver_name: primaryMatch.contactName || '',
+        receiver_number: primaryMatch.receiverNumber || '',
+        call_count: primaryMatch.callCount || 0,
+        answered_calls: primaryMatch.answeredCalls || 0,
+        no_answer_calls: primaryMatch.noAnswerCalls || 0,
+        busy_calls: primaryMatch.busyCalls || 0,
+        call_date: primaryMatch.callDate || '',
+        call_duration: primaryMatch.callDuration || '',
+        call_status: primaryMatch.callStatus || '',
+        hasRecentCalls: true,
+        all_matched_contacts: matches  // Store all matched contacts for reference
+      };
     });
     
     return result;
@@ -546,9 +600,11 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                             <th>{t('receiverName')}</th>
                             <th>{t('receiverNumber')}</th>
                             <th>{t('callCount')}</th>
+                            <th>ANSWERED</th>
+                            <th>NO ANSWER</th>
+                            <th>BUSY</th>
                             <th>{t('callDate')}</th>
                             <th>{t('callDuration')}</th>
-                            <th>{t('callStatus')}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -557,7 +613,7 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                               <tr key={call.id || index} className={call.hasRecentCalls ? "table-warning" : ""}>
                                 <td>{index + 1}</td>
                                 <td>{call.companyName || call.company_name || 'N/A'}</td>
-                                <td>{call.identificationCode || call.id || 'N/A'}</td>
+                                <td>{call.identificationCode || call.identification_code || call.id || 'N/A'}</td>
                                 <td>{call.contactPerson1 || call.contact_person1 || 'N/A'}</td>
                                 <td>{call.tel1 || call.contactTel1 || 'N/A'}</td>
                                 <td>{call.contactPerson2 || call.contact_person2 || 'N/A'}</td>
@@ -569,18 +625,20 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                                 <td>{call.receiverName || call.receiver_name || 'N/A'}</td>
                                 <td>{call.receiverNumber || call.receiver_number || 'N/A'}</td>
                                 <td>{call.callCount || call.call_count || '0'}</td>
+                                <td>{call.answeredCalls || call.answered_calls || '0'}</td>
+                                <td>{call.noAnswerCalls || call.no_answer_calls || '0'}</td>
+                                <td>{call.busyCalls || call.busy_calls || '0'}</td>
                                 <td>
                                   {call.callDate || call.call_date ? 
                                     new Date(call.callDate || call.call_date).toLocaleString() : 
                                     'N/A'}
                                 </td>
                                 <td>{call.callDuration || call.call_duration || 'N/A'}</td>
-                                <td>{call.callStatus || call.call_status || 'N/A'}</td>
                               </tr>
                             ))
                           ) : (
                             <tr>
-                              <td colSpan="17">No data available</td>
+                              <td colSpan="19">No data available</td>
                             </tr>
                           )}
                         </tbody>
