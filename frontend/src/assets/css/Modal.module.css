@@ -43,18 +43,17 @@
   width: 450px;
   max-width: 90%;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-  animation: scaleIn 0.3s ease-out;
+  animation: fadeIn 0.3s;
+  animation: modalPop 0.45s cubic-bezier(.68,-0.55,.27,1.55);
 }
 
-@keyframes scaleIn {
-  from {
-    transform: scale(0.8);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes modalPop {
+  0% { transform: scale(0.85) translateY(40px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
 }
 
 .title {
@@ -127,6 +126,36 @@
 
 .cancelBtn:hover {
   background-color: #c82333;
+}
+
+/* Add these styles to your existing Modal.module.css file */
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 15px;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: #64748b;
+  cursor: pointer;
+  transition: color 0.2s;
+  margin-left: 12px;
+  line-height: 1;
+}
+
+.closeButton:hover {
+  color: #ef4444;
+}
+
+.closeButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Responsive styles */

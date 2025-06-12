@@ -95,6 +95,11 @@ const translations = {
     uploadGeorgianExcel: "Upload Georgian Excel",
     transformingData: "Transforming data...",
     georgianToCallerMapping: "Georgian to Caller Format",
+
+    // Call status translations
+    ANSWERED: 'Answered',
+    NOANSWERED: 'No Answer',
+    BUSY: 'Busy',
   },
   ru: {
     companyDashboard: "Dashboard компании",
@@ -192,6 +197,11 @@ const translations = {
     uploadGeorgianExcel: "Загрузить грузинский Excel",
     transformingData: "Преобразование данных...",
     georgianToCallerMapping: "Грузинский в формат вызывающего",
+
+    // Call status translations
+    ANSWERED: 'Отвечено',
+    NOANSWERED: 'Нет ответа',
+    BUSY: 'Занято',
   },
   ka: {
     companyDashboard: "კომპანიის დაფა",
@@ -289,6 +299,11 @@ const translations = {
     uploadGeorgianExcel: "ქართული Excel-ის ატვირთვა",
     transformingData: "მონაცემების გარდაქმნა...",
     georgianToCallerMapping: "ქართულიდან დამრეკავის ფორმატში",
+
+    // Call status translations
+    ANSWERED: 'პასუხი გაცემულია',
+    NOANSWERED: 'პასუხი არ არის',
+    BUSY: 'დაკავებული',
   }
 };
 

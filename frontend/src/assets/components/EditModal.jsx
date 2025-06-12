@@ -112,13 +112,23 @@ function EditModal({ isOpen, onClose, onSave, editData }) {
       {!showSaved && isOpen && (
         <div
           className={`${styles.overlay} ${isClosing ? confirmStyles.fadeOut : ''}`}
-          onClick={e => e.target === e.currentTarget && onClose()}
         >
           <div
             className={`${styles.modal} ${isClosing ? confirmStyles.modalFadeOut : ''}`}
             onClick={e => e.stopPropagation()}
           >
-            <h3 className={styles.title}>Edit Company</h3>
+            <div className={styles.modalHeader}>
+              <h3 className={styles.title}>Edit Company</h3>
+              <button 
+                className={styles.closeButton} 
+                onClick={onClose}
+                disabled={isSaving}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+            
             <div className={styles.tabButtons}>
               {[1, 2, 3].map(tab => (
                 <button

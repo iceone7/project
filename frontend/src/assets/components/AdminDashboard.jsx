@@ -7,7 +7,7 @@ import edit_delete from '../css/edit_detele.module.css';
 import defaultInstance from '../../api/defaultInstance';
 import modalStyles from '../css/AddUser.module.css';
 import deleteModalStyles from '../css/DeleteModal.module.css';
-import { LanguageProvider } from '../i18n/LanguageContext'; // Импортируй LanguageProvider
+import { LanguageProvider } from '../i18n/LanguageContext';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 

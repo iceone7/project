@@ -19,7 +19,7 @@
   max-width: 420px;
   width: 100%;
   position: relative;
-  animation: modalPop 0.35s cubic-bezier(.68,-0.55,.27,1.55);
+  animation: modalPop 0.45s cubic-bezier(.68,-0.55,.27,1.55);
 }
 
 .modalHeader {

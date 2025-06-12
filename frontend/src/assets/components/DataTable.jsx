@@ -600,9 +600,9 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                             <th>{t('receiverName')}</th>
                             <th>{t('receiverNumber')}</th>
                             <th>{t('callCount')}</th>
-                            <th>ANSWERED</th>
-                            <th>NO ANSWER</th>
-                            <th>BUSY</th>
+                            <th>{t('ANSWERED')}</th>
+                            <th>{t('NOANSWERED')}</th>
+                            <th>{t('BUSY')}</th>
                             <th>{t('callDate')}</th>
                             <th>{t('callDuration')}</th>
                           </tr>
