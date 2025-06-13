@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import edit_delete from '../css/edit_detele.module.css';
 import button_comments from '../css/button_comments.module.css';
 import EditModal from './EditModal';
@@ -21,8 +21,10 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
   const [isLoading, setIsLoading] = useState(false);
   const [lastUpdateTime, setLastUpdateTime] = useState(null);
   const [lastExcelDataLength, setLastExcelDataLength] = useState(0);
-  // const [startDate, setStartDate] = useState('');
-  // const [endDate, setEndDate] = useState('');
+  // Add refs to prevent request loops
+  const isInitialMount = useRef(true);
+  const isProcessingCDR = useRef(false);
+  const lastProcessedData = useRef([]);
   const { t } = useLanguage();
 
   const recordingsBaseUrl = import.meta.env.VITE_RECORDINGS_URL;
@@ -43,16 +45,41 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
 
   // Add useEffect to detect new data uploads and trigger refresh once
   useEffect(() => {
+    // Skip on initial mount - only run on subsequent updates
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    
     if (activeDashboard === 'caller' && excelData && excelData.length > 0) {
-      // Only trigger refresh when data actually changes (after upload)
+      // Check if the data has changed significantly
       if (excelData.length !== lastExcelDataLength) {
         console.log('New data detected, refreshing CDR data...');
         setLastExcelDataLength(excelData.length);
         
-        // Small delay to ensure the data is properly loaded
-        setTimeout(() => {
-          fetchLiveCdrData();
-        }, 500);
+        // Only fetch if not already processing
+        if (!isProcessingCDR.current) {
+          // Track data fingerprint to avoid duplicate processing
+          const dataFingerprint = JSON.stringify(excelData.map(item => item.id));
+          const lastFingerprint = JSON.stringify(lastProcessedData.current.map(item => item.id));
+          
+          if (dataFingerprint !== lastFingerprint) {
+            console.log('Processing new unique data set');
+            lastProcessedData.current = excelData;
+            
+            // Set processing flag
+            isProcessingCDR.current = true;
+            
+            // Use setTimeout to ensure the component is fully rendered
+            setTimeout(() => {
+              fetchLiveCdrData();
+            }, 500);
+          } else {
+            console.log('Skipping duplicate data processing');
+          }
+        } else {
+          console.log('CDR processing already in progress, skipping new request');
+        }
       }
     }
   }, [excelData, activeDashboard]);
@@ -138,7 +165,10 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
 
   // Function to fetch live CDR data and update main table
   const fetchLiveCdrData = async () => {
-    if (!excelData || excelData.length === 0) return;
+    if (!excelData || excelData.length === 0) {
+      isProcessingCDR.current = false;
+      return;
+    }
     
     try {
       setIsLoading(true);
@@ -164,6 +194,7 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
         const updatedData = processCdrDataWithExcel(excelData, response.data.data);
         
         if (typeof handleCallerUploadSuccess === 'function') {
+          // This would usually trigger the effect again, but we have our flag to prevent loops
           handleCallerUploadSuccess(updatedData);
         }
       }
@@ -171,6 +202,10 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
       console.error('Error fetching live CDR data:', error);
     } finally {
       setIsLoading(false);
+      // Reset the processing flag AFTER the request is complete
+      setTimeout(() => {
+        isProcessingCDR.current = false;
+      }, 1000);
     }
   };
   

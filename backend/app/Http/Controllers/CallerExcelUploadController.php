@@ -418,40 +418,16 @@ class CallerExcelUploadController extends Controller
                 'date_range' => [$request->input('start_date'), $request->input('end_date')]
             ]);
 
-            // Set date range (default to last 30 days)
-            $startDate = $request->input('start_date') ?: now()->subDays(30)->format('Y-m-d');
-            $endDate = $request->input('end_date') ?: now()->format('Y-m-d');
-            
-            \Log::info("Using date range: $startDate to $endDate");
-
-            // Get Excel data and ensure we have unique records by ID/identificationCode
+            // Get Excel data and ensure we preserve all rows
             $rawExcelData = $request->input('data');
-            $uniqueKeys = [];
-            $excelData = [];
+            $excelData = $rawExcelData; // Keep all rows without filtering
             
-            // Filter out duplicates based on ID or identification code
-            foreach ($rawExcelData as $row) {
-                $uniqueKey = $row['identification_code'] ?? $row['identificationCode'] ?? $row['id'] ?? null;
-                if (!$uniqueKey) {
-                    // If no key is available, generate one based on company name and caller number
-                    $companyName = $row['company_name'] ?? $row['companyName'] ?? '';
-                    $callerNumber = $row['caller_number'] ?? $row['callerNumber'] ?? '';
-                    $uniqueKey = md5($companyName . $callerNumber);
-                }
-                
-                // Only add if not already in the result set
-                if (!isset($uniqueKeys[$uniqueKey])) {
-                    $uniqueKeys[$uniqueKey] = true;
-                    $excelData[] = $row;
-                }
-            }
-            
-            \Log::info("Removed " . (count($rawExcelData) - count($excelData)) . " duplicate records");
+            \Log::info("Processing all " . count($excelData) . " records without removing duplicates");
             $processedData = [];
             
-            // Handle case where there's no data after deduplication
+            // Handle case where there's no data
             if (empty($excelData)) {
-                \Log::warning("No data to process after deduplication");
+                \Log::warning("No data to process");
                 return response()->json([
                     'status' => 'success',
                     'data' => []
@@ -499,9 +475,23 @@ class CallerExcelUploadController extends Controller
 
             // Query CDR database for matching records - with error handling
             try {
-                $cdrQuery = DB::connection('asterisk')->table('cdr')
-                    ->whereDate('calldate', '>=', $startDate)
-                    ->whereDate('calldate', '<=', $endDate);
+                $cdrQuery = DB::connection('asterisk')->table('cdr');
+                
+                // Only apply date filters if explicitly provided by the user
+                if ($request->filled('start_date')) {
+                    $cdrQuery->whereDate('calldate', '>=', $request->input('start_date'));
+                    \Log::info("Filtering CDR from date: " . $request->input('start_date'));
+                }
+                
+                if ($request->filled('end_date')) {
+                    $cdrQuery->whereDate('calldate', '<=', $request->input('end_date'));
+                    \Log::info("Filtering CDR to date: " . $request->input('end_date'));
+                }
+                
+                // If no date filters, log that we're retrieving all data
+                if (!$request->filled('start_date') && !$request->filled('end_date')) {
+                    \Log::info("No date filters applied - retrieving all CDR data");
+                }
 
                 // Build query to match either caller numbers in clid/src OR phone numbers in dst
                 $cdrQuery->where(function ($query) use ($callerFormats, $phoneFormats) {

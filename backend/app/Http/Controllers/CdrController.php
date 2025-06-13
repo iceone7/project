@@ -15,7 +15,7 @@ class CdrController extends Controller
             $cdr = DB::connection('asterisk')
                     ->table('cdr')
                     ->orderBy('calldate', 'desc')
-                    ->limit(100)
+                    ->limit(1000)
                     ->get();
             
             return $cdr;
@@ -315,7 +315,7 @@ class CdrController extends Controller
     {
         try {
             // Get parameters
-            $limit = $request->input('limit', 100);
+            $limit = $request->input('limit', 200);
             $since = $request->input('since');
             $startDate = $request->input('start_date');
             $endDate = $request->input('end_date');
@@ -681,5 +681,162 @@ class CdrController extends Controller
             'callStatus' => '',
             'lastCallDate' => '',
         ];
+    }
+
+    /**
+     * Get all call records that match any of the specified phone numbers
+     * as either caller (clid) or receiver (dst) without date filtering
+     */
+    public function getAllCallRecords(Request $request)
+    {
+        try {
+            $request->validate([
+                'phone1' => 'nullable|string',
+                'phone2' => 'nullable|string',
+                'phone3' => 'nullable|string',
+                'callerNumber' => 'nullable|string',
+            ]);
+            
+            Log::info('Getting all call records for provided phone numbers');
+            
+            // Get phone numbers from request
+            $phone1 = $request->input('phone1');
+            $phone2 = $request->input('phone2');
+            $phone3 = $request->input('phone3');
+            $callerNumber = $request->input('callerNumber');
+            
+            // Store all phone numbers in an array (filter out empty ones)
+            $phoneNumbers = array_filter([$phone1, $phone2, $phone3, $callerNumber]);
+            
+            if (empty($phoneNumbers)) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'At least one phone number is required'
+                ], 400);
+            }
+            
+            // Generate all possible formats for each phone number
+            $allFormats = [];
+            foreach ($phoneNumbers as $phone) {
+                if (!empty($phone)) {
+                    $allFormats = array_merge($allFormats, $this->generatePhoneFormats($this->normalizePhoneNumber($phone)));
+                }
+            }
+            $allFormats = array_unique($allFormats);
+            
+            Log::info('Searching for call records with ' . count($allFormats) . ' phone number formats');
+            
+            // Build query to match either clid or dst with any of the phone formats
+            $query = DB::connection('asterisk')->table('cdr')->where(function($q) use ($allFormats) {
+                foreach ($allFormats as $format) {
+                    $q->orWhere('clid', 'LIKE', '%' . $format . '%')
+                      ->orWhere('src', $format)
+                      ->orWhere('dst', $format);
+                }
+            });
+            
+            // Order by calldate (newest first) and get results
+            // Not applying any date filtering as per requirement
+            $records = $query->orderBy('calldate', 'desc')->get();
+            
+            Log::info('Found ' . count($records) . ' matching call records');
+            
+            // Process records to count calls for each number and format output
+            $result = [
+                'total_calls' => count($records),
+                'call_counts' => [],
+                'calls' => []
+            ];
+            
+            // Initialize counters for each phone number
+            foreach ($phoneNumbers as $phone) {
+                $normalizedPhone = $this->normalizePhoneNumber($phone);
+                $result['call_counts'][$normalizedPhone] = [
+                    'as_caller' => 0,
+                    'as_receiver' => 0,
+                    'total' => 0
+                ];
+            }
+            
+            // Process each call record
+            foreach ($records as $record) {
+                // Extract caller number from clid
+                $callerNumber = $record->src;
+                if (preg_match('/".*" <(.+)>/', $record->clid, $matches)) {
+                    $callerNumber = $matches[1];
+                }
+                $normalizedCaller = $this->normalizePhoneNumber($callerNumber);
+                $normalizedDst = $this->normalizePhoneNumber($record->dst);
+                
+                // Check if caller matches any of our phone numbers
+                foreach ($phoneNumbers as $phone) {
+                    $normalizedPhone = $this->normalizePhoneNumber($phone);
+                    
+                    // Skip empty phone numbers
+                    if (empty($normalizedPhone)) continue;
+                    
+                    // Generate possible formats for this phone
+                    $possibleFormats = $this->generatePhoneFormats($normalizedPhone);
+                    
+                    // Check if caller matches this phone
+                    $callerMatches = false;
+                    foreach ($possibleFormats as $format) {
+                        if (strpos($normalizedCaller, $format) !== false || 
+                            strpos($format, $normalizedCaller) !== false) {
+                            $callerMatches = true;
+                            break;
+                        }
+                    }
+                    
+                    // Check if dst matches this phone
+                    $dstMatches = false;
+                    foreach ($possibleFormats as $format) {
+                        if (strpos($normalizedDst, $format) !== false || 
+                            strpos($format, $normalizedDst) !== false) {
+                            $dstMatches = true;
+                            break;
+                        }
+                    }
+                    
+                    // Increment appropriate counters
+                    if ($callerMatches) {
+                        $result['call_counts'][$normalizedPhone]['as_caller']++;
+                        $result['call_counts'][$normalizedPhone]['total']++;
+                    }
+                    
+                    if ($dstMatches) {
+                        $result['call_counts'][$normalizedPhone]['as_receiver']++;
+                        $result['call_counts'][$normalizedPhone]['total']++;
+                    }
+                }
+                
+                // Format and add this call record to the result
+                $result['calls'][] = [
+                    'callerId' => $normalizedCaller,
+                    'receiverId' => $normalizedDst,
+                    'callDate' => $record->calldate,
+                    'callDuration' => (int)$record->duration,
+                    'formattedDuration' => $this->formatDuration((int)$record->duration),
+                    'callStatus' => $record->disposition,
+                    'uniqueid' => $record->uniqueid,
+                    'recordingFile' => $record->recordingfile ?? null,
+                    'billsec' => (int)$record->billsec
+                ];
+            }
+            
+            return response()->json([
+                'success' => true,
+                'data' => $result
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Error getting call records: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+            
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to fetch call records: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

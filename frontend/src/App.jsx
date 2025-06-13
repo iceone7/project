@@ -51,6 +51,7 @@ function App({ dashboardType = 'company' }) {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isProcessingCDR, setIsProcessingCDR] = useState(false);
 
   useEffect(() => {
     if (dashboardType === 'company') {
@@ -132,10 +133,11 @@ function App({ dashboardType = 'company' }) {
     setExcelData(data);
     setFilteredCompanies(data);
     
-    // Then fetch enhanced data using the dedicated CDR matching endpoint
-    if (data.length > 0) {
+    // Prevent duplicate API calls while processing
+    if (data.length > 0 && !isProcessingCDR) {
       console.log('Sending data to process-cdr-data for enhanced matching...');
       setIsLoading(true);
+      setIsProcessingCDR(true);
       
       // Define date range (last 3 months by default)
       const endDate = new Date().toISOString().split('T')[0];
@@ -164,6 +166,7 @@ function App({ dashboardType = 'company' }) {
         })
         .finally(() => {
           setIsLoading(false);
+          setIsProcessingCDR(false);
         });
     }
   };
@@ -246,7 +249,43 @@ function App({ dashboardType = 'company' }) {
 
   const handleDownloadExcel = async (dataToDownload = filteredCompanies) => {
     try {
-      console.log('Starting downloadExcel, using filteredCompanies:', dataToDownload);
+      console.log("Download Excel called with", dataToDownload.length, "records");
+      // Check if this is pre-transformed data from FilterForm
+      const isTransformed = dataToDownload.length > 0 && 
+        dataToDownload[0] && 
+        "Company Name" in dataToDownload[0];
+      
+      if (isTransformed) {
+        console.log("Processing pre-transformed data for Excel export");
+        // Data is already transformed, create headers from the first record's keys
+        const headers = Object.keys(dataToDownload[0]);
+        const exportData = dataToDownload.map(row => headers.map(h => row[h] || ''));
+        
+        const worksheet = XLSX.utils.aoa_to_sheet([headers, ...exportData]);
+        
+        // Set column widths
+        worksheet['!cols'] = headers.map((h, i) => ({
+          wch: Math.max(
+            h.length,
+            ...exportData.map(row => (row[i] ? row[i].toString().length : 0))
+          ) + 2,
+        }));
+        
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Export Data');
+        
+        // Generate unique filename with date
+        const today = new Date();
+        const dateStr = today.toISOString().split('T')[0];
+        const timeStr = today.toTimeString().split(' ')[0].replace(/:/g, '-');
+        const fileName = `custom_export_${dateStr}_${timeStr}.xlsx`;
+        
+        console.log("Exporting to file:", fileName);
+        XLSX.writeFile(workbook, fileName);
+        return;
+      }
+      
+      // Original export code for standard data
       const dbData = dataToDownload || [];
       if (!dbData.length) {
         alert('No data to download');

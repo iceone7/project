@@ -100,6 +100,17 @@ const translations = {
     ANSWERED: 'Answered',
     NOANSWERED: 'No Answer',
     BUSY: 'Busy',
+
+    // Export tooltip
+    exportCallInformation: 'Export Call Information',
+    downloadCustomFormat: 'Download data with the selected date range in a custom format',
+    downloadWithCustomFormat: 'Download With Custom Format',
+    callDateRangeExport: 'Call Date Range for Export',
+    
+    // Download animation
+    downloading: 'Downloading your data...',
+    downloadComplete: 'Download Complete!',
+    downloadSuccessMessage: 'Your file has been successfully prepared and downloaded to your device.',
   },
   ru: {
     companyDashboard: "Dashboard компании",
@@ -202,6 +213,17 @@ const translations = {
     ANSWERED: 'Отвечено',
     NOANSWERED: 'Нет ответа',
     BUSY: 'Занято',
+
+    // Export tooltip
+    exportCallInformation: 'Экспорт информации о звонках',
+    downloadCustomFormat: 'Скачать данные с выбранным диапазоном дат в пользовательском формате',
+    downloadWithCustomFormat: 'Скачать в пользовательском формате',
+    callDateRangeExport: 'Диапазон дат звонков для экспорта',
+    
+    // Download animation
+    downloading: 'Загрузка данных...',
+    downloadComplete: 'Загрузка завершена!',
+    downloadSuccessMessage: 'Ваш файл был успешно подготовлен и загружен на ваше устройство.',
   },
   ka: {
     companyDashboard: "კომპანიის დაფა",
@@ -304,6 +326,17 @@ const translations = {
     ANSWERED: 'პასუხი გაცემულია',
     NOANSWERED: 'პასუხი არ არის',
     BUSY: 'დაკავებული',
+
+    // Export tooltip
+    exportCallInformation: 'ზარის ინფორმაციის ექსპორტი',
+    downloadCustomFormat: 'ჩამოტვირთეთ მონაცემები არჩეული თარიღების დიაპაზონით მორგებული ფორმატით',
+    downloadWithCustomFormat: 'ჩამოტვირთვა მორგებული ფორმატით',
+    callDateRangeExport: 'ზარის თარიღის დიაპაზონი ექსპორტისთვის',
+    
+    // Download animation
+    downloading: 'მონაცემების ჩამოტვირთვა...',
+    downloadComplete: 'ჩამოტვირთვა დასრულდა!',
+    downloadSuccessMessage: 'თქვენი ფაილი წარმატებით მომზადდა და ჩამოტვირთულია თქვენს მოწყობილობაზე.',
   }
 };
 

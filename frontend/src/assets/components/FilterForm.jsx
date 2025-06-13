@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import filterStyles from '../css/FilterModal.module.css';
 import styles from '../css/UploadButton.module.css';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -78,6 +78,18 @@ const FilterForm = ({
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const { t } = useLanguage();
   
+  // Add a ref to store the original dataset
+  const originalDataRef = useRef([]);
+  
+  // Add state for export date range
+  const [exportDateRange, setExportDateRange] = useState({
+    startDate: '',
+    endDate: ''
+  });
+  
+  // New state for download tooltip
+  const [showDownloadTooltip, setShowDownloadTooltip] = useState(false);
+  
   // Debounce filter changes
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -95,24 +107,49 @@ const FilterForm = ({
     }
   }, [debouncedFilters]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Initial data setup
+  // Initial data setup - store original data
   useEffect(() => {
-    if (isInitialLoad && data && data.length > 0) {
-      setIsInitialLoad(false);
-      onFilterApply(data); // Apply initial data
+    if (data && data.length > 0) {
+      console.log(`Storing original dataset of ${data.length} records`);
+      originalDataRef.current = [...data]; // Store a copy of the original data
+      
+      if (isInitialLoad) {
+        setIsInitialLoad(false);
+        // Use the original data without any filtering
+        onFilterApply(data);
+      }
     }
   }, [data, isInitialLoad, onFilterApply]);
 
   // Normalize string values for case-insensitive comparison
   const normalizeString = useCallback((value) => {
     if (value === null || value === undefined) return '';
-    return String(value).toLowerCase().trim();
+    // Convert to string, lowercase, and trim whitespace
+    const normalizedString = String(value).toLowerCase().trim();
+    // Special handling for Georgian text normalization if needed
+    return normalizedString;
   }, []);
 
-  // Check if text matches filter pattern
+  // Enhanced text matching for better results, especially with Georgian text
   const matchesText = useCallback((field, filter) => {
     if (!filter) return true;
-    return normalizeString(field).includes(normalizeString(filter));
+
+    // Normalize both strings for comparison
+    const normalizedField = normalizeString(field);
+    const normalizedFilter = normalizeString(filter);
+
+    // Debugging: Log each comparison for the manager filter
+    if (filter.toLowerCase().includes("ბიტარიშვილი")) {
+      console.debug("Filtering manager field:", {
+        field,
+        normalizedField,
+        filter,
+        normalizedFilter,
+        matches: normalizedField.includes(normalizedFilter),
+      });
+    }
+
+    return normalizedField.includes(normalizedFilter);
   }, [normalizeString]);
 
   // Check if number is within range
@@ -276,89 +313,92 @@ const FilterForm = ({
     },
     company: (row) => {
       try {
-        return (
-          matchesText(
-            getNestedProperty(row, ['tenderNumber', 'tender_number']), 
-            filters.tenderNumber
-          ) &&
-          matchesText(
-            getNestedProperty(row, ['buyer']), 
-            filters.buyer
-          ) &&
-          matchesText(
-            getNestedProperty(row, ['contact1', 'contact_1']), 
-            filters.contact1
-          ) &&
-          matchesText(
-            getNestedProperty(row, ['phone1', 'phone_1']), 
-            filters.phone1
-          ) &&
-          matchesText(
-            getNestedProperty(row, ['contact2', 'contact_2']), 
-            filters.contact2
-          ) &&
-          matchesText(
-            getNestedProperty(row, ['phone2', 'phone_2']), 
-            filters.phone2
-          ) &&
-          matchesText(
-            getNestedProperty(row, ['contact3', 'contact_3']), 
-            filters.contact3
-          ) &&
-          matchesText(
-            getNestedProperty(row, ['phone3', 'phone_3']), 
-            filters.phone3
-          ) &&
-          matchesText(
-            getNestedProperty(row, ['email']), 
-            filters.email
-          ) &&
-          matchesText(
-            getNestedProperty(row, ['executor']), 
-            filters.executor
-          ) &&
-          matchesText(
-            getNestedProperty(row, ['idCode', 'id_code']), 
-            filters.idCode
-          ) &&
-          matchesNumberRange(
-            getNestedProperty(row, ['contractValue', 'contract_value']), 
-            filters.contractValueMin, 
-            filters.contractValueMax
-          ) &&
-          matchesNumberRange(
-            getNestedProperty(row, ['totalValueGorgia', 'total_value_gorgia']), 
-            filters.totalValueGorgiaMin, 
-            filters.totalValueGorgiaMax
-          ) &&
-          matchesDateRange(
-            getNestedProperty(row, ['lastPurchaseDateGorgia', 'last_purchase_date_gorgia']), 
-            filters.lastPurchaseDateStart, 
-            filters.lastPurchaseDateEnd
-          ) &&
-          matchesDateRange(
-            getNestedProperty(row, ['contractEndDate', 'contract_end_date']), 
-            filters.contractEndDateStart, 
-            filters.contractEndDateEnd
-          ) &&
-          matchesDateRange(
-            getNestedProperty(row, ['foundationDate', 'foundation_date']), 
-            filters.foundationDateStart, 
-            filters.foundationDateEnd
-          ) &&
-          matchesText(
-            getNestedProperty(row, ['manager']), 
-            filters.manager
-          ) &&
-          matchesText(
-            getNestedProperty(row, ['managerNumber', 'manager_number']), 
-            filters.managerNumber
-          ) &&
-          matchesStatus(
-            getNestedProperty(row, ['status']), 
-            filters.status
-          )
+        // Debug log for the row being processed when manager filter is active
+        const isManagerFilterActive = filters.manager && filters.manager.trim() !== '';
+        
+        // Get manager value for this row
+        const managerValue = getNestedProperty(row, [
+          'manager', 'Manager', 'managerName', 'manager_name',
+          'მენეჯერი', 'managername', 'MANAGER'
+        ]);
+        
+        // Check if manager matches
+        const matchesManager = filters.manager === '' ||
+          matchesText(managerValue, filters.manager) ||
+          (row.executor && matchesText(row.executor, filters.manager));
+        
+        // If we're filtering for manager and this row matches, do detailed debugging
+        if (isManagerFilterActive && matchesManager) {
+          console.debug(`Row ${row.id} matches manager "${filters.manager}": ${managerValue}`);
+          
+          // Create an object to track which filters pass/fail for this row
+          const filterResults = {
+            tenderNumber: matchesText(getNestedProperty(row, ['tenderNumber', 'tender_number']), filters.tenderNumber),
+            buyer: matchesText(getNestedProperty(row, ['buyer']), filters.buyer),
+            contact1: matchesText(getNestedProperty(row, ['contact1', 'contact_1']), filters.contact1),
+            phone1: matchesText(getNestedProperty(row, ['phone1', 'phone_1']), filters.phone1),
+            contact2: matchesText(getNestedProperty(row, ['contact2', 'contact_2']), filters.contact2),
+            phone2: matchesText(getNestedProperty(row, ['phone2', 'phone_2']), filters.phone2), 
+            contact3: matchesText(getNestedProperty(row, ['contact3', 'contact_3']), filters.contact3),
+            phone3: matchesText(getNestedProperty(row, ['phone3', 'phone_3']), filters.phone3),
+            email: matchesText(getNestedProperty(row, ['email']), filters.email),
+            executor: matchesText(getNestedProperty(row, ['executor']), filters.executor),
+            idCode: matchesText(getNestedProperty(row, ['idCode', 'id_code']), filters.idCode),
+            contractValue: matchesNumberRange(getNestedProperty(row, ['contractValue', 'contract_value']), filters.contractValueMin, filters.contractValueMax),
+            totalValueGorgia: matchesNumberRange(getNestedProperty(row, ['totalValueGorgia', 'total_value_gorgia']), filters.totalValueGorgiaMin, filters.totalValueGorgiaMax),
+            lastPurchaseDate: matchesDateRange(getNestedProperty(row, ['lastPurchaseDateGorgia', 'last_purchase_date_gorgia']), filters.lastPurchaseDateStart, filters.lastPurchaseDateEnd),
+            contractEndDate: matchesDateRange(getNestedProperty(row, ['contractEndDate', 'contract_end_date']), filters.contractEndDateStart, filters.contractEndDateEnd),
+            foundationDate: matchesDateRange(getNestedProperty(row, ['foundationDate', 'foundation_date']), filters.foundationDateStart, filters.foundationDateEnd),
+            manager: matchesManager,
+            managerNumber: matchesText(getNestedProperty(row, ['managerNumber', 'manager_number']), filters.managerNumber),
+            status: matchesStatus(getNestedProperty(row, ['status']), filters.status)
+          };
+          
+          // Find failing filters
+          const failingFilters = Object.entries(filterResults)
+            .filter(([_, passes]) => !passes)
+            .map(([name]) => name);
+          
+          if (failingFilters.length > 0) {
+            console.debug(`Row ${row.id} failed on filters: ${failingFilters.join(', ')}`);
+            
+            // Print the expected vs actual values for failing filters
+            failingFilters.forEach(filter => {
+              const filterValue = filters[filter];
+              const rowValue = getNestedProperty(row, [filter, `${filter}_number`, filter.replace('Number', '_number')]);
+              console.debug(`  Filter ${filter}: Expected "${filterValue}", Got "${rowValue}"`);
+            });
+          }
+          
+          // Overall result is the AND of all filter results
+          const result = Object.values(filterResults).every(Boolean);
+          return result;
+        }
+
+        // Standard filter logic without detailed debugging for non-matching rows
+        const result = (
+          matchesText(getNestedProperty(row, ['tenderNumber', 'tender_number']), filters.tenderNumber) &&
+          matchesText(getNestedProperty(row, ['buyer']), filters.buyer) &&
+          matchesText(getNestedProperty(row, ['contact1', 'contact_1']), filters.contact1) &&
+          matchesText(getNestedProperty(row, ['phone1', 'phone_1']), filters.phone1) &&
+          matchesText(getNestedProperty(row, ['contact2', 'contact_2']), filters.contact2) &&
+          matchesText(getNestedProperty(row, ['phone2', 'phone_2']), filters.phone2) &&
+          matchesText(getNestedProperty(row, ['contact3', 'contact_3']), filters.contact3) &&
+          matchesText(getNestedProperty(row, ['phone3', 'phone_3']), filters.phone3) &&
+          matchesText(getNestedProperty(row, ['email']), filters.email) &&
+          matchesText(getNestedProperty(row, ['executor']), filters.executor) &&
+          matchesText(getNestedProperty(row, ['idCode', 'id_code']), filters.idCode) &&
+          matchesNumberRange(getNestedProperty(row, ['contractValue', 'contract_value']), filters.contractValueMin, filters.contractValueMax) &&
+          matchesNumberRange(getNestedProperty(row, ['totalValueGorgia', 'total_value_gorgia']), filters.totalValueGorgiaMin, filters.totalValueGorgiaMax) &&
+          matchesDateRange(getNestedProperty(row, ['lastPurchaseDateGorgia', 'last_purchase_date_gorgia']), filters.lastPurchaseDateStart, filters.lastPurchaseDateEnd) &&
+          matchesDateRange(getNestedProperty(row, ['contractEndDate', 'contract_end_date']), filters.contractEndDateStart, filters.contractEndDateEnd) &&
+          matchesDateRange(getNestedProperty(row, ['foundationDate', 'foundation_date']), filters.foundationDateStart, filters.foundationDateEnd) &&
+          matchesManager && // Use the consolidated manager matching logic
+          matchesText(getNestedProperty(row, ['managerNumber', 'manager_number']), filters.managerNumber) &&
+          matchesStatus(getNestedProperty(row, ['status']), filters.status)
         );
+
+        return result;
       } catch (err) {
         console.error('Filter error for company row:', row, err);
         return false;
@@ -382,29 +422,88 @@ const FilterForm = ({
     filters, matchesText, matchesNumberRange, matchesDateRange, 
     matchesStatus, formatDuration
   ]);
-
-  // Get filtered data based on current filters
+  
+  // Modified approach: create a special function when filtering by manager only
   const getFilteredData = useCallback(() => {
     if (!Array.isArray(data)) {
       console.log('getFilteredData: data is not an array', data);
       return [];
     }
     
+    // Check if all filters are empty (equal to initialFilters)
+    const allFiltersEmpty = Object.keys(filters).every(key => 
+      filters[key] === initialFilters[key]
+    );
+    
+    // If all filters are empty, return the original dataset
+    if (allFiltersEmpty) {
+      console.log(`All filters empty, returning original dataset (${originalDataRef.current.length} records)`);
+      return originalDataRef.current;
+    }
+    
+    // Special case: If ONLY the manager filter is active (not empty), use a simplified matching
+    // to ensure we find all records with the manager name
+    const isOnlyManagerFilterActive = 
+      filters.manager && 
+      filters.manager.trim() !== '' && 
+      Object.keys(filters).filter(key => 
+        key !== 'manager' && filters[key] !== initialFilters[key]
+      ).length === 0;
+    
     console.log(`Filtering ${data.length} ${dashboardType} records...`);
-    const filterFunction = filterFunctions[dashboardType] || (() => true);
+    console.log(`Is only manager filter active: ${isOnlyManagerFilterActive}`);
     
-    // Use efficient array filtering
-    const startTime = performance.now();
-    const filtered = data.filter(filterFunction);
-    const endTime = performance.now();
+    let filtered;
     
-    console.log(`Filtering completed in ${(endTime - startTime).toFixed(2)}ms. Found ${filtered.length} matching records.`);
+    if (dashboardType === 'company' && isOnlyManagerFilterActive) {
+      // Special case: Only filter by manager field
+      const managerFilterValue = filters.manager.toLowerCase().trim();
+      
+      filtered = data.filter(row => {
+        const managerValue = getNestedProperty(row, [
+          'manager', 'Manager', 'managerName', 'manager_name', 
+          'მენეჯერი', 'managername', 'MANAGER'
+        ]);
+        
+        // Match if manager contains the search term
+        return managerValue && 
+          normalizeString(managerValue).includes(normalizeString(managerFilterValue));
+      });
+      
+      console.log(`Special manager-only filtering found ${filtered.length} records`);
+    } else {
+      // Standard filtering using the filter functions
+      const filterFunction = filterFunctions[dashboardType] || (() => true);
+      filtered = data.filter(filterFunction);
+    }
+    
+    // Special debug for manager filter to count expected results
+    if (dashboardType === 'company' && filters.manager && filters.manager.trim() !== '') {
+      const managerFilterValue = filters.manager.toLowerCase().trim();
+      const expectedMatches = data.filter(row => {
+        const managerValue = getNestedProperty(row, [
+          'manager', 'Manager', 'managerName', 'manager_name', 
+          'მენეჯერი', 'managername', 'MANAGER'
+        ]);
+        return managerValue && managerValue.toLowerCase().includes(managerFilterValue);
+      });
+      console.log(`Expected matches for manager "${filters.manager}": ${expectedMatches.length}`);
+      
+      // Show the first few expected matches for debugging
+      if (expectedMatches.length > 0) {
+        console.log('Sample expected matches:', expectedMatches.slice(0, 3));
+      }
+    }
+    
+    console.log(`Filtering completed in ${performance.now().toFixed(2)}ms. Found ${filtered.length} matching records.`);
     return filtered;
-  }, [data, dashboardType, filterFunctions]);
+  }, [data, dashboardType, filterFunctions, filters, originalDataRef, normalizeString]);
 
   // Handle input changes with validation
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
+    
+    console.log(`Filter changed: ${name} = "${value}"`);
     
     // For number inputs, validate to prevent invalid entries that could break comparisons
     if (name.includes('Min') || name.includes('Max')) {
@@ -424,21 +523,95 @@ const FilterForm = ({
     onFilterApply(filteredData);
   };
 
-  // Clear all filters
+  // Clear all filters - use the original dataset and bypass all filter processing
   const handleClearFilters = () => {
+    console.log(`Clearing filters, restoring ${originalDataRef.current.length} records`);
+    
+    // Reset filter states
     setFilters(initialFilters);
     setDebouncedFilters(initialFilters);
-    onFilterApply(Array.isArray(data) ? data : []);
+    
+    // IMPORTANT: Directly pass the original data to the parent component
+    // bypassing any filtering logic
+    console.log("Bypassing filter processing entirely");
+    onFilterApply([...originalDataRef.current]);
   };
 
-  // Handle download of filtered data
+  // Handle download of filtered data with custom format
   const handleDownloadFiltered = () => {
-    const filteredData = getFilteredData();
-    if (filteredData.length > 0) {
-      onDownloadFiltered(filteredData);
-    } else {
-      alert('No data to download after filtering');
+    // Check if only date range is selected (no other filters)
+    const hasOtherFilters = Object.entries(filters).some(([key, value]) => {
+      // Skip empty values and date-related filters
+      return value && 
+             !['callDateStart', 'callDateEnd', 'lastPurchaseDateStart', 
+                'lastPurchaseDateEnd', 'contractEndDateStart', 'contractEndDateEnd', 
+                'foundationDateStart', 'foundationDateEnd'].includes(key);
+    });
+    
+    // Use all data if only date range is selected, otherwise use filtered data
+    const dataToProcess = hasOtherFilters ? getFilteredData() : (Array.isArray(data) ? data : []);
+    
+    if (dataToProcess.length === 0) {
+      alert('No data to download');
+      return;
     }
+    
+    console.log("Preparing download with", dataToProcess.length, "records");
+    console.log("Using date range:", exportDateRange);
+    
+    // Format date string nicely if available
+    const formattedDate = exportDateRange.startDate ? 
+      (exportDateRange.endDate ? 
+        `${exportDateRange.startDate} - ${exportDateRange.endDate}` : 
+        exportDateRange.startDate) : 
+      "";
+    
+    // Transform data according to requested mapping
+    const transformedData = dataToProcess.map((row, index) => {
+      // Log occasionally for debugging
+      if (index % 500 === 0) {
+        console.log(`Processing row ${index}`);
+      }
+      
+      const transformedRow = {
+        "Company Name": getNestedProperty(row, ['buyer']),
+        "ID Code": getNestedProperty(row, ['idCode', 'id_code']),
+        "Contact Person #1": getNestedProperty(row, ['contact1', 'contact_1']),
+        "Phone #1": getNestedProperty(row, ['phone1', 'phone_1']),
+        "Contact Person #2": getNestedProperty(row, ['contact2', 'contact_2']),
+        "Phone #2": getNestedProperty(row, ['phone2', 'phone_2']),
+        "Contact Person #3": getNestedProperty(row, ['contact3', 'contact_3']),
+        "Phone #3": getNestedProperty(row, ['phone3', 'phone_3']),
+        "Caller Name": getNestedProperty(row, ['manager']),
+        "Caller Number": getNestedProperty(row, ['managerNumber', 'manager_number']),
+        
+        // Empty columns as requested
+        "Receiver Name": "",
+        "Receiver Number": "",
+        "Call Count": "",
+        "Answered Calls": "",
+        "No Answer Calls": "",
+        "Busy Calls": "",
+        "Call Date": formattedDate, // Single date field with formatted date range
+        "Call Duration": ""
+      };
+      
+      return transformedRow;
+    });
+    
+    console.log("Transformed data ready for download:", transformedData.length, "records");
+    
+    // Pass transformed data to download handler
+    onDownloadFiltered([...transformedData]);
+  };
+  
+  // Handle date range changes for export
+  const handleExportDateChange = (e) => {
+    const { name, value } = e.target;
+    setExportDateRange(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   // Only button mode (just show filter toggle)
@@ -734,64 +907,6 @@ const FilterForm = ({
                   className={filterStyles.input}
                 />
               </div>
-
-              <div className={filterStyles.inputGroup}>
-                <input
-                  type="date"
-                  name="lastPurchaseDateStart"
-                  placeholder={t('lastPurchaseDateStart')}
-                  value={filters.lastPurchaseDateStart}
-                  onChange={handleFilterChange}
-                  className={filterStyles.input}
-                />
-                <input
-                  type="date"
-                  name="lastPurchaseDateEnd"
-                  placeholder={t('lastPurchaseDateEnd')}
-                  value={filters.lastPurchaseDateEnd}
-                  onChange={handleFilterChange}
-                  className={filterStyles.input}
-                />
-              </div>
-
-              <div className={filterStyles.inputGroup}>
-                <input
-                  type="date"
-                  name="contractEndDateStart"
-                  placeholder={t('contractEndDateStart')}
-                  value={filters.contractEndDateStart}
-                  onChange={handleFilterChange}
-                  className={filterStyles.input}
-                />
-                <input
-                  type="date"
-                  name="contractEndDateEnd"
-                  placeholder={t('contractEndDateEnd')}
-                  value={filters.contractEndDateEnd}
-                  onChange={handleFilterChange}
-                  className={filterStyles.input}
-                />
-              </div>
-
-              <div className={filterStyles.inputGroup}>
-                <input
-                  type="date"
-                  name="foundationDateStart"
-                  placeholder={t('foundationDateStart')}
-                  value={filters.foundationDateStart}
-                  onChange={handleFilterChange}
-                  className={filterStyles.input}
-                />
-                <input
-                  type="date"
-                  name="foundationDateEnd"
-                  placeholder={t('foundationDateEnd')}
-                  value={filters.foundationDateEnd}
-                  onChange={handleFilterChange}
-                  className={filterStyles.input}
-                />
-              </div>
-
               <input
                 type="text"
                 name="manager"
@@ -803,8 +918,8 @@ const FilterForm = ({
 
               <input
                 type="text"
-                name="manager number"
-                placeholder={t('manager number')}
+                name="managerNumber"
+                placeholder={t('managerNumber')}
                 value={filters.managerNumber}
                 onChange={handleFilterChange}
                 className={filterStyles.input}
@@ -861,6 +976,44 @@ const FilterForm = ({
           ) : null}
         </div>
         <div>
+          {/* Modified download section with date selection */}
+            {dashboardType === 'company' && onDownloadFiltered && (
+              <div className={filterStyles.downloadSection}>
+                <div className={filterStyles.dateSelectionGroup}>
+                  <label className={filterStyles.dateLabel}>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512">
+                      <path d="M128 0c17.7 0 32 14.3 32 32V64H288V32c0-17.7 14.3-32 32-32s32 14.3 32 32V64h48c26.5 0 48 21.5 48 48v48H0V112C0 85.5 21.5 64 48 64H96V32c0-17.7 14.3-32 32-32zM0 192H448V464c0 26.5-21.5 48-48 48H48c-26.5 0-48-21.5-48-48V192zm64 80v32c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V272c0-8.8-7.2-16-16-16H80c-8.8 0-16 7.2-16 16zm128 0v32c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V272c0-8.8-7.2-16-16-16H208c-8.8 0-16 7.2-16 16zm144-16c-8.8 0-16 7.2-16 16v32c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V272c0-8.8-7.2-16-16-16H336z"/>
+                    </svg>
+                    {t('callDateRangeExport') || 'Call Date Range for Export:'}
+                  </label>
+                  <div className={filterStyles.dateInputs}>
+                    <input
+                      type="date"
+                      name="startDate"
+                      placeholder="Start Date"
+                      value={exportDateRange.startDate}
+                      onChange={handleExportDateChange}
+                      className={filterStyles.input}
+                    />
+                    <input
+                      type="date"
+                      name="endDate"
+                      placeholder="End Date"
+                      value={exportDateRange.endDate}
+                      onChange={handleExportDateChange}
+                      className={filterStyles.input}
+                    />
+                  </div>
+                </div>
+                <div className={filterStyles.tooltipContainer}
+                     onMouseEnter={() => setShowDownloadTooltip(true)}
+                     onMouseLeave={() => setShowDownloadTooltip(false)}>
+                  <div className={`${filterStyles.tooltip} ${showDownloadTooltip ? filterStyles.tooltipVisible : ''}`}>
+                    {t('downloadCustomFormat') || 'Download data with the selected date range in a custom format'}
+                  </div>
+                </div>
+              </div>
+            )}
           <div className={filterStyles.buttonGroup}>
             <button
               className={[filterStyles.button, filterStyles.applyButton].join(' ')}
@@ -874,18 +1027,17 @@ const FilterForm = ({
             >
               <span className="label">Clear Filters</span>
             </button>
-            {/* Add new download button for company dashboard */}
             {dashboardType === 'company' && onDownloadFiltered && (
-              <button
-                className={[filterStyles.button, styles.filterDownloadBtn].join(' ')}
-                onClick={handleDownloadFiltered}
-                disabled={getFilteredData().length === 0}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512">
-                  <path d="M144 480C64.5 480 0 415.5 0 336c0-62.8 40.2-116.2 96.2-135.9c-.1-2.7-.2-5.4-.2-8.1c0-88.4 71.6-160 160-160c59.3 0 111 32.2 138.7 80.2C409.9 102 428.3 96 448 96c53 0 96 43 96 96c0 12.2-2.3 23.8-6.4 34.6C596 238.4 640 290.1 640 352c0 70.7-57.3 128-128 128H144zm79-167l80 80c9.4 9.4 24.6 9.4 33.9 0l80-80c9.4-9.4 9.4-24.6 0-33.9s-24.6-9.4-33.9 0l-39 39V184c0-13.3-10.7-24-24-24s-24 10.7-24 24V318.1l-39-39c-9.4-9.4-24.6-9.4-33.9 0s-9.4 24.6 0 33.9z" />
-                </svg>
-                Download
-              </button>
+            <button
+              className={filterStyles.downloadButton}
+              onClick={handleDownloadFiltered}
+              disabled={Array.isArray(data) ? data.length === 0 : true}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512">
+                <path d="M144 480C64.5 480 0 415.5 0 336c0-62.8 40.2-116.2 96.2-135.9c-.1-2.7-.2-5.4-.2-8.1c0-88.4 71.6-160 160-160c59.3 0 111 32.2 138.7 80.2C409.9 102 428.3 96 448 96c53 0 96 43 96 96c0 12.2-2.3 23.8-6.4 34.6C596 238.4 640 290.1 640 352c0 70.7-57.3 128-128 128H144zm79-167l80 80c9.4 9.4 24.6 9.4 33.9 0l80-80c9.4-9.4 9.4-24.6 0-33.9s-24.6-9.4-33.9 0l-39 39V184c0-13.3-10.7-24-24-24s-24 10.7-24 24V318.1l-39-39c-9.4-9.4-24.6-9.4-33.9 0s-9.4 24.6 0 33.9z" fill="white"/>
+              </svg>
+              {t('downloadWithCustomFormat') || 'Download With Custom Format'}
+            </button>
             )}
           </div>
         </div>
@@ -961,18 +1113,6 @@ const FilterForm = ({
                   <input type="number" name="totalValueGorgiaMin" placeholder="Min. Total Value Gorgia" value={filters.totalValueGorgiaMin} onChange={handleFilterChange} className={filterStyles.input} />
                   <input type="number" name="totalValueGorgiaMax" placeholder="Max. Total Value Gorgia" value={filters.totalValueGorgiaMax} onChange={handleFilterChange} className={filterStyles.input} />
                 </div>
-                <div className={filterStyles.inputGroup}>
-                  <input type="date" name="lastPurchaseDateStart" placeholder="Last Purchase Start Date" value={filters.lastPurchaseDateStart} onChange={handleFilterChange} className={filterStyles.input} />
-                  <input type="date" name="lastPurchaseDateEnd" placeholder="Last Purchase End Date" value={filters.lastPurchaseDateEnd} onChange={handleFilterChange} className={filterStyles.input} />
-                </div>
-                <div className={filterStyles.inputGroup}>
-                  <input type="date" name="contractEndDateStart" placeholder="Contract End Start Date" value={filters.contractEndDateStart} onChange={handleFilterChange} className={filterStyles.input} />
-                  <input type="date" name="contractEndDateEnd" placeholder="Contract End End Date" value={filters.contractEndDateEnd} onChange={handleFilterChange} className={filterStyles.input} />
-                </div>
-                <div className={filterStyles.inputGroup}>
-                  <input type="date" name="foundationDateStart" placeholder="Foundation Start Date" value={filters.foundationDateStart} onChange={handleFilterChange} className={filterStyles.input} />
-                  <input type="date" name="foundationDateEnd" placeholder="Foundation End Date" value={filters.foundationDateEnd} onChange={handleFilterChange} className={filterStyles.input} />
-                </div>
                 <input
                   type="text"
                   name="manager"
@@ -984,8 +1124,8 @@ const FilterForm = ({
 
                 <input
                   type="text"
-                  name="manager number"
-                  placeholder={t('manager number')}
+                  name="managerNumber"
+                  placeholder={t('managerNumber')}
                   value={filters.managerNumber}
                   onChange={handleFilterChange}
                   className={filterStyles.input}
@@ -1055,18 +1195,54 @@ const FilterForm = ({
               >
                 <span className="label">Clear Filters</span>
               </button>
-              {/* Add new download button for company dashboard */}
+              
+              {/* Modified download section with date selection */}
               {dashboardType === 'company' && onDownloadFiltered && (
-                <button
-                  className={[filterStyles.button, styles.filterDownloadBtn].join(' ')}
-                  onClick={handleDownloadFiltered}
-                  disabled={getFilteredData().length === 0}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512">
-                    <path d="M144 480C64.5 480 0 415.5 0 336c0-62.8 40.2-116.2 96.2-135.9c-.1-2.7-.2-5.4-.2-8.1c0-88.4 71.6-160 160-160c59.3 0 111 32.2 138.7 80.2C409.9 102 428.3 96 448 96c53 0 96 43 96 96c0 12.2-2.3 23.8-6.4 34.6C596 238.4 640 290.1 640 352c0 70.7-57.3 128-128 128H144zm79-167l80 80c9.4 9.4 24.6 9.4 33.9 0l80-80c9.4-9.4 9.4-24.6 0-33.9s-24.6-9.4-33.9 0l-39 39V184c0-13.3-10.7-24-24-24s-24 10.7-24 24V318.1l-39-39c-9.4-9.4-24.6-9.4-33.9 0s-9.4 24.6 0 33.9z" />
-                  </svg>
-                  Download
-                </button>
+                <div className={filterStyles.downloadSection}>
+                  <div className={filterStyles.dateSelectionGroup}>
+                    <label className={filterStyles.dateLabel}>
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512">
+                        <path d="M128 0c17.7 0 32 14.3 32 32V64H288V32c0-17.7 14.3-32 32-32s32 14.3 32 32V64h48c26.5 0 48 21.5 48 48v48H0V112C0 85.5 21.5 64 48 64H96V32c0-17.7 14.3-32 32-32zM0 192H448V464c0 26.5-21.5 48-48 48H48c-26.5 0-48-21.5-48-48V192zm64 80v32c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V272c0-8.8-7.2-16-16-16H80c-8.8 0-16 7.2-16 16zm128 0v32c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V272c0-8.8-7.2-16-16-16H208c-8.8 0-16 7.2-16 16zm144-16c-8.8 0-16 7.2-16 16v32c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V272c0-8.8-7.2-16-16-16H336z"/>
+                      </svg>
+                      {t('callDateRangeExport') || 'Call Date Range for Export:'}
+                    </label>
+                    <div className={filterStyles.dateInputs}>
+                      <input
+                        type="date"
+                        name="startDate"
+                        placeholder="Start Date"
+                        value={exportDateRange.startDate}
+                        onChange={handleExportDateChange}
+                        className={filterStyles.input}
+                      />
+                      <input
+                        type="date"
+                        name="endDate"
+                        placeholder="End Date"
+                        value={exportDateRange.endDate}
+                        onChange={handleExportDateChange}
+                        className={filterStyles.input}
+                      />
+                    </div>
+                  </div>
+                  <div className={filterStyles.tooltipContainer}
+                       onMouseEnter={() => setShowDownloadTooltip(true)}
+                       onMouseLeave={() => setShowDownloadTooltip(false)}>
+                    <div className={`${filterStyles.tooltip} ${showDownloadTooltip ? filterStyles.tooltipVisible : ''}`}>
+                      {t('downloadCustomFormat') || 'Download data with the selected date range in a custom format'}
+                    </div>
+                    <button
+                      className={filterStyles.downloadButton}
+                      onClick={handleDownloadFiltered}
+                      disabled={Array.isArray(data) ? data.length === 0 : true}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512">
+                        <path d="M144 480C64.5 480 0 415.5 0 336c0-62.8 40.2-116.2 96.2-135.9c-.1-2.7-.2-5.4-.2-8.1c0-88.4 71.6-160 160-160c59.3 0 111 32.2 138.7 80.2C409.9 102 428.3 96 448 96c53 0 96 43 96 96c0 12.2-2.3 23.8-6.4 34.6C596 238.4 640 290.1 640 352c0 70.7-57.3 128-128 128H144zm79-167l80 80c9.4 9.4 24.6 9.4 33.9 0l80-80c9.4-9.4 9.4-24.6 0-33.9s-24.6-9.4-33.9 0l-39 39V184c0-13.3-10.7-24-24-24s-24 10.7-24 24V318.1l-39-39c-9.4-9.4-24.6-9.4-33.9 0s-9.4 24.6 0 33.9z" fill="white"/>
+                      </svg>
+                      {t('downloadWithCustomFormat') || 'Download With Custom Format'}
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
           </div>
