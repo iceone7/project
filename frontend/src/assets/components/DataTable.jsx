@@ -235,14 +235,14 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
     }
   };
   
-  // Process CDR data with Excel data - enhanced to track all receiver numbers per caller
+  // Process CDR data with Excel data - enhanced for accurate call counts without phone matching
   const processCdrDataWithExcel = (excelData, cdrData) => {
     console.log('Processing', cdrData.length, 'CDR records for', excelData.length, 'Excel rows');
-
+    
     const result = [...excelData];
     const phoneToRowsMap = {};
-
-    // Create a lookup map of caller numbers
+    
+    // First pass: create a lookup map of ONLY caller numbers in the Excel data
     excelData.forEach((row, index) => {
       const callerNumber = normalizePhoneForMatching(row.caller_number || row.callerNumber);
       if (callerNumber) {
@@ -250,206 +250,123 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
         phoneToRowsMap[callerNumber].push(index);
       }
     });
-
-    // Log the unique numbers we're looking for 
-    console.log('Looking for these caller numbers:', Object.keys(phoneToRowsMap));
-
-    // Group CDR data by caller number AND track all receiver numbers
+    
+    // Group CDR data by unique caller number with status breakdowns
     const callerToCDRMap = {};
+    
     cdrData.forEach(cdr => {
-      // Only consider records where this number is specifically the caller (src)
       const callerNumber = normalizePhoneForMatching(cdr.callerNumber);
-      const receiverNumber = cdr.receiverNumber || '';
+      const callStatus = cdr.callStatus || 'UNKNOWN';
       
-      // Skip records with empty caller numbers
-      if (!callerNumber) return;
-      
+      // Initialize counter structure if this is a new caller
       if (!callerToCDRMap[callerNumber]) {
         callerToCDRMap[callerNumber] = {
           count: 0,
           answeredCalls: 0,
           noAnswerCalls: 0,
           busyCalls: 0,
-          latestCall: null,
-          receivers: new Map() // Use Map to track calls per receiver
+          data: cdr
         };
       }
       
-      // Increment overall call count
+      // Increment total count
       callerToCDRMap[callerNumber].count++;
       
-      // Track this receiver
-      if (!callerToCDRMap[callerNumber].receivers.has(receiverNumber)) {
-        callerToCDRMap[callerNumber].receivers.set(receiverNumber, {
-          count: 0,
-          answered: 0,
-          noAnswer: 0,
-          busy: 0,
-          calls: []
-        });
-      }
-      
-      // Increment count for this specific caller-receiver pair
-      const receiverData = callerToCDRMap[callerNumber].receivers.get(receiverNumber);
-      receiverData.count++;
-      receiverData.calls.push(cdr);
-      
-      // Track call status
-      if (cdr.callStatus === 'ANSWERED') {
+      // Increment specific status counter
+      if (callStatus === 'ANSWERED') {
         callerToCDRMap[callerNumber].answeredCalls++;
-        receiverData.answered++;
-      } else if (cdr.callStatus === 'NO ANSWER') {
+      } else if (callStatus === 'NO ANSWER') {
         callerToCDRMap[callerNumber].noAnswerCalls++;
-        receiverData.noAnswer++;
-      } else if (cdr.callStatus === 'BUSY') {
+      } else if (callStatus === 'BUSY') {
         callerToCDRMap[callerNumber].busyCalls++;
-        receiverData.busy++;
       }
-
-      // Track the latest call for this caller
-      if (!callerToCDRMap[callerNumber].latestCall || 
-          new Date(cdr.callDate) > new Date(callerToCDRMap[callerNumber].latestCall.callDate)) {
-        callerToCDRMap[callerNumber].latestCall = cdr;
+      
+      // Update latest call if this one is newer
+      if (new Date(cdr.callDate) > new Date(callerToCDRMap[callerNumber].data.callDate)) {
+        callerToCDRMap[callerNumber].data = cdr;
       }
     });
-
-    console.log('Found', Object.keys(callerToCDRMap).length, 'unique callers with call records');
-
-    // Update Excel rows with CDR data
+    
+    console.log('Found', Object.keys(callerToCDRMap).length, 'unique callers');
+    
+    // Create a map to store matched callers for each row
+    const rowCallerMatches = {};
+    
+    // Update Excel rows with the matching CDR data
     Object.entries(callerToCDRMap).forEach(([callerNumber, cdrInfo]) => {
-      const rowIndices = phoneToRowsMap[callerNumber] || [];
+      // Find rows with this caller number
+      const callerRowIndices = phoneToRowsMap[callerNumber] || [];
       
-      if (rowIndices.length === 0) {
-        console.log(`No Excel row found for caller: ${callerNumber}`);
-        return;
-      }
-      
-      // Format receiver numbers for display (with call counts)
-      const receiverNumbers = [];
-      const formattedReceiverList = [];
-      const receiverDetails = [];
-
-      cdrInfo.receivers.forEach((data, receiver) => {
-        // Find if this receiver matches any contact in the Excel data
-        const normalizedReceiver = normalizePhoneForMatching(receiver);
-        
-        // Check all of the row's phone fields for a match
-        const rowIndex = rowIndices[0]; // Use the first matched row for checking
-        if (rowIndex !== undefined) {
-          const rowData = result[rowIndex];
-          
-          // Initialize the receiver entry
-          const receiverEntry = {
-            number: receiver,
-            count: data.count,
-            answered: data.answered,
-            noAnswer: data.noAnswer,
-            busy: data.busy,
-            contactName: null,
-            contactField: null
-          };
-          
-          // Check tel1
-          if (normalizePhoneForMatching(rowData.tel1) === normalizedReceiver) {
-            receiverEntry.contactName = rowData.contactPerson1 || rowData.contact_person1 || '';
-            receiverEntry.contactField = 'contact_person1';
-          }
-          // Check tel2 - even if we found a match in tel1
-          else if (normalizePhoneForMatching(rowData.tel2) === normalizedReceiver) {
-            receiverEntry.contactName = rowData.contactPerson2 || rowData.contact_person2 || '';
-            receiverEntry.contactField = 'contact_person2';
-          }
-          // Check tel3 - even if we found a match already
-          else if (normalizePhoneForMatching(rowData.tel3) === normalizedReceiver) {
-            receiverEntry.contactName = rowData.contactPerson3 || rowData.contact_person3 || '';
-            receiverEntry.contactField = 'contact_person3';
-          }
-          
-          // Add to the receiver details with contact info
-          receiverDetails.push(receiverEntry);
-          
-          // Format the display text - include contact name if available
-          const displayText = receiverEntry.contactName 
-            ? `${receiver} (${data.count}) - ${receiverEntry.contactName}`
-            : `${receiver} (${data.count})`;
-          
-          formattedReceiverList.push(displayText);
-          receiverNumbers.push(receiver);
-        } else {
-          // Regular entry if no row index matched
-          receiverDetails.push({
-            number: receiver,
-            count: data.count,
-            answered: data.answered,
-            noAnswer: data.noAnswer,
-            busy: data.busy
-          });
-          formattedReceiverList.push(`${receiver} (${data.count})`);
-          receiverNumbers.push(receiver);
-        }
-      });
-      
-      rowIndices.forEach(rowIndex => {
+      callerRowIndices.forEach(rowIndex => {
         const row = result[rowIndex];
-        const originalCallDate = row.callDate || row.call_date || '';
+        const rowCallerNumber = normalizePhoneForMatching(row.caller_number || row.callerNumber);
         
-        console.log(`Updating row ${rowIndex} for caller ${callerNumber} with ${cdrInfo.count} calls to ${cdrInfo.receivers.size} receivers`);
-
-        result[rowIndex] = {
-          ...row,
-          // Use latest receiver as the primary display value
-          receiver_number: cdrInfo.latestCall?.receiverNumber || '',
-          receiverNumber: cdrInfo.latestCall?.receiverNumber || '',
-          // Include all receiver numbers and details
-          all_receiver_numbers: receiverNumbers,
-          allReceiverNumbers: receiverNumbers,
-          receiver_list: formattedReceiverList.join(', '),
-          receiverList: formattedReceiverList.join(', '),
-          receiver_details: receiverDetails,
-          receiverDetails: receiverDetails,
-          // Standard fields
-          call_count: cdrInfo.count || 0,
-          callCount: cdrInfo.count || 0,
-          answered_calls: cdrInfo.answeredCalls || 0,
-          answeredCalls: cdrInfo.answeredCalls || 0,
-          no_answer_calls: cdrInfo.noAnswerCalls || 0,
-          noAnswerCalls: cdrInfo.noAnswerCalls || 0,
-          busy_calls: cdrInfo.busyCalls || 0,
-          busyCalls: cdrInfo.busyCalls || 0,
-          cdr_call_date: cdrInfo.latestCall?.callDate || '',
-          cdrCallDate: cdrInfo.latestCall?.callDate || '',
-          call_date: originalCallDate || cdrInfo.latestCall?.callDate || '',
-          callDate: originalCallDate || cdrInfo.latestCall?.callDate || '',
-          call_duration: cdrInfo.latestCall?.formattedDuration || '',
-          callDuration: cdrInfo.latestCall?.formattedDuration || '',
-          call_status: cdrInfo.latestCall?.callStatus || '',
-          callStatus: cdrInfo.latestCall?.callStatus || '',
-          hasRecentCalls: cdrInfo.count > 0,
-          uniqueReceivers: cdrInfo.receivers.size // Count of unique receivers
-        };
+        // Verify the caller number matches
+        if (rowCallerNumber !== callerNumber) return;
+        
+        // Initialize caller matches for this row if needed
+        if (!rowCallerMatches[rowIndex]) {
+          rowCallerMatches[rowIndex] = [];
+        }
+        
+        // Store this match
+        rowCallerMatches[rowIndex].push({
+          receiverNumber: cdrInfo.data.receiverNumber,
+          callCount: cdrInfo.count,
+          answeredCalls: cdrInfo.answeredCalls,
+          noAnswerCalls: cdrInfo.noAnswerCalls,
+          busyCalls: cdrInfo.busyCalls,
+          callDate: cdrInfo.data.callDate,
+          callDuration: cdrInfo.data.formattedDuration,
+          callStatus: cdrInfo.data.callStatus
+        });
       });
     });
-
+    
+    // Update rows with their caller match data
+    Object.entries(rowCallerMatches).forEach(([rowIndex, matches]) => {
+      rowIndex = parseInt(rowIndex);
+      
+      // Sort matches by total call count (highest first)
+      matches.sort((a, b) => b.callCount - a.callCount);
+      
+      // Use the caller with most calls as primary
+      const primaryMatch = matches[0];
+      
+      // Preserve the original call date from Excel
+      const originalCallDate = result[rowIndex].callDate || result[rowIndex].call_date || '';
+      
+      // Update this row with the call data
+      result[rowIndex] = {
+        ...result[rowIndex],
+        receiver_number: primaryMatch.receiverNumber || '',
+        call_count: primaryMatch.callCount || 0,
+        answered_calls: primaryMatch.answeredCalls || 0,
+        no_answer_calls: primaryMatch.noAnswerCalls || 0,
+        busy_calls: primaryMatch.busyCalls || 0,
+        
+        // Store CDR date in a separate field, don't overwrite original
+        cdr_call_date: primaryMatch.callDate || '',
+        
+        // Only update call_date if it wasn't present in Excel
+        call_date: originalCallDate || primaryMatch.callDate || '',
+        callDate: originalCallDate || primaryMatch.callDate || '',
+        
+        call_duration: primaryMatch.callDuration || '',
+        call_status: primaryMatch.callStatus || '',
+        hasRecentCalls: true,
+        all_matched_calls: matches  // Store all matched calls
+      };
+    });
+    
     return result;
-};
+  };
   
   // Helper function to normalize phone numbers for matching
   const normalizePhoneForMatching = (phoneNumber) => {
     if (!phoneNumber) return '';
-    
-    // Convert to string first in case it's a number
-    phoneNumber = String(phoneNumber);
-    
     // Remove all non-digit characters
-    let normalized = phoneNumber.replace(/\D/g, '');
-    
-    // Handle country code variations
-    if (normalized.startsWith('995') && normalized.length > 9) {
-      // Prioritize the version without country code for matching
-      normalized = normalized.substring(3);
-    }
-    
-    return normalized;
+    return phoneNumber.replace(/\D/g, '');
   };
 
   // Формирует путь вида: 2025/04/29/имя_файла.wav
@@ -750,51 +667,7 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                                 <td>{call.callerName || call.caller_name || 'N/A'}</td>
                                 <td>{call.callerNumber || call.caller_number || 'N/A'}</td>
                                 <td>{call.receiverName || call.receiver_name || 'N/A'}</td>
-                                <td>
-                                  {call.receiverList ? (
-                                    <span 
-                                      title={call.receiverList} 
-                                      style={{ 
-                                        display: 'block', 
-                                        maxWidth: '150px', 
-                                        overflow: 'hidden', 
-                                        textOverflow: 'ellipsis', 
-                                        whiteSpace: 'nowrap',
-                                        cursor: 'pointer'
-                                      }}
-                                      onClick={() => {
-                                        // Display a formatted list of receivers with their contact names if available
-                                        const details = call.receiverDetails || [];
-                                        const formattedList = details.map(r => {
-                                          if (r.contactName) {
-                                            return `${r.number} (${r.count}) - ${r.contactName}`;
-                                          }
-                                          return `${r.number} (${r.count})`;
-                                        }).join('\n');
-                                        
-                                        alert('Receiver Numbers and Contacts:\n' + (formattedList || call.receiverList));
-                                      }}
-                                    >
-                                      {(() => {
-                                        // If we have receiverDetails with contact information, show the primary receiver with contact
-                                        if (call.receiverDetails && call.receiverDetails.length > 0) {
-                                          const primaryReceiver = call.receiverDetails.find(r => r.number === call.receiverNumber);
-                                          if (primaryReceiver && primaryReceiver.contactName) {
-                                            return `${call.receiverNumber} - ${primaryReceiver.contactName}`;
-                                          }
-                                        }
-        
-                                        // If there's a directly matched contact in the main record
-                                        if (call.matchedReceiverContact) {
-                                          return `${call.receiverNumber} - ${call.matchedReceiverContact}`;
-                                        }
-        
-                                        // Fallback to just showing receiver numbers list
-                                        return call.receiverList;
-                                      })()}
-                                    </span>
-                                  ) : (call.receiverNumber || call.receiver_number || 'N/A')}
-                                </td>
+                                <td>{call.receiverNumber || call.receiver_number || 'N/A'}</td>
                                 <td>{call.callCount || call.call_count || '0'}</td>
                                 <td>{call.answeredCalls || call.answered_calls || '0'}</td>
                                 <td>{call.noAnswerCalls || call.no_answer_calls || '0'}</td>

@@ -157,113 +157,6 @@ const ButtonsPanel = ({
     };
   }, []);
 
-  // Enhanced function to handle caller data export with proper data extraction
-  const handleExportCallerData = () => {
-    startDownloadAnimation(); // Start animation
-    setIsExporting(true);
-    setExportError(null);
-    
-    try {
-      // Check if there's data to export
-      if (!excelData || excelData.length === 0) {
-        alert('No caller data available to export');
-        setIsExporting(false);
-        return;
-      }
-      
-      console.log(`Preparing to export ${excelData.length} caller records`);
-      
-      // Define headers for caller export with new column for all receiver numbers
-      const headers = [
-        'Company Name', 'ID Code', 'Contact Person #1', 'Phone #1',
-        'Contact Person #2', 'Phone #2', 'Contact Person #3', 'Phone #3',
-        'Caller Name', 'Caller Number', 'All Receiver Numbers', 'Primary Receiver',
-        'Call Count', 'Answered Calls', 'No Answer Calls', 'Busy Calls',
-        'Call Date', 'Call Duration'
-      ];
-      
-      // Create export data with comprehensive field extraction
-      const exportData = excelData.map((item) => {
-        // Extract all fields with fallbacks for different naming conventions
-        return [
-          item.company_name || item.companyName || '',
-          item.identification_code || item.identificationCode || item.idCode || item.id_code || '',
-          item.contact_person1 || item.contactPerson1 || '',
-          item.tel1 || item.phone1 || '',
-          item.contact_person2 || item.contactPerson2 || '',
-          item.tel2 || item.phone2 || '',
-          item.contact_person3 || item.contactPerson3 || '',
-          item.tel3 || item.phone3 || '',
-          item.caller_name || item.callerName || '',
-          item.caller_number || item.callerNumber || '',
-          
-          // Add the full list of receiver numbers with call counts
-          item.receiverList || item.receiver_list || '',
-          
-          // Primary receiver is the most recent one
-          item.receiver_number || item.receiverNumber || '',
-          
-          // Add proper fallbacks for numeric fields
-          typeof item.call_count !== 'undefined' ? String(item.call_count) : 
-            (typeof item.callCount !== 'undefined' ? String(item.callCount) : '0'),
-          
-          typeof item.answered_calls !== 'undefined' ? String(item.answered_calls) : 
-            (typeof item.answeredCalls !== 'undefined' ? String(item.answeredCalls) : '0'),
-            
-          typeof item.no_answer_calls !== 'undefined' ? String(item.no_answer_calls) : 
-            (typeof item.noAnswerCalls !== 'undefined' ? String(item.noAnswerCalls) : '0'),
-            
-          typeof item.busy_calls !== 'undefined' ? String(item.busy_calls) : 
-            (typeof item.busyCalls !== 'undefined' ? String(item.busyCalls) : '0'),
-            
-          item.call_date || item.callDate || '',
-          item.call_duration || item.callDuration || ''
-        ];
-      });
-      
-      // Debug the export data
-      console.log('First row to be exported:', 
-        headers.map((h, i) => ({field: h, value: exportData[0]?.[i] || 'none'})));
-      
-      // Create worksheet with headers and data
-      const worksheet = XLSX.utils.aoa_to_sheet([headers, ...exportData]);
-      
-      // Set column widths - make the receiver list column wider
-      const colWidths = headers.map((h, colIndex) => {
-        let width = Math.max(
-          h.length,
-          ...exportData.map(row => (row[colIndex] ? String(row[colIndex]).length : 0))
-        ) + 2;
-        
-        // Make the receiver list column extra wide
-        if (colIndex === 10) { // "All Receiver Numbers" column
-          width = Math.max(width, 40);
-        }
-        
-        return { wch: width };
-      });
-      worksheet['!cols'] = colWidths;
-      
-      // Create workbook and append worksheet
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Caller Data');
-      
-      // Generate filename with current date
-      const today = new Date();
-      const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-      const fileName = `caller_data_${dateStr}.xlsx`;
-      
-      // Write to file and trigger download
-      XLSX.writeFile(workbook, fileName);
-      console.log('Caller data export successful');
-    } catch (err) {
-      console.error('Error exporting caller data:', err);
-      setExportError('Failed to export data: ' + (err.message || 'Unknown error'));
-    } finally {
-      setIsExporting(false);
-    }
-  };
-  
   // Handle data download based on active dashboard - this function was missing
   const handleExportData = () => {
     console.log('Export Data clicked, dashboard type:', activeDashboard);
@@ -405,6 +298,102 @@ const ButtonsPanel = ({
     } catch (err) {
       console.error('Error exporting company data:', err);
       setExportError('Failed to download data: ' + (err.message || 'Unknown error'));
+    } finally {
+      setIsExporting(false);
+    }
+  };
+  
+  // Enhanced function to handle caller data export with better data normalization
+  const handleExportCallerData = () => {
+    startDownloadAnimation();
+    setIsExporting(true);
+    setExportError(null);
+
+    try {
+      if (!excelData || excelData.length === 0) {
+        alert('No caller data available to export');
+        setIsExporting(false);
+        return;
+      }
+
+      console.log(`Preparing to export ${excelData.length} caller records`);
+
+      // Remove 'Call Status' from headers
+      const headers = [
+        'Company Name', 'ID Code', 'Contact Person #1', 'Phone #1',
+        'Contact Person #2', 'Phone #2', 'Contact Person #3', 'Phone #3',
+        'Caller Name', 'Caller Number', 'Receiver Name', 'Receiver Number',
+        'Call Count', 'Answered Calls', 'No Answer Calls', 'Busy Calls',
+        'Call Date', 'Call Duration'
+      ];
+
+      const safeExtract = (item, keys, defaultValue = '') => {
+        if (!item) return defaultValue;
+        for (const key of keys) {
+          const value = item[key];
+          if (value !== undefined && value !== null && value !== 'undefined') {
+            if (typeof value === 'number') return value.toString();
+            if (value === 0) return '0';
+            if (Array.isArray(value)) return value.join(', ');
+            if (typeof value === 'object' && value !== null) return JSON.stringify(value);
+            if (value === true) return 'Yes';
+            if (value === false) return 'No';
+            return value.toString();
+          }
+        }
+        return defaultValue;
+      };
+
+      const exportData = excelData.map((item) => [
+        safeExtract(item, ['companyName', 'company_name']),
+        safeExtract(item, ['identificationCode', 'identification_code', 'idCode', 'id_code', 'id']),
+        safeExtract(item, ['contactPerson1', 'contact_person1']),
+        safeExtract(item, ['tel1', 'phone1']),
+        safeExtract(item, ['contactPerson2', 'contact_person2']),
+        safeExtract(item, ['tel2', 'phone2']),
+        safeExtract(item, ['contactPerson3', 'contact_person3']),
+        safeExtract(item, ['tel3', 'phone3']),
+        safeExtract(item, ['callerName', 'caller_name']),
+        safeExtract(item, ['callerNumber', 'caller_number']),
+        safeExtract(item, ['receiverName', 'receiver_name']),
+        safeExtract(item, ['receiverNumber', 'receiver_number']),
+        safeExtract(item, ['callCount', 'call_count'], '0'),
+        safeExtract(item, ['answeredCalls', 'answered_calls'], '0'),
+        safeExtract(item, ['noAnswerCalls', 'no_answer_calls'], '0'),
+        safeExtract(item, ['busyCalls', 'busy_calls'], '0'),
+        safeExtract(item, ['callDate', 'call_date']),
+        safeExtract(item, ['callDuration', 'call_duration'])
+        // Removed call status extraction
+      ]);
+      
+      // Create worksheet
+      const worksheet = XLSX.utils.aoa_to_sheet([headers, ...exportData]);
+      
+      // Set column widths
+      const colWidths = headers.map((h, colIndex) => {
+        const maxLength = Math.max(
+          h.length,
+          ...exportData.map(row => (row[colIndex] ? String(row[colIndex]).length : 0))
+        );
+        return { wch: maxLength + 2 }; // Add padding
+      });
+      worksheet['!cols'] = colWidths;
+      
+      // Create workbook
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Caller Data');
+      
+      // Generate filename
+      const today = new Date();
+      const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      const fileName = `caller_data_${dateStr}.xlsx`;
+      
+      // Write file and download
+      XLSX.writeFile(workbook, fileName);
+      console.log('Caller data export successful');
+    } catch (err) {
+      console.error('Error exporting caller data:', err);
+      setExportError('Failed to export data: ' + (err.message || 'Unknown error'));
     } finally {
       setIsExporting(false);
     }
@@ -839,6 +828,8 @@ const ButtonsPanel = ({
                 }}
               >
                 <path
+                  d="M144 480C64.5 480 0 415.5 0 336c0-62.8 40.2-116.2 96.2-135.9c-.1-2.7-.2-5.4-.2-8.1c0-88.4 71.6-160 160-160c59.3 0 111 32.2 138.7 80.2C409.9 102 428.3 96 448 96c53 0 96 43 96 96c0 12.2-2.3 23.8-6.4 34.6C596 238.4 640 290.1 640 352c0 70.7-57.3 128-128 128H144zm79-167l80 80c9.4 9.4 24.6 9.4 33.9 0l80-80c9.4-9.4 9.4-24.6 0-33.9s-24.6-9.4-33.9 0l-39 39V184c0-13.3-10.7-24-24-24s-24 10.7-24 24V318.1l-39-39c-9.4-9.4-24.6-9.4-33.9 0s-9.4 24.6 0 33.9z"
+                  fill="white"
                 />
               </svg>
               <span style={{

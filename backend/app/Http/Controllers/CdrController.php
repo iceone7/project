@@ -2,16 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\CallRecord;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class CdrController extends Controller
 {
     public function index()
     {
         try {
-            $cdr = CallRecord::orderBy('calldate', 'desc')
+            $cdr = DB::connection('asterisk')->table('cdr')
+                    ->orderBy('calldate', 'desc')
                     ->limit(1000)
                     ->get();
             
@@ -54,15 +55,15 @@ class CdrController extends Controller
                 // Get the calls for this caller
                 $calls = $this->getCallsByCallerNumber($callerNumber);
                 
-                if ($calls->isNotEmpty()) {
+                if (count($calls) > 0) {
                     // Extract call metrics
                     $callCount = count($calls);
-                    $answeredCalls = $calls->where('disposition', 'ANSWERED')->count();
-                    $noAnswerCalls = $calls->where('disposition', 'NO ANSWER')->count();
-                    $busyCalls = $calls->where('disposition', 'BUSY')->count();
+                    $answeredCalls = collect($calls)->where('disposition', 'ANSWERED')->count();
+                    $noAnswerCalls = collect($calls)->where('disposition', 'NO ANSWER')->count();
+                    $busyCalls = collect($calls)->where('disposition', 'BUSY')->count();
                     
                     // Get the latest call
-                    $latestCall = $calls->first(); // Assuming calls are already sorted by date desc
+                    $latestCall = $calls[0]; // Assuming calls are already sorted by date desc
                     
                     // Format the duration
                     $formattedDuration = $this->formatCallDuration($latestCall->duration);
@@ -112,128 +113,86 @@ class CdrController extends Controller
      * Get enhanced caller data with date range support
      */
     public function getEnhancedCallerData(Request $request)
-{
-    try {
-        $validated = $request->validate([
-            'callerNumbers' => 'required|array',
-            'dateRange' => 'nullable|string'
-        ]);
-
-        $callerNumbers = $request->input('callerNumbers', []);
-        $dateRange = $request->input('dateRange', '');
-
-        $startDate = null;
-        $endDate = null;
-
-        if (!empty($dateRange) && strpos($dateRange, '-') !== false) {
-            list($startDateStr, $endDateStr) = explode('-', $dateRange, 2);
-            $startDate = date('Y-m-d', strtotime(trim($startDateStr)));
-            $endDate = date('Y-m-d', strtotime(trim($endDateStr)));
-        }
-
-        \Log::info('Getting enhanced caller data with date range', [
-            'caller_count' => count($callerNumbers),
-            'date_range' => $dateRange,
-            'parsed_start_date' => $startDate,
-            'parsed_end_date' => $endDate
-        ]);
-
-        // Normalize caller numbers
-        $normalizedCallerNumbers = array_map(function($number) {
-            return $this->normalizePhoneNumber($number);
-        }, $callerNumbers);
-
-        // Build query
-        $query = CallRecord::orderBy('calldate', 'desc');
-        if ($startDate) {
-            $query->whereDate('calldate', '>=', $startDate);
-        }
-        if ($endDate) {
-            $query->whereDate('calldate', '<=', $endDate);
-        }
-
-        // Match only on src or clid fields
-        if (!empty($normalizedCallerNumbers)) {
-            $query->where(function($q) use ($normalizedCallerNumbers) {
-                foreach ($normalizedCallerNumbers as $number) {
-                    if (!empty($number)) {
-                        $q->orWhere('src', $number)
-                          ->orWhere('clid', 'LIKE', '%' . $number . '%');
-                    }
-                }
-            });
-        }
-
-        $calls = $query->get();
-        \Log::info("Found " . count($calls) . " matching calls for " . count($normalizedCallerNumbers) . " caller numbers");
-
-        // Process results
-        $processedData = [];
-        foreach ($normalizedCallerNumbers as $callerNumber) {
-            $matchingCalls = $calls->filter(function($call) use ($callerNumber) {
-                $recordCaller = $this->extractCallerNumber($call);
-                return $recordCaller === $callerNumber || 
-                       (isset($call->clid) && strpos($call->clid, $callerNumber) !== false);
-            });
-
-            if ($matchingCalls->isNotEmpty()) {
-                $callCount = count($matchingCalls);
-                $answeredCount = $matchingCalls->where('disposition', 'ANSWERED')->count();
-                $noAnswerCount = $matchingCalls->where('disposition', 'NO ANSWER')->count();
-                $busyCount = $matchingCalls->where('disposition', 'BUSY')->count();
-                $latestCall = $matchingCalls->sortByDesc('calldate')->first();
-
-                $processedData[$callerNumber] = [
-                    'callerNumber' => $callerNumber,
-                    'receiverNumber' => $latestCall->dst,
-                    'callCount' => $callCount,
-                    'answeredCalls' => $answeredCount,
-                    'noAnswerCalls' => $noAnswerCount,
-                    'busyCalls' => $busyCount,
-                    'callDate' => $latestCall->calldate,
-                    'callDuration' => $this->formatCallDuration($latestCall->duration),
-                    'callStatus' => $latestCall->disposition
-                ];
-
-                \Log::info("Processed data for caller $callerNumber", [
-                    'call_count' => $callCount,
-                    'receiver_number' => $latestCall->dst,
-                    'call_date' => $latestCall->calldate
-                ]);
-            } else {
-                $processedData[$callerNumber] = [
-                    'callerNumber' => $callerNumber,
-                    'receiverNumber' => '',
-                    'callCount' => 0,
-                    'answeredCalls' => 0,
-                    'noAnswerCalls' => 0,
-                    'busyCalls' => 0,
-                    'callDate' => '',
-                    'callDuration' => '',
-                    'callStatus' => ''
-                ];
-                \Log::info("No calls found for caller $callerNumber");
+    {
+        try {
+            $validated = $request->validate([
+                'callerNumbers' => 'required|array',
+                'dateRange' => 'nullable|string'
+            ]);
+            
+            $callerNumbers = $request->input('callerNumbers', []);
+            $dateRange = $request->input('dateRange', '');
+            
+            // Parse date range if provided (format: "2025-06-10 - 2025-06-17")
+            $startDate = null;
+            $endDate = null;
+            
+            if (!empty($dateRange) && strpos($dateRange, '-') !== false) {
+                list($startDateStr, $endDateStr) = explode('-', $dateRange, 2);
+                $startDate = date('Y-m-d', strtotime(trim($startDateStr)));
+                $endDate = date('Y-m-d', strtotime(trim($endDateStr)));
             }
+            
+            Log::info('Getting enhanced caller data with date range', [
+                'caller_count' => count($callerNumbers),
+                'date_range' => $dateRange,
+                'parsed_start_date' => $startDate,
+                'parsed_end_date' => $endDate
+            ]);
+            
+            // Build query using asterisk database connection
+            $query = DB::connection('asterisk')->table('cdr')->orderBy('calldate', 'desc');
+            
+            // Add date range filter if provided
+            if ($startDate) {
+                $query->whereDate('calldate', '>=', $startDate);
+            }
+            
+            if ($endDate) {
+                $query->whereDate('calldate', '<=', $endDate);
+            }
+            
+            // Format numbers for query
+            $normalizedCallerNumbers = array_map(function($number) {
+                return $this->normalizePhoneNumber($number);
+            }, $callerNumbers);
+            
+            // Add caller number filter - ONLY match against src field (Caller Number)
+            if (!empty($normalizedCallerNumbers)) {
+                $query->where(function($q) use ($normalizedCallerNumbers) {
+                    foreach ($normalizedCallerNumbers as $number) {
+                        if (!empty($number)) {
+                            $q->orWhere('src', $number)
+                              ->orWhere('clid', 'LIKE', '%' . $number . '%');
+                        }
+                    }
+                });
+            }
+            
+            // Execute the query and get the results
+            $calls = $query->get();
+            
+            // Process the results - this now only uses caller info, not phone matching
+            $processedData = $this->processCdrResultsWithoutPhoneMatching($calls, $normalizedCallerNumbers);
+            
+            return response()->json([
+                'success' => true,
+                'date_range' => [
+                    'start_date' => $startDate,
+                    'end_date' => $endDate
+                ],
+                'call_count' => count($calls),
+                'data' => $processedData
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Error getting enhanced caller data: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to get enhanced caller data: ' . $e->getMessage()
+            ], 500);
         }
-
-        return response()->json([
-            'success' => true,
-            'date_range' => [
-                'start_date' => $startDate,
-                'end_date' => $endDate
-            ],
-            'call_count' => count($calls),
-            'data' => $processedData
-        ]);
-
-    } catch (\Exception $e) {
-        \Log::error('Error getting enhanced caller data: ' . $e->getMessage());
-        return response()->json([
-            'success' => false,
-            'error' => 'Failed to get enhanced caller data: ' . $e->getMessage()
-        ], 500);
     }
-}
     
     /**
      * Process CDR results without phone number matching
@@ -322,8 +281,8 @@ class CdrController extends Controller
                 'since' => $since
             ]);
             
-            // Build query using local CallRecord model
-            $query = CallRecord::orderBy('calldate', 'desc');
+            // Build query using Asterisk cdr table
+            $query = DB::connection('asterisk')->table('cdr')->orderBy('calldate', 'desc');
                       
             // Apply date filters
             if ($startDate) {
@@ -343,7 +302,7 @@ class CdrController extends Controller
             $cdrRecords = $query->get();
             
             // Process each record to extract caller information
-            $processedRecords = $cdrRecords->map(function($record) {
+            $processedRecords = collect($cdrRecords)->map(function($record) {
                 return [
                     'cdr_id' => $record->uniqueid,
                     'callerNumber' => $this->extractCallerNumber($record),
@@ -383,8 +342,8 @@ class CdrController extends Controller
         // Generate variations of the caller number for matching
         $numberFormats = $this->generateNumberFormats($callerNumber);
         
-        // Build query using local CallRecord model - ONLY look in src field
-        $query = CallRecord::where(function($q) use ($numberFormats) {
+        // Build query using Asterisk cdr table
+        $query = DB::connection('asterisk')->table('cdr')->where(function($q) use ($numberFormats) {
                 foreach ($numberFormats as $format) {
                     if (!empty($format)) {
                         // Only search in src field and clid field
@@ -454,5 +413,69 @@ class CdrController extends Controller
         }
         
         return $formats;
+    }
+    
+    /**
+     * Debug endpoint to check raw CDR data
+     */
+    public function debugCdrData(Request $request)
+    {
+        try {
+            // Get parameters with defaults
+            $limit = $request->input('limit', 20);
+            $startDate = $request->input('start_date', now()->subDays(7)->format('Y-m-d'));
+            $endDate = $request->input('end_date', now()->format('Y-m-d'));
+            
+            // Log the request
+            Log::info('Debug CDR data request', [
+                'limit' => $limit,
+                'start_date' => $startDate,
+                'end_date' => $endDate
+            ]);
+            
+            // Check database connection
+            try {
+                DB::connection('asterisk')->getPdo();
+                $connectionStatus = 'Connected successfully to Asterisk database';
+            } catch (\Exception $e) {
+                $connectionStatus = 'Connection failed: ' . $e->getMessage();
+                Log::error('Asterisk DB connection error: ' . $e->getMessage());
+            }
+            
+            // Attempt to get data
+            $rawData = [];
+            $error = null;
+            
+            try {
+                $query = DB::connection('asterisk')->table('cdr')
+                    ->orderBy('calldate', 'desc')
+                    ->limit($limit);
+                
+                if ($startDate) {
+                    $query->whereDate('calldate', '>=', $startDate);
+                }
+                
+                if ($endDate) {
+                    $query->whereDate('calldate', '<=', $endDate);
+                }
+                
+                $rawData = $query->get();
+            } catch (\Exception $e) {
+                $error = $e->getMessage();
+                Log::error('Error fetching debug CDR data: ' . $e->getMessage());
+            }
+            
+            return response()->json([
+                'connection_status' => $connectionStatus,
+                'error' => $error,
+                'data_count' => count($rawData),
+                'raw_data' => $rawData
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Debug CDR endpoint error: ' . $e->getMessage());
+            return response()->json([
+                'error' => 'Debug endpoint error: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

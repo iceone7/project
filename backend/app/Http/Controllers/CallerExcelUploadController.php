@@ -405,10 +405,10 @@ class CallerExcelUploadController extends Controller
             // Get Excel data
             $rawExcelData = $request->input('data');
             $excelData = $rawExcelData;
-
+            
             \Log::info("Processing all " . count($excelData) . " records");
             $processedData = [];
-
+            
             // Handle case where there's no data
             if (empty($excelData)) {
                 \Log::warning("No data to process");
@@ -417,71 +417,118 @@ class CallerExcelUploadController extends Controller
                     'data' => []
                 ]);
             }
-
-            // Extract date range from Excel data or request
+            
+            // Extract date range from Excel data - check all rows for date ranges
             $startDate = $request->input('start_date');
             $endDate = $request->input('end_date');
             $dateRangeFound = false;
-
+            
+            // Scan Excel data for any row that has a date range in call_date field
             foreach ($excelData as $row) {
                 $callDate = $row['call_date'] ?? $row['callDate'] ?? null;
                 if ($callDate && strpos($callDate, ' - ') !== false) {
                     list($start, $end) = explode(' - ', $callDate, 2);
+                    
+                    // Try to parse the dates
                     $parsedStart = date('Y-m-d', strtotime(trim($start)));
                     $parsedEnd = date('Y-m-d', strtotime(trim($end)));
+                    
                     if ($parsedStart && $parsedEnd) {
                         $startDate = $parsedStart;
                         $endDate = $parsedEnd;
                         $dateRangeFound = true;
+                        
                         \Log::info("Extracted date range from Call Date field:", [
                             'raw_value' => $callDate,
                             'start_date' => $startDate,
                             'end_date' => $endDate
                         ]);
-                        break;
+                        
+                        break; // Use the first valid date range found
                     }
                 }
             }
-
-            if (!$dateRangeFound) {
+            
+            if ($dateRangeFound) {
+                \Log::info("Using extracted date range for CDR query: $startDate to $endDate");
+            } else {
                 \Log::info("No date range found in Call Date field, using provided parameters or defaults");
-                // Default to last 30 days if no dates provided
-                $startDate = $startDate ?? now()->subDays(30)->format('Y-m-d');
-                $endDate = $endDate ?? now()->format('Y-m-d');
             }
-
+            
             \Log::info("Using date range for CDR query: {$startDate} to {$endDate}");
-
-            // Collect ONLY caller numbers
+            
+            // Create a lookup map for phone numbers to contact persons
+            $phoneToContactMap = [];
+            foreach ($excelData as $index => $row) {
+                // Add tel1 -> contact_person1
+                $phone1 = $this->normalizeNumber($row['tel1'] ?? $row['phone1'] ?? '');
+                if (!empty($phone1)) {
+                    $phoneToContactMap[$phone1] = [
+                        'name' => $row['contactPerson1'] ?? $row['contact_person1'] ?? '',
+                        'index' => $index
+                    ];
+                }
+                
+                // Add tel2 -> contact_person2
+                $phone2 = $this->normalizeNumber($row['tel2'] ?? $row['phone2'] ?? '');
+                if (!empty($phone2)) {
+                    $phoneToContactMap[$phone2] = [
+                        'name' => $row['contactPerson2'] ?? $row['contact_person2'] ?? '',
+                        'index' => $index
+                    ];
+                }
+                
+                // Add tel3 -> contact_person3
+                $phone3 = $this->normalizeNumber($row['tel3'] ?? $row['phone3'] ?? '');
+                if (!empty($phone3)) {
+                    $phoneToContactMap[$phone3] = [
+                        'name' => $row['contactPerson3'] ?? $row['contact_person3'] ?? '',
+                        'index' => $index
+                    ];
+                }
+            }
+            
+            \Log::info("Built phone to contact mapping with " . count($phoneToContactMap) . " entries");
+            
+            // Collect ONLY caller numbers - not contact phone numbers
             $callerNumbers = [];
+            
             foreach ($excelData as $row) {
+                // Get caller number
                 $callerNumber = $this->normalizeNumber($row['caller_number'] ?? $row['callerNumber'] ?? '');
                 if (!empty($callerNumber)) {
                     $callerNumbers[] = $callerNumber;
                 }
             }
-
+            
+            // Remove duplicates and empty values
             $callerNumbers = array_unique(array_filter($callerNumbers));
+            
             \Log::info("Found " . count($callerNumbers) . " unique caller numbers");
-
+            
             // Generate number formats for matching
             $callerFormats = [];
             foreach ($callerNumbers as $number) {
                 $callerFormats = array_merge($callerFormats, $this->generateNumberFormats($number));
             }
+            
             $callerFormats = array_unique($callerFormats);
-
-            // Query call_records table with date range and caller number filters
-            $cdrQuery = \App\Models\CallRecord::query();
+            
+            // Query Asterisk cdr table with the date range and caller number filters
+            $cdrQuery = DB::connection('asterisk')->table('cdr');
+            
+            // Apply date filters if available
             if ($startDate) {
                 $cdrQuery->whereDate('calldate', '>=', $startDate);
                 \Log::info("Filtering CDR records from date: $startDate");
             }
+            
             if ($endDate) {
                 $cdrQuery->whereDate('calldate', '<=', $endDate);
                 \Log::info("Filtering CDR records to date: $endDate");
             }
-
+            
+            // Build query to match ONLY caller numbers in src field
             $cdrQuery->where(function($query) use ($callerFormats) {
                 foreach ($callerFormats as $format) {
                     if (!empty($format)) {
@@ -490,201 +537,112 @@ class CallerExcelUploadController extends Controller
                     }
                 }
             });
-
+            
+            // Execute query and get call records
             $cdrRecords = $cdrQuery->orderBy('calldate', 'desc')->get();
+            
             \Log::info("Found " . count($cdrRecords) . " matching call records in date range");
-
-            // Process each row of Excel data
+            
+            // Process each row of Excel data to find matching calls
             foreach ($excelData as $index => $row) {
                 $callerNumber = $this->normalizeNumber($row['caller_number'] ?? $row['callerNumber'] ?? '');
                 $callerFormats = !empty($callerNumber) ? $this->generateNumberFormats($callerNumber) : [];
-
+                
+                // If no caller number, skip this row
                 if (empty($callerNumber)) {
-                    $processedData[] = $row; // Keep row unchanged
-                    \Log::warning("No caller number for row $index, skipping CDR matching");
+                    $processedData[] = $row; // Keep the row unchanged
                     continue;
                 }
-
-                // Filter CDR records for this caller number
-                $matchingCalls = $cdrRecords->filter(function($call) use ($callerFormats) {
+                
+                // Find matching calls for this caller number
+                $matchingCalls = collect($cdrRecords)->filter(function($call) use ($callerFormats) {
+                    // Check if caller matches src/clid
+                    $callerMatches = false;
                     $recordCaller = $this->extractCallerNumber($call);
+                    
                     foreach ($callerFormats as $format) {
                         if (!empty($format) && ($recordCaller === $format || 
                             (isset($call->clid) && strpos($call->clid, $format) !== false))) {
-                            return true;
+                            $callerMatches = true;
+                            break;
                         }
                     }
-                    return false;
+                    
+                    return $callerMatches;
                 });
-
-                // Initialize default values
-                $row['receiver_number'] = $row['receiver_number'] ?? $row['receiverNumber'] ?? '';
-                $row['receiverNumber'] = $row['receiver_number'];
-                $row['call_count'] = $row['call_count'] ?? $row['callCount'] ?? 0;
-                $row['callCount'] = $row['call_count'];
-                $row['answered_calls'] = $row['answered_calls'] ?? $row['answeredCalls'] ?? 0;
-                $row['answeredCalls'] = $row['answered_calls'];
-                $row['no_answer_calls'] = $row['no_answer_calls'] ?? $row['noAnswerCalls'] ?? 0;
-                $row['noAnswerCalls'] = $row['no_answer_calls'];
-                $row['busy_calls'] = $row['busy_calls'] ?? $row['busyCalls'] ?? 0;
-                $row['busyCalls'] = $row['busy_calls'];
-                $row['call_date'] = $row['call_date'] ?? $row['callDate'] ?? '';
-                $row['callDate'] = $row['call_date'];
-                $row['call_duration'] = $row['call_duration'] ?? $row['callDuration'] ?? '';
-                $row['callDuration'] = $row['call_duration'];
-                $row['call_status'] = $row['call_status'] ?? $row['callStatus'] ?? '';
-                $row['callStatus'] = $row['call_status'];
-
+                
                 if ($matchingCalls->isNotEmpty()) {
-                    // Group calls by receiver number for accurate counting
-                    $callsByReceiver = [];
-                    foreach ($matchingCalls as $call) {
-                        $receiverNumber = $call->dst;
-                        if (!isset($callsByReceiver[$receiverNumber])) {
-                            $callsByReceiver[$receiverNumber] = [
-                                'calls' => [],
-                                'answered' => 0,
-                                'no_answer' => 0,
-                                'busy' => 0,
-                                'latest' => null
-                            ];
-                        }
-                        
-                        // Add call to this receiver's collection
-                        $callsByReceiver[$receiverNumber]['calls'][] = $call;
-                        
-                        // Update counts by disposition
-                        if ($call->disposition === 'ANSWERED') {
-                            $callsByReceiver[$receiverNumber]['answered']++;
-                        } elseif ($call->disposition === 'NO ANSWER') {
-                            $callsByReceiver[$receiverNumber]['no_answer']++;
-                        } elseif ($call->disposition === 'BUSY') {
-                            $callsByReceiver[$receiverNumber]['busy']++;
-                        }
-                        
-                        // Update latest call if needed
-                        if (!$callsByReceiver[$receiverNumber]['latest'] || 
-                            new \DateTime($call->calldate) > new \DateTime($callsByReceiver[$receiverNumber]['latest']->calldate)) {
-                            $callsByReceiver[$receiverNumber]['latest'] = $call;
-                        }
-                    }
-
-                    // Calculate total counts across all receivers
-                    $totalCalls = 0;
-                    $answeredCount = 0;
-                    $noAnswerCount = 0;
-                    $busyCount = 0;
-                    $uniqueReceivers = count($callsByReceiver);
-                    $latestCall = null;
-                    $allReceiverNumbers = [];
-                    $receiverDetails = [];
+                    $callCount = count($matchingCalls);
+                    $answeredCount = $matchingCalls->where('disposition', 'ANSWERED')->count();
+                    $noAnswerCount = $matchingCalls->where('disposition', 'NO ANSWER')->count();
+                    $busyCount = $matchingCalls->where('disposition', 'BUSY')->count();
                     
-                    foreach ($callsByReceiver as $receiver => $receiverData) {
-                        $totalCalls += count($receiverData['calls']);
-                        $answeredCount += $receiverData['answered'];
-                        $noAnswerCount += $receiverData['no_answer'];
-                        $busyCount += $receiverData['busy'];
-                        
-                        // Add to our list of receivers with their call counts
-                        $allReceiverNumbers[] = $receiver;
-                        
-                        // Try to identify if this receiver matches a contact phone number
-                        $matchedContact = null;
-                        $normalizedReceiver = $this->normalizeNumber($receiver);
-                        
-                        // Check if this receiver number matches any of the contact phone numbers
-                        if ($this->normalizeNumber($row['tel1'] ?? '') === $normalizedReceiver) {
-                            $matchedContact = [
-                                'name' => $row['contact_person1'] ?? $row['contactPerson1'] ?? '',
-                                'phone_field' => 'tel1',
-                                'contact_field' => 'contact_person1'
-                            ];
-                        } elseif ($this->normalizeNumber($row['tel2'] ?? '') === $normalizedReceiver) {
-                            $matchedContact = [
-                                'name' => $row['contact_person2'] ?? $row['contactPerson2'] ?? '',
-                                'phone_field' => 'tel2',
-                                'contact_field' => 'contact_person2'
-                            ];
-                        } elseif ($this->normalizeNumber($row['tel3'] ?? '') === $normalizedReceiver) {
-                            $matchedContact = [
-                                'name' => $row['contact_person3'] ?? $row['contactPerson3'] ?? '',
-                                'phone_field' => 'tel3',
-                                'contact_field' => 'contact_person3'
-                            ];
-                        }
-                        
-                        $receiverDetails[] = [
-                            'number' => $receiver,
-                            'call_count' => count($receiverData['calls']),
-                            'answered' => $receiverData['answered'],
-                            'no_answer' => $receiverData['no_answer'],
-                            'busy' => $receiverData['busy'],
-                            'latest_call_date' => $receiverData['latest']->calldate,
-                            'matched_contact' => $matchedContact
-                        ];
-                        
-                        // Find the overall latest call
-                        if (!$latestCall || 
-                            new \DateTime($receiverData['latest']->calldate) > new \DateTime($latestCall->calldate)) {
-                            $latestCall = $receiverData['latest'];
+                    // Get the latest call
+                    $latestCall = $matchingCalls->sortByDesc('calldate')->first();
+                    
+                    // Store the original call date before updating
+                    $originalCallDate = $row['call_date'] ?? $row['callDate'] ?? null;
+                    
+                    // Get receiver number from the call
+                    $receiverNumber = $latestCall->dst ?? '';
+                    $normalizedReceiverNumber = $this->normalizeNumber($receiverNumber);
+                    
+                    // Find matching contact person for this receiver number
+                    $receiverName = '';
+                    $companyIndex = null;
+                    
+                    // Check if the receiver number matches any phone in our mapping
+                    foreach (['995' . $normalizedReceiverNumber, $normalizedReceiverNumber, substr($normalizedReceiverNumber, -9)] as $format) {
+                        if (isset($phoneToContactMap[$format])) {
+                            $receiverName = $phoneToContactMap[$format]['name'];
+                            $companyIndex = $phoneToContactMap[$format]['index'];
+                            \Log::info("Found match for receiver number: {$receiverNumber} -> {$receiverName}");
+                            break;
                         }
                     }
                     
-                    // Sort receivers by their call counts (descending)
-                    usort($receiverDetails, function($a, $b) {
-                        return $b['call_count'] - $a['call_count'];
-                    });
+                    // If we found a match in a different company row, add company name to receiver name
+                    if ($companyIndex !== null && $companyIndex !== $index) {
+                        $companyName = $excelData[$companyIndex]['company_name'] ?? 
+                                       $excelData[$companyIndex]['companyName'] ?? '';
+                        if ($companyName) {
+                            $receiverName .= " (" . $companyName . ")";
+                        }
+                    }
                     
-                    // Create a comma-separated list of receiver numbers with their call counts
-                    $formattedReceiverList = implode(', ', array_map(function($detail) {
-                        return $detail['number'] . ' (' . $detail['call_count'] . ')';
-                    }, $receiverDetails));
-
-                    // Update row with aggregated data
-                    $row['receiver_number'] = $latestCall->dst ?? '';
-                    $row['receiverNumber'] = $latestCall->dst ?? '';
-                    $row['call_count'] = $totalCalls;
-                    $row['callCount'] = $totalCalls;
+                    $row['receiver_number'] = $receiverNumber;
+                    $row['receiverNumber'] = $receiverNumber;
+                    $row['receiver_name'] = $receiverName;
+                    $row['receiverName'] = $receiverName;
+                    $row['call_count'] = $callCount;
+                    $row['callCount'] = $callCount;
                     $row['answered_calls'] = $answeredCount;
                     $row['answeredCalls'] = $answeredCount;
                     $row['no_answer_calls'] = $noAnswerCount;
                     $row['noAnswerCalls'] = $noAnswerCount;
                     $row['busy_calls'] = $busyCount;
                     $row['busyCalls'] = $busyCount;
-                    $row['unique_receivers'] = $uniqueReceivers;
-                    $row['uniqueReceivers'] = $uniqueReceivers;
-                    $row['all_receiver_numbers'] = $allReceiverNumbers;
-                    $row['allReceiverNumbers'] = $allReceiverNumbers;
-                    $row['receiver_list'] = $formattedReceiverList;
-                    $row['receiverList'] = $formattedReceiverList;
-                    $row['receiver_details'] = $receiverDetails;
-                    $row['receiverDetails'] = $receiverDetails;
+                    
+                    // Store the CDR call date in a separate field
                     $row['cdr_call_date'] = $latestCall->calldate;
                     $row['cdrCallDate'] = $latestCall->calldate;
-
-                    // Only update call_date if it wasn't provided in Excel
-                    if (empty($row['call_date'])) {
+                    
+                    // Preserve the original call date if it exists
+                    if (empty($originalCallDate)) {
+                        // Only set the call date if it wasn't already present in the Excel
                         $row['call_date'] = $latestCall->calldate;
                         $row['callDate'] = $latestCall->calldate;
                     }
+                    
                     $row['call_duration'] = $this->formatCallDuration($latestCall->duration);
                     $row['callDuration'] = $this->formatCallDuration($latestCall->duration);
                     $row['call_status'] = $latestCall->disposition;
                     $row['callStatus'] = $latestCall->disposition;
-
-                    \Log::info("Matched $totalCalls calls for caller $callerNumber to $uniqueReceivers unique receivers", [
-                        'latest_receiver' => $latestCall->dst,
-                        'all_receivers' => implode(', ', $allReceiverNumbers),
-                        'call_date' => $latestCall->calldate,
-                        'call_status' => $latestCall->disposition
-                    ]);
-                } else {
-                    \Log::info("No matching calls found for caller $callerNumber");
                 }
-
+                
                 $processedData[] = $row;
             }
-
+            
             return response()->json([
                 'status' => 'success',
                 'date_range' => [
@@ -694,17 +652,18 @@ class CallerExcelUploadController extends Controller
                 ],
                 'data' => $processedData
             ]);
-
+            
         } catch (\Exception $e) {
             \Log::error('Error processing CDR data: ' . $e->getMessage());
             \Log::error('Stack trace: ' . $e->getTraceAsString());
+            
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to process CDR data: ' . $e->getMessage()
             ], 500);
         }
     }
-
+    
     /**
      * Extract caller number from CDR record (from src or clid field)
      */
@@ -770,7 +729,7 @@ class CallerExcelUploadController extends Controller
     }
 
     public function test(){
-        $cdrQuery = DB::connection('asterisk')->table('cdr')->where('created_at', '>', now()->subDays(30));
+        $cdrQuery = DB::connection('asterisk')->table('cdr')->where('calldate', '>', now()->subDays(30));
         $company = ImportCompany::pluck('caller_number')->all();
 
         return response()->json([
@@ -778,5 +737,4 @@ class CallerExcelUploadController extends Controller
             'data' => $company
         ], 200);
     }
-
 }

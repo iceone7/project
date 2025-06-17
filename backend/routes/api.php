@@ -12,7 +12,6 @@ use App\Http\Controllers\CompanyExcelUploadController;
 use App\Http\Controllers\CdrController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\CallerExcelUploadController;
-use App\Http\Controllers\DiagnosticsController;
 
 
 Route::post('/admin/login', [AdminAuthController::class, 'login']);
