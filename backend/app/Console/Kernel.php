@@ -8,14 +8,18 @@ use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 class Kernel extends ConsoleKernel
 {
     /**
-     * Define the application's command schedule.
+     * The application's command schedule.
      *
      * @param  \Illuminate\Console\Scheduling\Schedule  $schedule
      * @return void
      */
-    protected function schedule(Schedule $schedule)
+    protected function schedule(Schedule $schedule): void
     {
-        // $schedule->command('inspire')->hourly();
+        // Schedule CDR import to run every hour to ensure local call_records is up to date
+        $schedule->command('cdr:import')
+                 ->hourly()
+                 ->withoutOverlapping()
+                 ->appendOutputTo(storage_path('logs/cdr-import.log'));
     }
 
     /**

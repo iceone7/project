@@ -12,6 +12,7 @@ use App\Http\Controllers\CompanyExcelUploadController;
 use App\Http\Controllers\CdrController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\CallerExcelUploadController;
+use App\Http\Controllers\DiagnosticsController;
 
 
 Route::post('/admin/login', [AdminAuthController::class, 'login']);
@@ -27,7 +28,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/companies', [CompanyController::class, 'store']);
 
     // upload excel
-    Route::middleware('throttle:1300,1')->group(function () {
+    Route::middleware('throttle:1500,1')->group(function () {
         Route::get('/get-imported-companies', [ExcelUploadController::class, 'index']);
         Route::post('/import-company', [ExcelUploadController::class, 'store']);
     });
@@ -65,6 +66,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/caller-excel-data', [CallerExcelUploadController::class, 'index']);
     Route::post('/caller-excel-uploads', [CallerExcelUploadController::class, 'store']);
     Route::post('/caller-excel-preview', [CallerExcelUploadController::class, 'preview'])->withoutMiddleware('auth:sanctum');
+
     
     // Enhanced CDR data processing endpoints
     Route::post('/process-cdr-data', [CallerExcelUploadController::class, 'processCdrData']);
@@ -84,7 +86,33 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/comments', [CommentController::class, 'store']);
     // logout
     Route::post('/logout', [AuthController::class, 'logout']);
+
+    // CDR Import routes
+    Route::post('/cdr/import', [App\Http\Controllers\CdrImportController::class, 'import']);
+    Route::get('/cdr/stats', [App\Http\Controllers\CdrImportController::class, 'stats']);
 });
 
 // Optionally expose a public endpoint for CDR webhooks from Asterisk
-Route::post('/cdr-webhook', [CdrController::class, 'handleCdrWebhook'])->withoutMiddleware('auth:sanctum');
+// Route::post('/cdr-webhook', [CdrController::class, 'handleCdrWebhook'])->withoutMiddleware('auth:sanctum');
+
+
+Route::get('/recordings/{path}', function ($path) {
+    $pbxUrl = 'http://10.150.20.117/recordings/' . $path;
+    try {
+        $file = file_get_contents($pbxUrl);
+        return response($file)->header('Content-Type', 'audio/wav');
+    } catch (\Exception $e) {
+        abort(404, 'File not found');
+    }
+})->where('path', '.*');
+
+// Call Records and CDR routes
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/cdr', [App\Http\Controllers\CdrController::class, 'index']);
+    Route::post('/process-cdr-data', [App\Http\Controllers\CallerExcelUploadController::class, 'processCdrData']);
+    Route::get('/live-cdr', [App\Http\Controllers\CdrController::class, 'getLiveCdrData']);
+    
+    // Comment routes
+    Route::get('/comments/{cdrId}', [App\Http\Controllers\CommentsController::class, 'index']);
+    Route::post('/comments', [App\Http\Controllers\CommentsController::class, 'store']);
+});

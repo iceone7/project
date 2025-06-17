@@ -118,56 +118,107 @@ function App({ dashboardType = 'company' }) {
           console.log('Normalized data:', normalizedData);
           setExcelData(normalizedData);
           setFilteredCompanies(normalizedData);
+          
+          // Immediately fetch CDR data after loading caller data
+          if (normalizedData.length > 0) {
+            console.log('Auto-fetching CDR data for loaded caller records');
+            fetchAndEnrichCallerData(normalizedData);
+          }
         })
         .catch((error) => {
           console.error('Error loading calls:', error);
         });
     }
   }, [dashboardType]);
-
-  const handleCallerUploadSuccess = (data) => {
-    // Extract phone numbers for enhanced data fetching
-    const callerNumbers = data.map(item => item.callerNumber || item.caller_number).filter(Boolean);
+  
+  // New function to fetch and enrich caller data with CDR information
+  const fetchAndEnrichCallerData = (data) => {
+    if (data.length === 0) return;
     
+    // Only proceed if we're not already processing
+    if (isProcessingCDR) {
+      console.log('CDR processing already in progress, skipping');
+      return;
+    }
+    
+    setIsLoading(true);
+    setIsProcessingCDR(true);
+    
+    // Extract date range if available in the data
+    let startDate = null;
+    let endDate = null;
+    
+    // Look for date ranges in the data
+    for (const row of data) {
+      const callDate = row.callDate || row.call_date;
+      if (callDate && callDate.includes(' - ')) {
+        const [start, end] = callDate.split(' - ').map(d => d.trim());
+        startDate = start;
+        endDate = end;
+        console.log(`Found date range in loaded data: ${start} to ${end}`);
+        break;
+      }
+    }
+    
+    // If no date range found, use default (last 3 months)
+    if (!startDate || !endDate) {
+      endDate = new Date().toISOString().split('T')[0];
+      const threeMonthsAgo = new Date();
+      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+      startDate = threeMonthsAgo.toISOString().split('T')[0];
+      console.log(`Using default date range: ${startDate} to ${endDate}`);
+    }
+    
+    // Send data for CDR processing
+    defaultInstance.post('/process-cdr-data', {
+      data: data,
+      start_date: startDate,
+      end_date: endDate
+    })
+      .then(response => {
+        if (response.data && response.data.status === 'success') {
+          console.log('Received enriched data with CDR info:', 
+                  response.data.data.filter(item => item.call_count > 0).length);
+          
+          // Preserve original call dates
+          const enhancedData = response.data.data.map(enhancedRow => {
+            const originalRow = data.find(r => r.id === enhancedRow.id || 
+                                     (r.company_name === enhancedRow.company_name && 
+                                      r.caller_number === enhancedRow.caller_number));
+            
+            if (originalRow && (originalRow.callDate || originalRow.call_date)) {
+              return {
+                ...enhancedRow,
+                call_date: originalRow.call_date || originalRow.callDate,
+                callDate: originalRow.callDate || originalRow.call_date
+              };
+            }
+            return enhancedRow;
+          });
+          
+          // Update state with the enriched data
+          setExcelData(enhancedData);
+          setFilteredCompanies(enhancedData);
+        }
+      })
+      .catch(error => {
+        console.error('Error enriching caller data with CDR info:', error);
+      })
+      .finally(() => {
+        setIsLoading(false);
+        setIsProcessingCDR(false);
+      });
+  };
+
+  // Modify existing function to use our new helper
+  const handleCallerUploadSuccess = (data) => {
     // First update the state with the basic data
     setExcelData(data);
     setFilteredCompanies(data);
     
-    // Prevent duplicate API calls while processing
-    if (data.length > 0 && !isProcessingCDR) {
-      console.log('Sending data to process-cdr-data for enhanced matching...');
-      setIsLoading(true);
-      setIsProcessingCDR(true);
-      
-      // Define date range (last 3 months by default)
-      const endDate = new Date().toISOString().split('T')[0];
-      const startDate = new Date();
-      startDate.setMonth(startDate.getMonth() - 3);
-      const startDateStr = startDate.toISOString().split('T')[0];
-      
-      // Send all record data for comprehensive matching
-      defaultInstance.post('/process-cdr-data', { 
-        data: data,
-        start_date: startDateStr,
-        end_date: endDate
-      })
-        .then(response => {
-          if (response.data && response.data.status === 'success') {
-            console.log('Received enhanced data with call records:', 
-                       response.data.data.filter(item => item.call_count > 0).length);
-            
-            // Update the data with enhanced information
-            setExcelData(response.data.data);
-            setFilteredCompanies(response.data.data);
-          }
-        })
-        .catch(error => {
-          console.error('Error fetching enhanced caller data:', error);
-        })
-        .finally(() => {
-          setIsLoading(false);
-          setIsProcessingCDR(false);
-        });
+    // Then enrich with CDR data
+    if (data.length > 0) {
+      fetchAndEnrichCallerData(data);
     }
   };
 
