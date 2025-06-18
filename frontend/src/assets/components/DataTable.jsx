@@ -795,13 +795,9 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
     return normalizePhoneForMatching(cdrRecord.src || '');
   };
 
-  // Add these new state variables inside the DataTable component
+  // We can keep these state variables but won't need the comment input ones
   const [recordingComments, setRecordingComments] = useState({});
   const [activeCommentPanel, setActiveCommentPanel] = useState(null);
-  const [recordingComment, setRecordingComment] = useState('');
-  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
-
-  // Add these new functions inside the DataTable component before the return statement
 
   // Toggle comment panel for a recording
   const toggleCommentPanel = (recordingId) => {
@@ -842,42 +838,6 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
       }));
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  // Save a comment for a recording
-  const saveRecordingComment = async (recordingId) => {
-    if (!recordingComment.trim()) {
-      alert('Comment cannot be empty');
-      return;
-    }
-    
-    try {
-      setIsSubmittingComment(true);
-      
-      const response = await defaultInstance.post('/recording-comments', {
-        recording_id: recordingId,
-        comment: recordingComment
-      });
-      
-      console.log('Comment saved successfully:', response.data);
-      
-      // Add new comment to the list (prepend to beginning)
-      setRecordingComments(prev => {
-        const currentComments = prev[recordingId] || [];
-        return {
-          ...prev,
-          [recordingId]: [response.data, ...currentComments]
-        };
-      });
-      
-      // Clear the comment input
-      setRecordingComment('');
-    } catch (error) {
-      console.error('Error saving recording comment:', error);
-      alert(`Failed to save comment: ${error?.response?.data?.error || error.message}`);
-    } finally {
-      setIsSubmittingComment(false);
     }
   };
 
@@ -1314,7 +1274,7 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                             <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
                             <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
                           </svg>
-                          {activeCommentPanel === recording.recordingfile ? 'Hide Comments' : 'Show Comments'}
+                          {activeCommentPanel === recording.recordingfile ? t('hideComments') : t('showComments')}
                         </button>
                         
                         <div 
@@ -1322,32 +1282,11 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                             activeCommentPanel === recording.recordingfile ? modalStyles.commentPanelOpen : ''
                           }`}
                         >
-                          <textarea
-                            className={modalStyles.commentTextarea}
-                            value={recordingComment}
-                            onChange={(e) => setRecordingComment(e.target.value)}
-                            placeholder={t('addCommentForRecording')}
-                            disabled={isSubmittingComment}
-                          />
-                          
-                          <div className={modalStyles.commentActionRow}>
-                            <button
-                              className={modalStyles.saveCommentButton}
-                              onClick={() => saveRecordingComment(recording.recordingfile)}
-                              disabled={!recordingComment.trim() || isSubmittingComment}
-                            >
-                              {isSubmittingComment ? (
-                                <>
-                                  <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                                  {t('saving')}
-                                </>
-                              ) : t('addComment')}
-                            </button>
-                          </div>
+                          {/* Remove textarea and save button */}
                           
                           {recordingComments[recording.recordingfile]?.length > 0 && (
                             <div className={modalStyles.commentsListHeader}>
-                              {t('previousComments')} ({recordingComments[recording.recordingfile]?.length})
+                              {t('comments')} ({recordingComments[recording.recordingfile]?.length})
                             </div>
                           )}
                           
