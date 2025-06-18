@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import edit_delete from '../css/edit_detele.module.css';
 import button_comments from '../css/button_comments.module.css';
+import paginationStyles from '../css/pagination.module.css';
 import EditModal from './EditModal';
 import defaultInstance from '../../api/defaultInstance';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -21,6 +22,12 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
   const [isLoading, setIsLoading] = useState(false);
   const [lastUpdateTime, setLastUpdateTime] = useState(null);
   const [lastExcelDataLength, setLastExcelDataLength] = useState(0);
+  
+  // Pagination state
+  const itemsPerPage = 15;
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagesCount, setPagesCount] = useState(1);
+  
   // Add refs to prevent request loops
   const isInitialMount = useRef(true);
   const isProcessingCDR = useRef(false);
@@ -28,6 +35,50 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
   const { t } = useLanguage();
 
   const recordingsBaseUrl = import.meta.env.VITE_RECORDINGS_URL;
+
+  // Animation reference for page changes
+  const paginationRef = useRef(null);
+  const [animatePage, setAnimatePage] = useState(false);
+
+  // Calculate total pages whenever data changes
+  useEffect(() => {
+    let totalItems = 0;
+    if (activeDashboard === 'company' && isDepartamentVip) {
+      totalItems = filteredCompanies?.length || 0;
+    } else if (activeDashboard === 'caller') {
+      totalItems = excelData?.length || 0;
+    } else if (activeDashboard === 'company' && isDepartamentCraftsmen) {
+      totalItems = calls?.length || 0;
+    }
+    
+    const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+    setPagesCount(totalPages);
+    
+    // Reset to first page when dashboard changes or when data significantly changes
+    setCurrentPage(1);
+  }, [activeDashboard, filteredCompanies, excelData, calls]);
+
+  // Pagination handler functions
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= pagesCount && newPage !== currentPage) {
+      setAnimatePage(true);
+      
+      // Small delay for animation effect before changing page
+      setTimeout(() => {
+        setCurrentPage(newPage);
+        // Reset animation state after changing page
+        setTimeout(() => {
+          setAnimatePage(false);
+        }, 300);
+      }, 200);
+    }
+  };
+  
+  const getPaginatedData = (data) => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return data?.slice(startIndex, endIndex) || [];
+  };
 
   // Fetch call history data for craftsmen section
   useEffect(() => {
@@ -251,7 +302,7 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
       }
     });
     
-    // Group CDR data by unique caller number with status breakdowns
+    // Group CDR data by unique caller with status breakdowns
     const callerToCDRMap = {};
     
     cdrData.forEach(cdr => {
@@ -510,7 +561,98 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
     }
   };
 
+  // Get data for current dashboard and apply pagination
   const dataToDisplay = activeDashboard === 'caller' ? excelData : filteredCompanies;
+  const paginatedData = getPaginatedData(dataToDisplay);
+  const paginatedCalls = getPaginatedData(calls);
+
+  // Enhanced Pagination component with beautiful design and animations
+  const Pagination = ({ currentPage, totalPages, onPageChange }) => {
+    const getPageNumbers = () => {
+      const delta = 2; // Number of pages to show before and after current page
+      const pages = [];
+      
+      // Always show first page
+      pages.push(1);
+      
+      // Calculate start and end of page range around current page
+      let start = Math.max(2, currentPage - delta);
+      let end = Math.min(totalPages - 1, currentPage + delta);
+      
+      // Adjust to show consistent number of pages
+      if (start > 2) pages.push('...');
+      
+      // Add pages in range
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+      
+      // Add ellipsis if needed
+      if (end < totalPages - 1) pages.push('...');
+      
+      // Always show last page if more than 1 page
+      if (totalPages > 1) pages.push(totalPages);
+      
+      return pages;
+    };
+    
+    if (totalPages <= 1) return null; // Don't show pagination if there's only one page
+
+    return (
+      <nav 
+        aria-label="Data pagination" 
+        className={paginationStyles.paginationContainer}
+        ref={paginationRef}
+      >
+        <ul className={paginationStyles.paginationList}>
+          <li className={`${paginationStyles.pageItem}`}>
+            <button 
+              className={`${paginationStyles.pageLink} ${paginationStyles.navigation} ${paginationStyles.prevNav} ${currentPage === 1 ? paginationStyles.disabled : ''}`}
+              onClick={() => onPageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              aria-label="Previous page"
+            >
+              &laquo; Prev
+            </button>
+          </li>
+          
+          {getPageNumbers().map((page, index) => (
+            <li 
+              key={index} 
+              className={`${paginationStyles.pageItem} ${animatePage ? paginationStyles.scaleUp : ''}`}
+            >
+              {page === '...' ? (
+                <span className={`${paginationStyles.pageLink} ${paginationStyles.ellipsis}`}>
+                  &hellip;
+                </span>
+              ) : (
+                <button 
+                  className={`${paginationStyles.pageLink} ${page === currentPage ? `${paginationStyles.active} ${paginationStyles.pulse}` : ''}`}
+                  onClick={() => onPageChange(page)}
+                  disabled={page === currentPage}
+                  aria-label={`Page ${page}`}
+                  aria-current={page === currentPage ? "page" : undefined}
+                >
+                  {page}
+                </button>
+              )}
+            </li>
+          ))}
+          
+          <li className={`${paginationStyles.pageItem}`}>
+            <button 
+              className={`${paginationStyles.pageLink} ${paginationStyles.navigation} ${paginationStyles.nextNav} ${currentPage === totalPages ? paginationStyles.disabled : ''}`}
+              onClick={() => onPageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              aria-label="Next page"
+            >
+              Next &raquo;
+            </button>
+          </li>
+        </ul>
+      </nav>
+    );
+  };
 
   return (
     <>
@@ -518,7 +660,7 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
         <div className="ecommerce-widget">
           <div className="row">
             <div className="col-12">
-              <div key={activeDashboard} className="animated-section fade-in">
+              <div key={`${activeDashboard}-${currentPage}`} className={`animated-section ${animatePage ? paginationStyles.fadeIn : 'fade-in'}`}>
                 <div className="card">
                   <h5 className="card-header">Recent Orders</h5>
                   <div className="card-body p-0">
@@ -550,10 +692,10 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                           </tr>
                         </thead>
                         <tbody>
-                          {dataToDisplay.length > 0 ? (
-                            dataToDisplay.map((company, index) => (
+                          {paginatedData.length > 0 ? (
+                            paginatedData.map((company, index) => (
                               <tr key={company.id || index}>
-                                <td>{index + 1}</td>
+                                <td>{(currentPage - 1) * itemsPerPage + index + 1}</td>
                                 <td>{company.tenderNumber || company.tender_number || 'N/A'}</td>
                                 <td>{company.buyer || 'N/A'}</td>
                                 <td>{company.contact1 || company.contact_1 || 'N/A'}</td>
@@ -600,6 +742,11 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                         </tbody>
                       </table>
                     </div>
+                    <Pagination 
+                      currentPage={currentPage} 
+                      totalPages={pagesCount} 
+                      onPageChange={handlePageChange} 
+                    />
                   </div>
                 </div>
               </div>
@@ -612,7 +759,7 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
         <div className="ecommerce-widget">
           <div className="row">
             <div className="col-12">
-              <div key={activeDashboard} className="animated-section fade-in">
+              <div key={`${activeDashboard}-${currentPage}`} className={`animated-section ${animatePage ? paginationStyles.fadeIn : 'fade-in'}`}>
                 <div className="card">
                   <h5 className="card-header">
                     Caller Dashboard
@@ -652,10 +799,10 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                           </tr>
                         </thead>
                         <tbody>
-                          {excelData.length > 0 ? (
-                            excelData.map((call, index) => (
+                          {getPaginatedData(excelData).length > 0 ? (
+                            getPaginatedData(excelData).map((call, index) => (
                               <tr key={call.id || index} className={call.hasRecentCalls ? "table-warning" : ""}>
-                                <td>{index + 1}</td>
+                                <td>{(currentPage - 1) * itemsPerPage + index + 1}</td>
                                 <td>{call.companyName || call.company_name || 'N/A'}</td>
                                 <td>{call.identificationCode || call.identification_code || call.id || 'N/A'}</td>
                                 <td>{call.contactPerson1 || call.contact_person1 || 'N/A'}</td>
@@ -667,7 +814,11 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                                 <td>{call.callerName || call.caller_name || 'N/A'}</td>
                                 <td>{call.callerNumber || call.caller_number || 'N/A'}</td>
                                 <td>{call.receiverName || call.receiver_name || 'N/A'}</td>
-                                <td>{call.receiverNumber || call.receiver_number || 'N/A'}</td>
+                                <td>
+                                  {(call.receiverNumber === 'N/A' || call.receiver_number === 'N/A') ? 
+                                    'N/A' : 
+                                    (call.receiverNumber || call.receiver_number || 'N/A')}
+                                </td>
                                 <td>{call.callCount || call.call_count || '0'}</td>
                                 <td>{call.answeredCalls || call.answered_calls || '0'}</td>
                                 <td>{call.noAnswerCalls || call.no_answer_calls || '0'}</td>
@@ -686,6 +837,11 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                         </tbody>
                       </table>
                     </div>
+                    <Pagination 
+                      currentPage={currentPage} 
+                      totalPages={pagesCount}
+                      onPageChange={handlePageChange} 
+                    />
                   </div>
                 </div>
               </div>
@@ -698,7 +854,7 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
         <div className="ecommerce-widget">
           <div className="row">
             <div className="col-12">
-              <div key={activeDashboard} className="animated-section fade-in">
+              <div key={`${activeDashboard}-${currentPage}`} className={`animated-section ${animatePage ? paginationStyles.fadeIn : 'fade-in'}`}>
                 <div className="card">
                   <h5 className="card-header">Craftsmen Companies</h5>
                   <div className="card-body p-0">
@@ -715,10 +871,10 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                           </tr>
                         </thead>
                         <tbody>
-                          {calls.length > 0 ? (
-                            calls.map((call, index) => (
+                          {paginatedCalls.length > 0 ? (
+                            paginatedCalls.map((call, index) => (
                               <tr key={index}>
-                                <td>{index + 1}</td>
+                                <td>{(currentPage - 1) * itemsPerPage + index + 1}</td>
                                 <td>{call.clid || 'N/A'}</td>
                                 <td>{call.dst || 'N/A'}</td>
                                 <td>{call.calldate || 'N/A'}</td>
@@ -768,6 +924,11 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                         </tbody>
                       </table>
                     </div>
+                    <Pagination 
+                      currentPage={currentPage} 
+                      totalPages={pagesCount} 
+                      onPageChange={handlePageChange} 
+                    />
                   </div>
                 </div>
               </div>

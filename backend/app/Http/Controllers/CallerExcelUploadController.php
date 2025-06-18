@@ -572,56 +572,104 @@ class CallerExcelUploadController extends Controller
                 });
                 
                 if ($matchingCalls->isNotEmpty()) {
-                    $callCount = count($matchingCalls);
-                    $answeredCount = $matchingCalls->where('disposition', 'ANSWERED')->count();
-                    $noAnswerCount = $matchingCalls->where('disposition', 'NO ANSWER')->count();
-                    $busyCount = $matchingCalls->where('disposition', 'BUSY')->count();
+                    // Get all receiver numbers from calls
+                    $receiverNumbers = $matchingCalls->pluck('dst')->unique()->toArray();
+                    $normalizedReceiverNumbers = array_map([$this, 'normalizeNumber'], $receiverNumbers);
                     
+                    // Extract phone numbers from the current row for validation
+                    $tel1 = $this->normalizeNumber($row['tel1'] ?? $row['phone1'] ?? '');
+                    $tel2 = $this->normalizeNumber($row['tel2'] ?? $row['phone2'] ?? '');
+                    $tel3 = $this->normalizeNumber($row['tel3'] ?? $row['phone3'] ?? '');
+                    $phoneNumbers = array_filter([$tel1, $tel2, $tel3]);
+                    
+                    // Find a valid receiver number that matches one of the phone numbers
+                    $validReceiverNumber = null;
+                    $validNormalizedReceiver = null;
+                    
+                    foreach ($normalizedReceiverNumbers as $index => $normalizedReceiver) {
+                        // Generate variations of the receiver number for matching
+                        $receiverFormats = $this->generateNumberFormats($normalizedReceiver);
+                        
+                        foreach ($receiverFormats as $format) {
+                            if (in_array($format, $phoneNumbers)) {
+                                $validReceiverNumber = $receiverNumbers[$index];
+                                $validNormalizedReceiver = $normalizedReceiver;
+                                \Log::info("Found valid receiver match: {$validReceiverNumber}");
+                                break 2;
+                            }
+                        }
+                    }
+                    
+                    // If no valid receiver found, set to N/A
+                    if ($validReceiverNumber === null) {
+                        $row['receiver_number'] = 'N/A';
+                        $row['receiverNumber'] = 'N/A';
+                        
+                        // Set all call metrics to 0 since no valid receiver
+                        $row['call_count'] = 0;
+                        $row['callCount'] = 0;
+                        $row['answered_calls'] = 0;
+                        $row['answeredCalls'] = 0;
+                        $row['no_answer_calls'] = 0;
+                        $row['noAnswerCalls'] = 0;
+                        $row['busy_calls'] = 0;
+                        $row['busyCalls'] = 0;
+                    } else {
+                        // Use the valid receiver number
+                        $row['receiver_number'] = $validReceiverNumber;
+                        $row['receiverNumber'] = $validReceiverNumber;
+                        
+                        // Now count ONLY calls between this specific caller and the valid receiver
+                        $specificCalls = $matchingCalls->filter(function($call) use ($validNormalizedReceiver) {
+                            return $this->normalizeNumber($call->dst) === $validNormalizedReceiver;
+                        });
+                        
+                        $callCount = count($specificCalls);
+                        $answeredCount = $specificCalls->where('disposition', 'ANSWERED')->count();
+                        $noAnswerCount = $specificCalls->where('disposition', 'NO ANSWER')->count();
+                        $busyCount = $specificCalls->where('disposition', 'BUSY')->count();
+                        
+                        $row['call_count'] = $callCount;
+                        $row['callCount'] = $callCount;
+                        $row['answered_calls'] = $answeredCount;
+                        $row['answeredCalls'] = $answeredCount;
+                        $row['no_answer_calls'] = $noAnswerCount;
+                        $row['noAnswerCalls'] = $noAnswerCount;
+                        $row['busy_calls'] = $busyCount;
+                        $row['busyCalls'] = $busyCount;
+                        
+                        // Find matching contact person for this receiver number
+                        $receiverName = '';
+                        $companyIndex = null;
+                        
+                        // Check if the receiver number matches any phone in our mapping
+                        foreach (['995' . $validNormalizedReceiver, $validNormalizedReceiver, substr($validNormalizedReceiver, -9)] as $format) {
+                            if (isset($phoneToContactMap[$format])) {
+                                $receiverName = $phoneToContactMap[$format]['name'];
+                                $companyIndex = $phoneToContactMap[$format]['index'];
+                                \Log::info("Found match for receiver number: {$validReceiverNumber} -> {$receiverName}");
+                                break;
+                            }
+                        }
+                        
+                        // If we found a match in a different company row, add company name to receiver name
+                        if ($companyIndex !== null && $companyIndex !== $index) {
+                            $companyName = $excelData[$companyIndex]['company_name'] ?? 
+                                          $excelData[$companyIndex]['companyName'] ?? '';
+                            if ($companyName) {
+                                $receiverName .= " (" . $companyName . ")";
+                            }
+                        }
+                        
+                        $row['receiver_name'] = $receiverName;
+                        $row['receiverName'] = $receiverName;
+                    }
+
                     // Get the latest call
                     $latestCall = $matchingCalls->sortByDesc('calldate')->first();
                     
                     // Store the original call date before updating
                     $originalCallDate = $row['call_date'] ?? $row['callDate'] ?? null;
-                    
-                    // Get receiver number from the call
-                    $receiverNumber = $latestCall->dst ?? '';
-                    $normalizedReceiverNumber = $this->normalizeNumber($receiverNumber);
-                    
-                    // Find matching contact person for this receiver number
-                    $receiverName = '';
-                    $companyIndex = null;
-                    
-                    // Check if the receiver number matches any phone in our mapping
-                    foreach (['995' . $normalizedReceiverNumber, $normalizedReceiverNumber, substr($normalizedReceiverNumber, -9)] as $format) {
-                        if (isset($phoneToContactMap[$format])) {
-                            $receiverName = $phoneToContactMap[$format]['name'];
-                            $companyIndex = $phoneToContactMap[$format]['index'];
-                            \Log::info("Found match for receiver number: {$receiverNumber} -> {$receiverName}");
-                            break;
-                        }
-                    }
-                    
-                    // If we found a match in a different company row, add company name to receiver name
-                    if ($companyIndex !== null && $companyIndex !== $index) {
-                        $companyName = $excelData[$companyIndex]['company_name'] ?? 
-                                       $excelData[$companyIndex]['companyName'] ?? '';
-                        if ($companyName) {
-                            $receiverName .= " (" . $companyName . ")";
-                        }
-                    }
-                    
-                    $row['receiver_number'] = $receiverNumber;
-                    $row['receiverNumber'] = $receiverNumber;
-                    $row['receiver_name'] = $receiverName;
-                    $row['receiverName'] = $receiverName;
-                    $row['call_count'] = $callCount;
-                    $row['callCount'] = $callCount;
-                    $row['answered_calls'] = $answeredCount;
-                    $row['answeredCalls'] = $answeredCount;
-                    $row['no_answer_calls'] = $noAnswerCount;
-                    $row['noAnswerCalls'] = $noAnswerCount;
-                    $row['busy_calls'] = $busyCount;
-                    $row['busyCalls'] = $busyCount;
                     
                     // Store the CDR call date in a separate field
                     $row['cdr_call_date'] = $latestCall->calldate;
