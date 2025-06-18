@@ -287,7 +287,7 @@ const translations = {
     callerDashboard: "დამრეკავის Dashboard",
     adminDashboard: "ადმინის Dashboard",
     vipDepartment: "VIP განყოფილება",
-    workerDepartment: "მუშაკთა განყოფილება",
+    workerDepartment: "ხელოსნების განყოფილება",
     logout: "გამოსვლა",
     reload: "გვერდის გადატვირთვა",
     confirmDeletion: "წაშლის დადასტურება",
