@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import edit_delete from '../css/edit_detele.module.css';
 import button_comments from '../css/button_comments.module.css';
 import paginationStyles from '../css/pagination.module.css';
+import modalStyles from '../css/recordings-modal.module.css'; // Import the new styles
 import EditModal from './EditModal';
 import defaultInstance from '../../api/defaultInstance';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -675,6 +676,9 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
   const [recordings, setRecordings] = useState([]);
   const [isLoadingRecordings, setIsLoadingRecordings] = useState(false);
 
+  // Add new state variables for modal animation
+  const [isClosing, setIsClosing] = useState(false);
+  
   // Function to format call duration from seconds to HH:MM:SS
   const formatCallDuration = (seconds) => {
     if (!seconds) return '00:00:00';
@@ -718,11 +722,15 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
     fetchRecordingsForCaller(call, rowStartDate, rowEndDate);
   };
 
-  // Function to close the recordings modal
+  // Modified function to close the recordings modal with animation
   const closeRecordingsModal = () => {
-    setShowRecordingsModal(false);
-    setSelectedCall(null);
-    setRecordings([]);
+    setIsClosing(true);
+    setTimeout(() => {
+      setShowRecordingsModal(false);
+      setSelectedCall(null);
+      setRecordings([]);
+      setIsClosing(false);
+    }, 300); // Match this to the animation duration
   };
 
   // Function to fetch recordings for the selected call
@@ -1136,97 +1144,97 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
         editData={editRowData}
       />
       
-      {/* Recordings Modal */}
+      {/* Recordings Modal - Updated with new styles */}
       {showRecordingsModal && selectedCall && (
-        <div className="modal fade show" style={{ display: 'block' }} tabIndex="-1">
-          <div className="modal-dialog modal-lg">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">
-                  {t('callRecordings')} - 
-                  {selectedCall.callerNumber || selectedCall.caller_number ? 
-                    ` ${t('callerNumber')}: ${selectedCall.callerNumber || selectedCall.caller_number}` : 
-                    ''}
-                  {selectedCall.receiverNumber || selectedCall.receiver_number ? 
-                    ` → ${t('receiverNumber')}: ${selectedCall.receiverNumber || selectedCall.receiver_number}` : 
-                    ''}
-                </h5>
-                <button type="button" className="btn-close" onClick={closeRecordingsModal}></button>
-              </div>
-              <div className="modal-body">
-                {isLoadingRecordings ? (
-                  <div className="text-center p-4">
-                    <div className="spinner-border text-primary" role="status">
-                      <span className="visually-hidden">Loading...</span>
-                    </div>
-                    <p className="mt-2">Fetching recordings...</p>
-                  </div>
-                ) : recordings.length > 0 ? (
-                  <div className={button_comments.recordingsList}>
-                    <div className="alert alert-info mb-3">
-                      {t('callCount')}: <strong>{recordings.length}</strong> {recordings.length === 1 ? 'recording' : 'recordings'} 
-                      {selectedCall.call_count || selectedCall.callCount ? 
-                        ` (${t('tableShows')}: ${selectedCall.call_count || selectedCall.callCount})` : ''}
-                      <div className="mt-1 text-muted small">
-                        {t('dateRange')}: {selectedCall.call_date || selectedCall.callDate || `${startDate} - ${endDate}`}
-                      </div>
-                    </div>
-                    
-                    {recordings.map((recording, index) => (
-                      <div key={index} className={button_comments.recordingItem}>
-                        <div className={button_comments.recordingInfo}>
-                          <div>
-                            <strong>Date:</strong> {new Date(recording.calldate).toLocaleString()}
-                          </div>
-                          <div>
-                            <strong>Duration:</strong> {formatCallDuration(recording.duration)}
-                          </div>
-                          <div>
-                            <strong>To:</strong> {recording.dst}
-                          </div>
-                          <div>
-                            <strong>Status:</strong> <span className={
-                              recording.disposition === 'ANSWERED' ? button_comments.statusAnswered :
-                              recording.disposition === 'NO ANSWER' ? button_comments.statusNoAnswer :
-                              recording.disposition === 'BUSY' ? button_comments.statusBusy :
-                              ''
-                            }>{recording.disposition}</span>
-                          </div>
-                        </div>
-                        {recording.recordingfile && (
-                          <div className={button_comments.audioContainer}>
-                            <audio
-                              controls
-                              className={button_comments.audioPlayer}
-                              onError={(e) => console.error('Audio error:', e)}
-                            >
-                              <source
-                                src={`${recordingsBaseUrl}/${getPath(recording.recordingfile)}`}
-                                type="audio/wav"
-                              />
-                              Your browser does not support the audio element.
-                            </audio>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className={button_comments.noRecordings}>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" viewBox="0 0 16 16">
-                      <path d="M10.404 5.11c.5.502.502 1.313 0 1.815-.503.502-1.312.502-1.815 0-.503-.503-.503-1.313 0-1.816.5-.5 1.312-.5 1.815 0M8 1.11a6.85 6.85 0 0 0-6.894 6.89c0 3.83 3.068 6.894 6.894 6.894A6.889 6.889 0 0 0 14.89 8a6.886 6.886 0 0 0-6.89-6.89m-1.5 2.976c-.5 0-.977.196-1.33.55-.554.554-.694 1.397-.35 2.095.342.7 1.06 1.134 1.838 1.134.507 0 .99-.196 1.348-.55.556-.554.693-1.397.35-2.095-.34-.696-1.063-1.134-1.837-1.134m1.5-1.5c2.483 0 4.5 2.015 4.5 4.5s-2.017 4.5-4.5 4.5-4.5-2.015-4.5-4.5 2.017-4.5 4.5-4.5m7.438 2.343c.32.2.262.484.268.85.003.398.068.576-.077.845-.148.264-.44.46-.44.632 0 .17.29.367.44.63.145.27.08.447.077.846-.006.367-.026.65-.268.85-.244.2-.394.116-.618.116-.225 0-.375.084-.62-.116-.24-.2-.26-.483-.265-.85-.004-.398-.066-.575.075-.845.146-.264.44-.46.44-.63 0-.17-.294-.368-.44-.632-.144-.27-.08-.447-.075-.846.005-.366.025-.65.265-.85.245-.2.395-.116.62-.116.224 0 .374-.083.618.116"/>
-                    </svg>
-                    <p>No recordings found for this caller during the specified date range.</p>
-                    <p className="text-muted small">Date range: {selectedCall.call_date || selectedCall.callDate || `${startDate} - ${endDate}`}</p>
-                  </div>
-                )}
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={closeRecordingsModal}>
-                  Close
-                </button>
-              </div>
+        <div className={`${modalStyles.modalOverlay} ${isClosing ? modalStyles.modalClosing : ''}`}>
+          <div className={`${modalStyles.modalContent} ${isClosing ? modalStyles.modalContentClosing : ''}`}>
+            <div className={modalStyles.modalHeader}>
+              <h5 className={modalStyles.modalTitle}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                  <path d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5z"/>
+                  <path d="M10 8a2 2 0 1 1-4 0V3a2 2 0 1 1 4 0v5zM8 0a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V3a3 3 0 0 0-3-3z"/>
+                </svg>
+                {t('callRecordings')} - {selectedCall.callerNumber || selectedCall.caller_number || ''} 
+                {selectedCall.receiverNumber && selectedCall.receiverNumber !== 'N/A' ? 
+                  <span style={{marginLeft: '4px'}}>→ {selectedCall.receiverNumber}</span> : ''}
+              </h5>
+              <button type="button" className={modalStyles.closeButton} onClick={closeRecordingsModal}>
+                ×
+              </button>
             </div>
+            <div className={modalStyles.modalBody}>
+              {isLoadingRecordings ? (
+                <div className={modalStyles.loadingContainer}>
+                  <div className={modalStyles.spinner}></div>
+                  <p>Fetching recordings...</p>
+                </div>
+              ) : recordings.length > 0 ? (
+                <div className={modalStyles.recordingsList}>
+                  {recordings.map((recording, index) => (
+                    <div 
+                      key={index} 
+                      className={modalStyles.recordingItem} 
+                      style={{"--index": index}}
+                    >
+                      <div className={modalStyles.recordingInfo}>
+                        <div>
+                          <span className={modalStyles.infoLabel}>Date & Time</span>
+                          <span className={modalStyles.infoValue}>{new Date(recording.calldate).toLocaleString()}</span>
+                        </div>
+                        <div>
+                          <span className={modalStyles.infoLabel}>Duration</span>
+                          <span className={modalStyles.infoValue}>{formatCallDuration(recording.duration)}</span>
+                        </div>
+                        <div>
+                          <span className={modalStyles.infoLabel}>Receiver</span>
+                          <span className={modalStyles.infoValue}>{recording.dst}</span>
+                        </div>
+                        <div>
+                          <span className={modalStyles.infoLabel}>Status</span>
+                          <span className={`${modalStyles.statusBadge} ${
+                            recording.disposition === 'ANSWERED' ? modalStyles.statusAnswered :
+                            recording.disposition === 'NO ANSWER' ? modalStyles.statusNoAnswer :
+                            recording.disposition === 'BUSY' ? modalStyles.statusBusy : ''
+                          }`}>
+                            {recording.disposition}
+                          </span>
+                        </div>
+                      </div>
+                      {recording.recordingfile && (
+                        <div className={modalStyles.audioContainer}>
+                          <audio
+                            controls
+                            className={modalStyles.audioPlayer}
+                            onError={(e) => console.error('Audio error:', e)}
+                          >
+                            <source
+                              src={`${recordingsBaseUrl}/${getPath(recording.recordingfile)}`}
+                              type="audio/wav"
+                            />
+                            Your browser does not support the audio element.
+                          </audio>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className={modalStyles.noRecordings}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M10.404 5.11c.5.502.502 1.313 0 1.815-.503.502-1.312.502-1.815 0-.503-.503-.503-1.313 0-1.816.5-.5 1.312-.5 1.815 0M8 1.11a6.85 6.85 0 0 0-6.894 6.89c0 3.83 3.068 6.894 6.894 6.894A6.889 6.889 0 0 0 14.89 8a6.886 6.886 0 0 0-6.89-6.89m-1.5 2.976c-.5 0-.977.196-1.33.55-.554.554-.694 1.397-.35 2.095.342.7 1.06 1.134 1.838 1.134.507 0 .99-.196 1.348-.55.556-.554.693-1.397.35-2.095-.34-.696-1.063-1.134-1.837-1.134m1.5-1.5c2.483 0 4.5 2.015 4.5 4.5s-2.017 4.5-4.5 4.5-4.5-2.015-4.5-4.5 2.017-4.5 4.5-4.5m7.438 2.343c.32.2.262.484.268.85.003.398.068.576-.077.845-.148.264-.44.46-.44.632 0 .17.29.367.44.63.145.27.08.447.077.846-.006.367-.026.65-.268.85-.244.2-.394.116-.618.116-.225 0-.375.084-.62-.116-.24-.2-.26-.483-.265-.85-.004-.398-.066-.575.075-.845.146-.264.44-.46.44-.63 0-.17-.294-.368-.44-.632-.144-.27-.08-.447-.075-.846.005-.366.025-.65.265-.85.245-.2.395-.116.62-.116.224 0 .374-.083.618.116"/>
+                  </svg>
+                  <p>No recordings found for this caller during the specified date range.</p>
+                </div>
+              )}
+            </div>
+            {/* <div className={modalStyles.modalFooter}>
+              <button type="button" className={modalStyles.closeModalBtn} onClick={closeRecordingsModal}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                  <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
+                </svg>
+                Close
+              </button>
+            </div> */}
           </div>
         </div>
       )}
