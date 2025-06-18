@@ -139,6 +139,10 @@ const translations = {
     // Download button
     download: "Download",
     downloadRecording: "Download recording",
+
+    // Comment deletion translations
+    deleteComment: "Delete Comment",
+    confirmCommentDeletion: "Are you sure you want to delete this comment?",
   },
   ru: {
     companyDashboard: "Dashboard компании",
@@ -278,9 +282,9 @@ const translations = {
     showComments: "Показать комментарии",
     hideComments: "Скрыть комментарии",
 
-    // Download button
-    download: "Скачать",
-    downloadRecording: "Скачать запись",
+    // Comment deletion translations
+    deleteComment: "Удалить комментарий",
+    confirmCommentDeletion: "Вы уверены, რომ გსურთ ამ კომენტარის წაშლა?",
   },
   ka: {
     companyDashboard: "კომპანიის Dashboard",
@@ -420,9 +424,9 @@ const translations = {
     showComments: "კომენტარების ჩვენება",
     hideComments: "კომენტარების დამალვა",
 
-    // Download button
-    download: "ჩამოტვირთვა",
-    downloadRecording: "ჩანაწერის ჩამოტვირთვა",
+    // Comment deletion translations
+    deleteComment: "კომენტარის წაშლა",
+    confirmCommentDeletion: "დარწმუნებული ხართ, რომ გსურთ ამ კომენტარის წაშლა?",
   }
 };
 

@@ -61,4 +61,39 @@ class RecordingCommentController extends Controller
             return response()->json(['error' => 'Failed to save comment: ' . $e->getMessage()], 500);
         }
     }
+
+    /**
+     * Delete a comment for a recording
+     * Only super_admin or the user who created the comment can delete it
+     */
+    public function destroy($id)
+    {
+        try {
+            Log::info('Attempting to delete recording comment ID: ' . $id);
+            
+            $comment = RecordingComment::find($id);
+            
+            if (!$comment) {
+                Log::warning('Comment not found for deletion: ' . $id);
+                return response()->json(['error' => 'Comment not found'], 404);
+            }
+            
+            // Check if user is authorized to delete (super_admin or comment owner)
+            $user = Auth::user();
+            if ($user->role !== 'super_admin' && $user->id !== $comment->user_id) {
+                Log::warning('Unauthorized deletion attempt for comment ID: ' . $id . ' by user ID: ' . $user->id);
+                return response()->json(['error' => 'You are not authorized to delete this comment'], 403);
+            }
+            
+            // Delete the comment
+            $comment->delete();
+            
+            Log::info('Successfully deleted comment ID: ' . $id . ' by user ID: ' . $user->id);
+            
+            return response()->json(['success' => true, 'message' => 'Comment deleted successfully']);
+        } catch (\Exception $e) {
+            Log::error('Error deleting recording comment: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to delete comment: ' . $e->getMessage()], 500);
+        }
+    }
 }

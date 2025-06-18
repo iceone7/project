@@ -7,7 +7,8 @@ import EditModal from './EditModal';
 import defaultInstance from '../../api/defaultInstance';
 import { useLanguage } from '../i18n/LanguageContext';
 
-const isAdmin = localStorage.getItem('role') === 'super_admin' || localStorage.getItem('role') === 'admin';
+const isSuperAdmin = localStorage.getItem('role') === 'super_admin';
+const isAdmin = isSuperAdmin || localStorage.getItem('role') === 'admin';
 const isDepartamentVip = localStorage.getItem('department_id') === '1';
 const isDepartamentCraftsmen = localStorage.getItem('department_id') === '2';
 
@@ -23,6 +24,11 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
   const [isLoading, setIsLoading] = useState(false);
   const [lastUpdateTime, setLastUpdateTime] = useState(null);
   const [lastExcelDataLength, setLastExcelDataLength] = useState(0);
+  
+  // Add missing state variables for delete confirmation
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [commentToDelete, setCommentToDelete] = useState(null);
+  const [recordingIdForComment, setRecordingIdForComment] = useState(null);
   
   // Pagination state
   const itemsPerPage = 15;
@@ -577,6 +583,51 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
     }
   };
 
+  // Update the handleDeleteComment function to show confirmation modal
+  const handleDeleteComment = async (commentId, recordingId) => {
+    if (!isSuperAdmin) return;
+    
+    // Instead of using confirm(), store the comment ID and show the modal
+    setCommentToDelete(commentId);
+    setRecordingIdForComment(recordingId);
+    setShowDeleteConfirm(true);
+  };
+  
+  // Add a new function to handle the actual deletion after confirmation
+  const confirmDeleteComment = async () => {
+    try {
+      setIsLoading(true);
+      
+      console.log(`Deleting comment ID: ${commentToDelete} for recording: ${recordingIdForComment}`);
+      const response = await defaultInstance.delete(`/recording-comments/${commentToDelete}`);
+      
+      if (response.data && response.data.success) {
+        console.log('Comment deleted successfully');
+        
+        // Update the comment list for this recording
+        fetchRecordingComments(recordingIdForComment);
+      } else {
+        console.error('Failed to delete comment:', response.data);
+        alert('Failed to delete comment. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      alert('Error: ' + (error.response?.data?.error || error.message));
+    } finally {
+      setIsLoading(false);
+      setShowDeleteConfirm(false);
+      setCommentToDelete(null);
+      setRecordingIdForComment(null);
+    }
+  };
+  
+  // Add a function to cancel deletion
+  const cancelDeleteComment = () => {
+    setShowDeleteConfirm(false);
+    setCommentToDelete(null);
+    setRecordingIdForComment(null);
+  };
+  
   // Get data for current dashboard and apply pagination
   const dataToDisplay = activeDashboard === 'caller' ? excelData : filteredCompanies;
   const paginatedData = getPaginatedData(dataToDisplay);
@@ -1350,7 +1401,7 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                             onClick={() => toggleCommentPanel(recording.recordingfile)}
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                              <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                              <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 4A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
                               <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
                             </svg>
                             {activeCommentPanel === recording.recordingfile ? t('hideComments') : t('showComments')}
@@ -1413,6 +1464,21 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                                     </span>
                                   </p>
                                   <p className={modalStyles.commentText}>{comment.comment}</p>
+                                  {isSuperAdmin && (
+                                    <div className={modalStyles.commentActions}>
+                                      <button
+                                        className={modalStyles.deleteCommentButton}
+                                        onClick={() => handleDeleteComment(comment.id, recording.recordingfile)}
+                                        title={t('deleteComment')}
+                                      >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                          <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                                          <path fillRule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                                        </svg>
+                                        {t('deleteComment')}
+                                      </button>
+                                    </div>
+                                  )}
                                 </div>
                               ))
                             ) : (
@@ -1441,6 +1507,39 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                 Close
               </button>
             </div> */}
+          </div>
+        </div>
+      )}
+      
+      {/* Add the delete confirmation modal */}
+      {showDeleteConfirm && (
+        <div className={modalStyles.deleteConfirmModal}>
+          <div className={modalStyles.deleteConfirmContent}>
+            <div className={modalStyles.deleteConfirmHeader}>
+              <h4>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
+                </svg>
+                {t('deleteComment')}
+              </h4>
+            </div>
+            <div className={modalStyles.deleteConfirmBody}>
+              <p>{t('confirmCommentDeletion')}</p>
+            </div>
+            <div className={modalStyles.deleteConfirmFooter}>
+              <button 
+                className={modalStyles.cancelDeleteBtn}
+                onClick={cancelDeleteComment}
+              >
+                {t('cancel')}
+              </button>
+              <button 
+                className={modalStyles.confirmDeleteBtn}
+                onClick={confirmDeleteComment}
+              >
+                {t('delete')}
+              </button>
+            </div>
           </div>
         </div>
       )}

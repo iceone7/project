@@ -130,4 +130,5 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/recording-comments/{recordingId}', [App\Http\Controllers\RecordingCommentController::class, 'index']);
     Route::post('/recording-comments', [App\Http\Controllers\RecordingCommentController::class, 'store']);
+    Route::delete('/recording-comments/{id}', [App\Http\Controllers\RecordingCommentController::class, 'destroy']);
 });
