@@ -110,7 +110,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/cdr', [App\Http\Controllers\CdrController::class, 'index']);
     Route::post('/process-cdr-data', [App\Http\Controllers\CallerExcelUploadController::class, 'processCdrData']);
     Route::get('/live-cdr', [App\Http\Controllers\CdrController::class, 'getLiveCdrData']);
-    Route::get('/caller-recordings/{callerNumber}', [App\Http\Controllers\CdrController::class, 'getRecordingsByCallerNumber']);
+    Route::get('/caller-recordings', [App\Http\Controllers\CdrController::class, 'getCallerRecordings']);
     
     // Comment routes
     Route::get('/comments/{cdrId}', [App\Http\Controllers\CommentsController::class, 'index']);

@@ -545,4 +545,150 @@ class CdrController extends Controller
             ], 500);
         }
     }
+    
+    /**
+     * Get recordings for a specific caller-receiver pair
+     */
+    public function getCallerRecordings(Request $request)
+    {
+        try {
+            $callerNumber = $request->input('callerNumber');
+            $receiverNumber = $request->input('receiverNumber');
+            $startDate = $request->input('start_date');
+            $endDate = $request->input('end_date');
+            
+            Log::info('Getting recordings for caller-receiver pair with date range', [
+                'caller' => $callerNumber,
+                'receiver' => $receiverNumber,
+                'start_date' => $startDate,
+                'end_date' => $endDate
+            ]);
+            
+            if (empty($receiverNumber)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Receiver number is required',
+                    'recordings' => []
+                ]);
+            }
+            
+            // Generate different formats for caller and receiver numbers
+            $callerFormats = !empty($callerNumber) ? $this->generateNumberFormats($callerNumber) : [];
+            $receiverFormats = !empty($receiverNumber) ? $this->generateNumberFormats($receiverNumber) : [];
+            
+            // Build the query
+            $query = DB::connection('asterisk')->table('cdr')
+                ->whereNotNull('recordingfile')
+                ->where('recordingfile', '!=', '')
+                ->orderBy('calldate', 'desc');
+            
+            // Apply date filtering if provided - properly handle both YYYY-MM-DD format and other formats
+            if (!empty($startDate)) {
+                try {
+                    // Try to parse the date in various formats
+                    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $startDate)) {
+                        // Already in YYYY-MM-DD format
+                        $query->whereDate('calldate', '>=', $startDate);
+                    } else {
+                        // Try to parse in common formats
+                        $parsedDate = date('Y-m-d', strtotime($startDate));
+                        if ($parsedDate && $parsedDate !== '1970-01-01') {
+                            $query->whereDate('calldate', '>=', $parsedDate);
+                            Log::info("Converted start date from {$startDate} to {$parsedDate}");
+                        }
+                    }
+                    Log::info("Filtering recordings by start date: {$startDate}");
+                } catch (\Exception $e) {
+                    Log::warning("Failed to parse start date: {$startDate}", ['error' => $e->getMessage()]);
+                }
+            }
+            
+            if (!empty($endDate)) {
+                try {
+                    // Try to parse the date in various formats
+                    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $endDate)) {
+                        // Already in YYYY-MM-DD format
+                        $query->whereDate('calldate', '<=', $endDate);
+                    } else {
+                        // Try to parse in common formats
+                        $parsedDate = date('Y-m-d', strtotime($endDate));
+                        if ($parsedDate && $parsedDate !== '1970-01-01') {
+                            $query->whereDate('calldate', '<=', $parsedDate);
+                            Log::info("Converted end date from {$endDate} to {$parsedDate}");
+                        }
+                    }
+                    Log::info("Filtering recordings by end date: {$endDate}");
+                } catch (\Exception $e) {
+                    Log::warning("Failed to parse end date: {$endDate}", ['error' => $e->getMessage()]);
+                }
+            }
+            
+            // Filter by receiver number - this is required
+            $query->where(function($q) use ($receiverFormats) {
+                foreach ($receiverFormats as $format) {
+                    if (!empty($format)) {
+                        $q->orWhere('dst', $format);
+                    }
+                }
+            });
+            
+            // Filter by caller number if provided
+            if (!empty($callerFormats)) {
+                $query->where(function($q) use ($callerFormats) {
+                    foreach ($callerFormats as $format) {
+                        if (!empty($format)) {
+                            $q->orWhere('src', $format)
+                              ->orWhere('clid', 'LIKE', '%' . $format . '%');
+                        }
+                    }
+                });
+            }
+            
+            // Log the query
+            $querySql = $query->toSql();
+            Log::info("Recordings query SQL: {$querySql}", [
+                'bindings' => $query->getBindings()
+            ]);
+            
+            // Execute the query
+            $recordings = $query->get();
+            
+            Log::info('Found recordings with date filtering', [
+                'count' => count($recordings),
+                'caller' => $callerNumber,
+                'receiver' => $receiverNumber,
+                'date_range' => "{$startDate} to {$endDate}"
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'caller_number' => $callerNumber,
+                'receiver_number' => $receiverNumber,
+                'date_range' => [
+                    'start_date' => $startDate,
+                    'end_date' => $endDate
+                ],
+                'recordings' => $recordings->map(function($recording) {
+                    return [
+                        'calldate' => $recording->calldate,
+                        'duration' => $recording->duration,
+                        'formattedDuration' => $this->formatCallDuration($recording->duration),
+                        'disposition' => $recording->disposition,
+                        'recordingfile' => $recording->recordingfile,
+                        'dst' => $recording->dst,
+                        'src' => $recording->src,
+                        'clid' => $recording->clid,
+                        'uniqueid' => $recording->uniqueid
+                    ];
+                })
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error fetching caller recordings: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to fetch recordings: ' . $e->getMessage(),
+                'recordings' => []
+            ], 500);
+        }
+    }
 }

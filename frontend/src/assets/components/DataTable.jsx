@@ -675,11 +675,47 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
   const [recordings, setRecordings] = useState([]);
   const [isLoadingRecordings, setIsLoadingRecordings] = useState(false);
 
+  // Function to format call duration from seconds to HH:MM:SS
+  const formatCallDuration = (seconds) => {
+    if (!seconds) return '00:00:00';
+    
+    const secondsNum = parseInt(seconds, 10);
+    if (isNaN(secondsNum)) return '00:00:00';
+    
+    const hours = Math.floor(secondsNum / 3600);
+    const minutes = Math.floor((secondsNum / 60) % 60);
+    const secs = secondsNum % 60;
+    
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
   // Function to open the recordings modal
   const openRecordingsModal = (call) => {
     setSelectedCall(call);
     setShowRecordingsModal(true);
-    fetchRecordingsForCaller(call);
+    
+    // Extract date range from the call data
+    const callDate = call.call_date || call.callDate || '';
+    let rowStartDate, rowEndDate;
+    
+    // Check if the call_date contains a range (format: "2023-01-01 - 2023-01-31")
+    if (callDate && callDate.includes(' - ')) {
+      [rowStartDate, rowEndDate] = callDate.split(' - ').map(d => formatDateForApi(d.trim()));
+      console.log(`Extracted date range from call_date: ${rowStartDate} to ${rowEndDate}`);
+    } else if (callDate) {
+      // If it's a single date, use it as both start and end date
+      rowStartDate = formatDateForApi(callDate);
+      rowEndDate = formatDateForApi(callDate);
+      console.log(`Using single date from call_date: ${rowStartDate}`);
+    } else {
+      // Fallback to global date filters if no call date is available
+      rowStartDate = startDate;
+      rowEndDate = endDate;
+      console.log(`Using global date filters: ${rowStartDate} to ${rowEndDate}`);
+    }
+    
+    // Fetch recordings with the specific date range from this call
+    fetchRecordingsForCaller(call, rowStartDate, rowEndDate);
   };
 
   // Function to close the recordings modal
@@ -689,43 +725,13 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
     setRecordings([]);
   };
 
-  // Format call duration from seconds to HH:MM:SS
-  const formatCallDuration = (seconds) => {
-    if (!seconds) return '00:00:00';
-    
-    const secondsNum = parseInt(seconds, 10);
-    if (isNaN(secondsNum)) return '00:00:00';
-    
-    return sprintf('%02d:%02d:%02d', 
-      Math.floor(secondsNum / 3600),
-      Math.floor((secondsNum / 60) % 60),
-      secondsNum % 60
-    );
-  };
-  
-  // sprintf implementation for formatted strings
-  const sprintf = (format, ...args) => {
-    let i = 0;
-    return format.replace(/%s|%d|%i|%f|%x|%X|%o|%O|%g|%G|%e|%E|%c|%u|%b|%n|%\d+d|%\d+s|%0\d+d/g, (match) => {
-      // Return % if it's escaped
-      if (match === '%%') return '%';
-      
-      // Parse padding for numbers if specified
-      if (match.startsWith('%0') && match.endsWith('d')) {
-        const padding = parseInt(match.substring(2, match.length - 1), 10);
-        return args[i++].toString().padStart(padding, '0');
-      }
-      
-      // Handle standard %d, %s, etc.
-      return args[i++];
-    });
-  };
-
   // Function to fetch recordings for the selected call
-  const fetchRecordingsForCaller = async (call) => {
+  const fetchRecordingsForCaller = async (call, rowStartDate, rowEndDate) => {
     if (!call) return;
     
+    const callerNumber = call.callerNumber || call.caller_number || '';
     const receiverNumber = call.receiverNumber || call.receiver_number || '';
+    
     if (!receiverNumber || receiverNumber === 'N/A') {
       console.error('No valid receiver number provided');
       setRecordings([]);
@@ -734,24 +740,27 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
     
     setIsLoadingRecordings(true);
     try {
-      // Get all number formats to use in the query
-      const numberFormats = generateNumberFormats(receiverNumber);
+      console.log(`Fetching recordings for caller: ${callerNumber}, receiver: ${receiverNumber}, date range: ${rowStartDate} to ${rowEndDate}`);
       
-      // Get call records from asterisk CDR
-      const response = await defaultInstance.get('/cdr');
+      // Use the date range from the row instead of global filters
+      const params = {
+        callerNumber: callerNumber,
+        receiverNumber: receiverNumber,
+        start_date: rowStartDate, // Use row-specific date
+        end_date: rowEndDate     // Use row-specific date
+      };
       
-      if (response.data && response.data.length > 0) {
-        // Filter recordings where the receiver number matches dst
-        const matchingRecordings = response.data.filter(record => {
-          // Check if receiver number matches the dst field
-          return numberFormats.some(format => 
-            record.dst === format  // Direct match against destination number
-          ) && record.recordingfile; // Only include records with recordings
-        });
-        
-        console.log(`Found ${matchingRecordings.length} recordings for receiver: ${receiverNumber}`);
-        setRecordings(matchingRecordings);
+      // Log date range being used
+      console.log('Using row-specific date range for recordings:', params.start_date, 'to', params.end_date);
+      
+      // Use a dedicated endpoint to get matching recordings
+      const response = await defaultInstance.get('/caller-recordings', { params });
+      
+      if (response.data && response.data.success) {
+        console.log(`Found ${response.data.recordings.length} recordings for caller-receiver pair in date range`);
+        setRecordings(response.data.recordings);
       } else {
+        console.error('Error in recordings response:', response.data);
         setRecordings([]);
       }
     } catch (error) {
@@ -760,26 +769,6 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
     } finally {
       setIsLoadingRecordings(false);
     }
-  };
-  
-  // Function to generate all possible formats of a phone number for searching
-  const generateNumberFormats = (number) => {
-    const formats = [];
-    
-    // Original format
-    formats.push(number);
-    
-    // If the number starts with '995', also add without it
-    if (number.length > 9 && number.substring(0, 3) === '995') {
-      formats.push(number.substring(3));
-    }
-    
-    // If the number doesn't start with '995', also add with it
-    if (number.length <= 9 && number.substring(0, 3) !== '995') {
-      formats.push('995' + number);
-    }
-    
-    return formats;
   };
   
   // Extract caller number from clid or src field
@@ -1154,9 +1143,12 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">
-                  Call Recordings for Receiver Number: {selectedCall.receiverNumber || selectedCall.receiver_number || 'N/A'}
-                  {selectedCall.receiverName || selectedCall.receiver_name ? 
-                    ` (${selectedCall.receiverName || selectedCall.receiver_name})` : 
+                  {t('callRecordings')} - 
+                  {selectedCall.callerNumber || selectedCall.caller_number ? 
+                    ` ${t('callerNumber')}: ${selectedCall.callerNumber || selectedCall.caller_number}` : 
+                    ''}
+                  {selectedCall.receiverNumber || selectedCall.receiver_number ? 
+                    ` → ${t('receiverNumber')}: ${selectedCall.receiverNumber || selectedCall.receiver_number}` : 
                     ''}
                 </h5>
                 <button type="button" className="btn-close" onClick={closeRecordingsModal}></button>
@@ -1171,6 +1163,15 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                   </div>
                 ) : recordings.length > 0 ? (
                   <div className={button_comments.recordingsList}>
+                    <div className="alert alert-info mb-3">
+                      {t('callCount')}: <strong>{recordings.length}</strong> {recordings.length === 1 ? 'recording' : 'recordings'} 
+                      {selectedCall.call_count || selectedCall.callCount ? 
+                        ` (${t('tableShows')}: ${selectedCall.call_count || selectedCall.callCount})` : ''}
+                      <div className="mt-1 text-muted small">
+                        {t('dateRange')}: {selectedCall.call_date || selectedCall.callDate || `${startDate} - ${endDate}`}
+                      </div>
+                    </div>
+                    
                     {recordings.map((recording, index) => (
                       <div key={index} className={button_comments.recordingItem}>
                         <div className={button_comments.recordingInfo}>
@@ -1215,7 +1216,8 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                     <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" viewBox="0 0 16 16">
                       <path d="M10.404 5.11c.5.502.502 1.313 0 1.815-.503.502-1.312.502-1.815 0-.503-.503-.503-1.313 0-1.816.5-.5 1.312-.5 1.815 0M8 1.11a6.85 6.85 0 0 0-6.894 6.89c0 3.83 3.068 6.894 6.894 6.894A6.889 6.889 0 0 0 14.89 8a6.886 6.886 0 0 0-6.89-6.89m-1.5 2.976c-.5 0-.977.196-1.33.55-.554.554-.694 1.397-.35 2.095.342.7 1.06 1.134 1.838 1.134.507 0 .99-.196 1.348-.55.556-.554.693-1.397.35-2.095-.34-.696-1.063-1.134-1.837-1.134m1.5-1.5c2.483 0 4.5 2.015 4.5 4.5s-2.017 4.5-4.5 4.5-4.5-2.015-4.5-4.5 2.017-4.5 4.5-4.5m7.438 2.343c.32.2.262.484.268.85.003.398.068.576-.077.845-.148.264-.44.46-.44.632 0 .17.29.367.44.63.145.27.08.447.077.846-.006.367-.026.65-.268.85-.244.2-.394.116-.618.116-.225 0-.375.084-.62-.116-.24-.2-.26-.483-.265-.85-.004-.398-.066-.575.075-.845.146-.264.44-.46.44-.63 0-.17-.294-.368-.44-.632-.144-.27-.08-.447-.075-.846.005-.366.025-.65.265-.85.245-.2.395-.116.62-.116.224 0 .374-.083.618.116"/>
                     </svg>
-                    <p>No recordings found for this caller.</p>
+                    <p>No recordings found for this caller during the specified date range.</p>
+                    <p className="text-muted small">Date range: {selectedCall.call_date || selectedCall.callDate || `${startDate} - ${endDate}`}</p>
                   </div>
                 )}
               </div>

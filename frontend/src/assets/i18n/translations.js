@@ -53,6 +53,8 @@ const translations = {
     actions: "Actions", // new translation
     calls: "Calls", // new translation
     callRecordings: "Call Recordings", // new translation
+    recordingsFound: "Recordings Found",
+    noRecordingsFound: "No recordings found for this caller-receiver pair.",
 
     //Craftsmen dashboard
     aNumber: "A Number",
@@ -119,6 +121,10 @@ const translations = {
     downloading: 'Downloading your data...',
     downloadComplete: 'Download Complete!',
     downloadSuccessMessage: 'Your file has been successfully prepared and downloaded to your device.',
+
+    // Date range display
+    dateRange: "Date range",
+    tableShows: "Table shows",
   },
   ru: {
     companyDashboard: "Dashboard компании",
@@ -171,6 +177,8 @@ const translations = {
     actions: "Действия",
     calls: "Звонки",
     callRecordings: "Записи звонков",
+    recordingsFound: "Найденные записи",
+    noRecordingsFound: "Записи звонков для этой пары звонящий-получатель не найдены.",
 
     //Craftsmen dashboard
     aNumber: "A Номер",
@@ -237,6 +245,10 @@ const translations = {
     downloading: 'Загрузка данных...',
     downloadComplete: 'Загрузка завершена!',
     downloadSuccessMessage: 'Ваш файл был успешно подготовлен и загружен на ваше устройство.',
+
+    // Date range display
+    dateRange: "Диапазон дат",
+    tableShows: "В таблице показано",
   },
   ka: {
     companyDashboard: "კომპანიის დაფა",
@@ -289,6 +301,8 @@ const translations = {
     actions: "მოქმედებები",
     calls: "ზარები",
     callRecordings: "ზარის ჩანაწერები",
+    recordingsFound: "ნაპოვნი ჩანაწერები",
+    noRecordingsFound: "ამ დამრეკავ-მიმღები წყვილისთვის ჩანაწერები არ მოიძებნა.",
 
     //Craftsmen dashboard
     aNumber: "A ნომერი",
@@ -355,6 +369,10 @@ const translations = {
     downloading: 'მონაცემების ჩამოტვირთვა...',
     downloadComplete: 'ჩამოტვირთვა დასრულდა!',
     downloadSuccessMessage: 'თქვენი ფაილი წარმატებით მომზადდა და ჩამოტვირთულია თქვენს მოწყობილობაზე.',
+
+    // Date range display
+    dateRange: "თარიღების დიაპაზონი",
+    tableShows: "ცხრილში ნაჩვენებია",
   }
 };
 
