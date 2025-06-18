@@ -289,7 +289,7 @@
 }
 
 .commentPanelOpen {
-  max-height: 300px; /* Reduced from 500px since we don't need space for input */
+  max-height: 500px; /* Increased from 300px to accommodate comment form */
   opacity: 1;
   padding: 12px;
   border: 1px solid rgba(0, 0, 0, 0.1);
@@ -369,6 +369,56 @@
   font-size: 0.9rem;
 }
 
+/* Comment form styles */
+.commentForm {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.commentInput {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+  resize: vertical;
+  transition: border-color 0.2s;
+  background-color: #fff;
+}
+
+.commentInput:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.commentButton {
+  padding: 8px 16px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 120px;
+}
+
+.commentButton:hover {
+  background-color: #0069d9;
+}
+
+.commentButton:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
 /* Animations */
 @keyframes fadeIn {
   from { opacity: 0; }
@@ -400,49 +450,6 @@
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .modalContent {
-    width: 95%;
-    max-height: 80vh;
-  }
-  
-  .recordingInfo {
-    grid-template-columns: 1fr;
-  }
-  
-  .modalTitle {
-    font-size: 1.1rem;
-  }
-}
-
-/* Animation for modal closing */
-.modalClosing {
-  animation: fadeOut 0.3s ease forwards;
-}
-
-.modalContentClosing {
-  animation: slideDown 0.3s ease forwards;
-}
-
-@keyframes fadeOut {
-  from { opacity: 1; }
-  to { opacity: 0; }
-}
-
-@keyframes slideDown {
-  from {
-    transform: translateY(0);
-    opacity: 1;
-  }
-  to {
-    transform: translateY(20px);
-    opacity: 0;
-  }
-}
-  to { transform: rotate(360deg); }
-
 
 /* Responsive adjustments */
 @media (max-width: 768px) {

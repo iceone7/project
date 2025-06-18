@@ -841,6 +841,54 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
     }
   };
 
+  // Add the following state variables with your other state declarations (around line 40-50)
+  const [newRecordingComments, setNewRecordingComments] = useState({});
+  const [isSavingComment, setIsSavingComment] = useState(false);
+
+  // Add this function to handle input changes for recording comments
+  const handleRecordingCommentChange = (recordingId, value) => {
+    setNewRecordingComments(prev => ({
+      ...prev,
+      [recordingId]: value
+    }));
+  };
+
+  // Add this function to save recording comments
+  const saveRecordingComment = async (recordingId) => {
+    if (!recordingId || !newRecordingComments[recordingId]?.trim()) {
+      alert('Comment cannot be empty');
+      return;
+    }
+
+    try {
+      setIsSavingComment(true);
+      
+      console.log(`Saving comment for recording: ${recordingId}`);
+      
+      const response = await defaultInstance.post('/recording-comments', {
+        recording_id: recordingId,
+        comment: newRecordingComments[recordingId]
+      });
+      
+      console.log('Recording comment saved successfully:', response.data);
+      
+      // Clear the input after saving
+      setNewRecordingComments(prev => ({
+        ...prev,
+        [recordingId]: ''
+      }));
+      
+      // Update the comments list
+      fetchRecordingComments(recordingId);
+      
+    } catch (error) {
+      console.error('Error saving recording comment:', error);
+      alert('Failed to save comment: ' + (error?.response?.data?.error || error.message));
+    } finally {
+      setIsSavingComment(false);
+    }
+  };
+
   return (
     <>
       {isDepartamentVip && activeDashboard === 'company' && (
@@ -1262,7 +1310,7 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                         </div>
                       )}
                       
-                      {/* Add comment section */}
+                      {/* Update the comment section in the recordings modal */}
                       <div className={modalStyles.commentSection}>
                         <button 
                           className={`${modalStyles.commentToggle} ${
@@ -1282,7 +1330,23 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                             activeCommentPanel === recording.recordingfile ? modalStyles.commentPanelOpen : ''
                           }`}
                         >
-                          {/* Remove textarea and save button */}
+                          {/* Add the comment input form */}
+                          <div className={modalStyles.commentForm}>
+                            <textarea
+                              className={modalStyles.commentInput}
+                              value={newRecordingComments[recording.recordingfile] || ''}
+                              onChange={(e) => handleRecordingCommentChange(recording.recordingfile, e.target.value)}
+                              placeholder={t('addCommentForRecording')}
+                              rows="3"
+                            ></textarea>
+                            <button 
+                              className={modalStyles.commentButton}
+                              onClick={() => saveRecordingComment(recording.recordingfile)}
+                              disabled={isSavingComment}
+                            >
+                              {isSavingComment ? t('saving') : t('addComment')}
+                            </button>
+                          </div>
                           
                           {recordingComments[recording.recordingfile]?.length > 0 && (
                             <div className={modalStyles.commentsListHeader}>
