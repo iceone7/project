@@ -669,6 +669,135 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
     );
   };
 
+  // Add new state variables for the recordings modal
+  const [showRecordingsModal, setShowRecordingsModal] = useState(false);
+  const [selectedCall, setSelectedCall] = useState(null);
+  const [recordings, setRecordings] = useState([]);
+  const [isLoadingRecordings, setIsLoadingRecordings] = useState(false);
+
+  // Function to open the recordings modal
+  const openRecordingsModal = (call) => {
+    setSelectedCall(call);
+    setShowRecordingsModal(true);
+    fetchRecordingsForCaller(call);
+  };
+
+  // Function to close the recordings modal
+  const closeRecordingsModal = () => {
+    setShowRecordingsModal(false);
+    setSelectedCall(null);
+    setRecordings([]);
+  };
+
+  // Format call duration from seconds to HH:MM:SS
+  const formatCallDuration = (seconds) => {
+    if (!seconds) return '00:00:00';
+    
+    const secondsNum = parseInt(seconds, 10);
+    if (isNaN(secondsNum)) return '00:00:00';
+    
+    return sprintf('%02d:%02d:%02d', 
+      Math.floor(secondsNum / 3600),
+      Math.floor((secondsNum / 60) % 60),
+      secondsNum % 60
+    );
+  };
+  
+  // sprintf implementation for formatted strings
+  const sprintf = (format, ...args) => {
+    let i = 0;
+    return format.replace(/%s|%d|%i|%f|%x|%X|%o|%O|%g|%G|%e|%E|%c|%u|%b|%n|%\d+d|%\d+s|%0\d+d/g, (match) => {
+      // Return % if it's escaped
+      if (match === '%%') return '%';
+      
+      // Parse padding for numbers if specified
+      if (match.startsWith('%0') && match.endsWith('d')) {
+        const padding = parseInt(match.substring(2, match.length - 1), 10);
+        return args[i++].toString().padStart(padding, '0');
+      }
+      
+      // Handle standard %d, %s, etc.
+      return args[i++];
+    });
+  };
+
+  // Function to fetch recordings for the selected call
+  const fetchRecordingsForCaller = async (call) => {
+    if (!call) return;
+    
+    const receiverNumber = call.receiverNumber || call.receiver_number || '';
+    if (!receiverNumber || receiverNumber === 'N/A') {
+      console.error('No valid receiver number provided');
+      setRecordings([]);
+      return;
+    }
+    
+    setIsLoadingRecordings(true);
+    try {
+      // Get all number formats to use in the query
+      const numberFormats = generateNumberFormats(receiverNumber);
+      
+      // Get call records from asterisk CDR
+      const response = await defaultInstance.get('/cdr');
+      
+      if (response.data && response.data.length > 0) {
+        // Filter recordings where the receiver number matches dst
+        const matchingRecordings = response.data.filter(record => {
+          // Check if receiver number matches the dst field
+          return numberFormats.some(format => 
+            record.dst === format  // Direct match against destination number
+          ) && record.recordingfile; // Only include records with recordings
+        });
+        
+        console.log(`Found ${matchingRecordings.length} recordings for receiver: ${receiverNumber}`);
+        setRecordings(matchingRecordings);
+      } else {
+        setRecordings([]);
+      }
+    } catch (error) {
+      console.error('Error fetching recordings:', error);
+      setRecordings([]);
+    } finally {
+      setIsLoadingRecordings(false);
+    }
+  };
+  
+  // Function to generate all possible formats of a phone number for searching
+  const generateNumberFormats = (number) => {
+    const formats = [];
+    
+    // Original format
+    formats.push(number);
+    
+    // If the number starts with '995', also add without it
+    if (number.length > 9 && number.substring(0, 3) === '995') {
+      formats.push(number.substring(3));
+    }
+    
+    // If the number doesn't start with '995', also add with it
+    if (number.length <= 9 && number.substring(0, 3) !== '995') {
+      formats.push('995' + number);
+    }
+    
+    return formats;
+  };
+  
+  // Extract caller number from clid or src field
+  const extractCallerNumber = (cdrRecord) => {
+    if (!cdrRecord) return '';
+    
+    // First try to extract from clid (format: "Name" <number>)
+    if (cdrRecord.clid && cdrRecord.clid.includes('<') && cdrRecord.clid.includes('>')) {
+      const match = cdrRecord.clid.match(/<([^>]+)>/);
+      if (match && match[1]) {
+        return normalizePhoneForMatching(match[1]);
+      }
+    }
+    
+    // Otherwise use src field
+    return normalizePhoneForMatching(cdrRecord.src || '');
+  };
+
   return (
     <>
       {isDepartamentVip && activeDashboard === 'company' && (
@@ -811,6 +940,7 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                             <th>{t('BUSY')}</th>
                             <th>{t('callDate')}</th>
                             <th>{t('callDuration')}</th>
+                            <th>{t('actions')}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -829,7 +959,11 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                                 <td>{call.callerName || call.caller_name || 'N/A'}</td>
                                 <td>{call.callerNumber || call.caller_number || 'N/A'}</td>
                                 <td>{call.receiverName || call.receiver_name || 'N/A'}</td>
-                                <td>{call.receiverNumber || call.receiver_number || 'N/A'}</td>
+                                <td>
+                                  {(call.receiverNumber === 'N/A' || call.receiver_number === 'N/A') ? 
+                                    'N/A' : 
+                                    (call.receiverNumber || call.receiver_number || 'N/A')}
+                                </td>
                                 <td>{call.callCount || call.call_count || '0'}</td>
                                 <td>{call.answeredCalls || call.answered_calls || '0'}</td>
                                 <td>{call.noAnswerCalls || call.no_answer_calls || '0'}</td>
@@ -838,11 +972,24 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                                   {call.callDate || call.call_date || 'N/A'}
                                 </td>
                                 <td>{call.callDuration || call.call_duration || 'N/A'}</td>
+                                <td>
+                                  <button 
+                                    className={button_comments.callsButton}
+                                    onClick={() => openRecordingsModal(call)}
+                                    title="View Call Recordings"
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                      <path d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5z"/>
+                                      <path d="M10 8a2 2 0 1 1-4 0V3a2 2 0 1 1 4 0v5zM8 0a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V3a3 3 0 0 0-3-3z"/>
+                                    </svg>
+                                    Calls
+                                  </button>
+                                </td>
                               </tr>
                             ))
                           ) : (
                             <tr>
-                              <td colSpan="19">No data available</td>
+                              <td colSpan="20">No data available</td>
                             </tr>
                           )}
                         </tbody>
@@ -999,6 +1146,88 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
         onSave={saveEdit}
         editData={editRowData}
       />
+      
+      {/* Recordings Modal */}
+      {showRecordingsModal && selectedCall && (
+        <div className="modal fade show" style={{ display: 'block' }} tabIndex="-1">
+          <div className="modal-dialog modal-lg">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  Call Recordings for Receiver Number: {selectedCall.receiverNumber || selectedCall.receiver_number || 'N/A'}
+                  {selectedCall.receiverName || selectedCall.receiver_name ? 
+                    ` (${selectedCall.receiverName || selectedCall.receiver_name})` : 
+                    ''}
+                </h5>
+                <button type="button" className="btn-close" onClick={closeRecordingsModal}></button>
+              </div>
+              <div className="modal-body">
+                {isLoadingRecordings ? (
+                  <div className="text-center p-4">
+                    <div className="spinner-border text-primary" role="status">
+                      <span className="visually-hidden">Loading...</span>
+                    </div>
+                    <p className="mt-2">Fetching recordings...</p>
+                  </div>
+                ) : recordings.length > 0 ? (
+                  <div className={button_comments.recordingsList}>
+                    {recordings.map((recording, index) => (
+                      <div key={index} className={button_comments.recordingItem}>
+                        <div className={button_comments.recordingInfo}>
+                          <div>
+                            <strong>Date:</strong> {new Date(recording.calldate).toLocaleString()}
+                          </div>
+                          <div>
+                            <strong>Duration:</strong> {formatCallDuration(recording.duration)}
+                          </div>
+                          <div>
+                            <strong>To:</strong> {recording.dst}
+                          </div>
+                          <div>
+                            <strong>Status:</strong> <span className={
+                              recording.disposition === 'ANSWERED' ? button_comments.statusAnswered :
+                              recording.disposition === 'NO ANSWER' ? button_comments.statusNoAnswer :
+                              recording.disposition === 'BUSY' ? button_comments.statusBusy :
+                              ''
+                            }>{recording.disposition}</span>
+                          </div>
+                        </div>
+                        {recording.recordingfile && (
+                          <div className={button_comments.audioContainer}>
+                            <audio
+                              controls
+                              className={button_comments.audioPlayer}
+                              onError={(e) => console.error('Audio error:', e)}
+                            >
+                              <source
+                                src={`${recordingsBaseUrl}/${getPath(recording.recordingfile)}`}
+                                type="audio/wav"
+                              />
+                              Your browser does not support the audio element.
+                            </audio>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className={button_comments.noRecordings}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" viewBox="0 0 16 16">
+                      <path d="M10.404 5.11c.5.502.502 1.313 0 1.815-.503.502-1.312.502-1.815 0-.503-.503-.503-1.313 0-1.816.5-.5 1.312-.5 1.815 0M8 1.11a6.85 6.85 0 0 0-6.894 6.89c0 3.83 3.068 6.894 6.894 6.894A6.889 6.889 0 0 0 14.89 8a6.886 6.886 0 0 0-6.89-6.89m-1.5 2.976c-.5 0-.977.196-1.33.55-.554.554-.694 1.397-.35 2.095.342.7 1.06 1.134 1.838 1.134.507 0 .99-.196 1.348-.55.556-.554.693-1.397.35-2.095-.34-.696-1.063-1.134-1.837-1.134m1.5-1.5c2.483 0 4.5 2.015 4.5 4.5s-2.017 4.5-4.5 4.5-4.5-2.015-4.5-4.5 2.017-4.5 4.5-4.5m7.438 2.343c.32.2.262.484.268.85.003.398.068.576-.077.845-.148.264-.44.46-.44.632 0 .17.29.367.44.63.145.27.08.447.077.846-.006.367-.026.65-.268.85-.244.2-.394.116-.618.116-.225 0-.375.084-.62-.116-.24-.2-.26-.483-.265-.85-.004-.398-.066-.575.075-.845.146-.264.44-.46.44-.63 0-.17-.294-.368-.44-.632-.144-.27-.08-.447-.075-.846.005-.366.025-.65.265-.85.245-.2.395-.116.62-.116.224 0 .374-.083.618.116"/>
+                    </svg>
+                    <p>No recordings found for this caller.</p>
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={closeRecordingsModal}>
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

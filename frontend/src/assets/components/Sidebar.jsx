@@ -57,6 +57,23 @@ const Sidebar = () => {
     width: '100%'
   });
 
+  // Close sidebar when clicking a link on mobile
+  const handleMobileLinkClick = () => {
+    if (window.innerWidth <= 768) {
+      const sidebar = document.querySelector('.nav-left-sidebar');
+      const container = document.querySelector('.dashboard-content');
+      const overlay = document.querySelector('.sidebar-overlay');
+      
+      if (sidebar && container) {
+        sidebar.style.left = '-264px';
+        sidebar.classList.remove('mobile-open');
+        container.classList.remove('sidebar-open');
+        container.classList.add('sidebar-closed');
+        if (overlay) overlay.classList.remove('active');
+      }
+    }
+  };
+
   return (
     <div className="nav-left-sidebar sidebar-dark">
       <div className="menu-list">
@@ -112,6 +129,7 @@ const Sidebar = () => {
                   <NavLink
                     to="/company-dashboard"
                     className={({ isActive }) => `fade-in nav-link ${isActive ? 'my-active' : ''}`}
+                    onClick={handleMobileLinkClick}
                   >
                     <i className="fa fa-fw fa-user-circle"></i>{t('companyDashboard')}
                   </NavLink>
@@ -122,6 +140,7 @@ const Sidebar = () => {
                   <NavLink
                     to="/caller-dashboard"
                     className={({ isActive }) => `fade-in nav-link ${isActive ? 'my-active' : ''}`}
+                    onClick={handleMobileLinkClick}
                   >
                     <i className="fa fa-fw fa-user-circle"></i>{t('callerDashboard')}
                   </NavLink>
@@ -201,6 +220,7 @@ const Sidebar = () => {
                   <NavLink
                     to="/admin-dahsboard"
                     className={({ isActive }) => `fade-in nav-link ${isActive ? 'my-active' : ''}`}
+                    onClick={handleMobileLinkClick}
                   >
                     <i className="fa fa-fw fa-user-circle"></i>{t('adminDashboard')}
                   </NavLink>

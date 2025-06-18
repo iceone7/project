@@ -43,8 +43,16 @@ const translations = {
     receiverName: "Receiver Name",
     callCount: "Call Count",
     callDate: "Call Date",
+    callTime: "Call Time",
+    callFullDateTime: "Call Date & Time",
     callDuration: "Call Duration",
     callStatus: "Call Status",
+    aNumber: "A Number",
+    bNumber: "B Number",
+    date: "Date",
+    actions: "Actions", // new translation
+    calls: "Calls", // new translation
+    callRecordings: "Call Recordings", // new translation
 
     //Craftsmen dashboard
     aNumber: "A Number",
@@ -156,8 +164,13 @@ const translations = {
     receiverName: "Имя получателя",
     callCount: "Кол-во звонков",
     callDate: "Дата звонка",
+    callTime: "Время разговора",
+    callFullDateTime: "Дата и время звонка",
     callDuration: "Длительность звонка",
     callStatus: "Статус звонка",
+    actions: "Действия",
+    calls: "Звонки",
+    callRecordings: "Записи звонков",
 
     //Craftsmen dashboard
     aNumber: "A Номер",
@@ -205,7 +218,7 @@ const translations = {
 
     // Company to Caller Transform
     companyToCallerTransform: "Преобразование компании в вызывающий",
-    uploadGeorgianExcel: "Загрузить грузинский Excel",
+    uploadGeorgianExcel: "Загрузить грузინский Excel",
     transformingData: "Преобразование данных...",
     georgianToCallerMapping: "Грузинский в формат вызывающего",
 
@@ -269,8 +282,13 @@ const translations = {
     receiverName: "მიმღების სახელი",
     callCount: "ზარების რაოდენობა",
     callDate: "ზარის თარიღი",
+    callTime: "საუბრის დრო",
+    callFullDateTime: "ზარის თარიღი და დრო",
     callDuration: "ზარის ხანგრძლივობა",
     callStatus: "ზარის სტატუსი",
+    actions: "მოქმედებები",
+    calls: "ზარები",
+    callRecordings: "ზარის ჩანაწერები",
 
     //Craftsmen dashboard
     aNumber: "A ნომერი",

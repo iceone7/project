@@ -102,3 +102,64 @@ h1, h2, h3, h4, h5, h6 {
     color: #ffffff;
     border: none;
 }
+
+/* Mobile Responsive Styles */
+@media only screen and (max-width: 768px) {
+  .buttons {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  
+  .create {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .card-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .card-header .float-end {
+    width: 100%;
+    margin-top: 10px;
+  }
+  
+  .logo {
+    padding: 15px 20px;
+  }
+}
+
+@media only screen and (max-width: 480px) {
+  .fade-in, 
+  .left-fade-in, 
+  .bottom-fade-in {
+    animation-duration: 0.5s;
+  }
+  
+  h1, h2, h3 {
+    font-size: 90%;
+  }
+  
+  .logo {
+    padding: 10px 15px;
+  }
+  
+  .card-header {
+    padding: 12px;
+  }
+}
+
+/* Fix for iOS safari mobile input zoom */
+@media screen and (max-width: 768px) {
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  input[type="password"],
+  input[type="date"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}

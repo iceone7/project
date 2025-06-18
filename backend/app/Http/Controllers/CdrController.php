@@ -481,4 +481,68 @@ class CdrController extends Controller
             ], 500);
         }
     }
+    
+    /**
+     * Get recordings for a specific caller number
+     */
+    public function getRecordingsByCallerNumber($callerNumber)
+    {
+        try {
+            // Normalize the caller number
+            $normalizedNumber = $this->normalizePhoneNumber($callerNumber);
+            
+            // Generate different formats of the number for searching
+            $numberFormats = $this->generateNumberFormats($normalizedNumber);
+            
+            Log::info('Getting recordings for caller number', [
+                'original' => $callerNumber,
+                'normalized' => $normalizedNumber,
+                'formats' => $numberFormats
+            ]);
+            
+            // Build query to find recordings for this caller
+            $query = DB::connection('asterisk')->table('cdr')
+                ->where(function($q) use ($numberFormats) {
+                    foreach ($numberFormats as $format) {
+                        if (!empty($format)) {
+                            $q->orWhere('src', $format)
+                              ->orWhere('clid', 'LIKE', '%' . $format . '%');
+                        }
+                    }
+                })
+                ->whereNotNull('recordingfile')
+                ->where('recordingfile', '!=', '')
+                ->orderBy('calldate', 'desc')
+                ->limit(20); // Limit to most recent 20 recordings
+            
+            $recordings = $query->get();
+            
+            Log::info('Found recordings for caller', [
+                'caller' => $callerNumber,
+                'count' => count($recordings)
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'caller_number' => $callerNumber,
+                'recordings' => $recordings->map(function($recording) {
+                    return [
+                        'calldate' => $recording->calldate,
+                        'duration' => $recording->duration,
+                        'formattedDuration' => $this->formatCallDuration($recording->duration),
+                        'disposition' => $recording->disposition,
+                        'recordingfile' => $recording->recordingfile,
+                        'dst' => $recording->dst,
+                        'uniqueid' => $recording->uniqueid
+                    ];
+                })
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error fetching recordings: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to get recordings: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }
