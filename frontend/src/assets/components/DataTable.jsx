@@ -1280,7 +1280,7 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                 </svg>
                 {t('callRecordings')} - {selectedCall.callerNumber || selectedCall.caller_number || ''} 
                 {selectedCall.receiverNumber && selectedCall.receiverNumber !== 'N/A' ? 
-                  <span style={{marginLeft: '4px'}}>→ {selectedCall.receiverNumber}</span> : ''}
+                  <span style={{marginLeft: '0px'}}>→ {selectedCall.receiverNumber}</span> : ''}
               </h5>
               <button type="button" className={modalStyles.closeButton} onClick={closeRecordingsModal}>
                 ×

@@ -267,6 +267,20 @@ const translations = {
     // Download button
     download: "Скачать",
     downloadRecording: "Скачать запись",
+    
+    // Comment section translations
+    addComment: "Добавить комментарий",
+    addCommentForRecording: "Добавить комментарий к этой записи...",
+    saving: "Сохраняется...",
+    previousComments: "Комментарии",
+    noCommentsYet: "Пока нет комментариев",
+    unknownUser: "Неизвестный пользователь",
+    showComments: "Показать комментарии",
+    hideComments: "Скрыть комментарии",
+
+    // Download button
+    download: "Скачать",
+    downloadRecording: "Скачать запись",
   },
   ka: {
     companyDashboard: "კომპანიის Dashboard",
@@ -391,6 +405,20 @@ const translations = {
     // Date range display
     dateRange: "თარიღების დიაპაზონი",
     tableShows: "ცხრილში ნაჩვენებია",
+
+    // Download button
+    download: "ჩამოტვირთვა",
+    downloadRecording: "ჩანაწერის ჩამოტვირთვა",
+
+    // Comment section translations
+    addComment: "კომენტარის დამატება",
+    addCommentForRecording: "დაამატეთ კომენტარი ამ ჩანაწერთან დაკავშირებით...",
+    saving: "შენახვა...",
+    previousComments: "კომენტარები",
+    noCommentsYet: "ჯერ არ არის კომენტარები",
+    unknownUser: "უცნობი მომხმარებელი",
+    showComments: "კომენტარების ჩვენება",
+    hideComments: "კომენტარების დამალვა",
 
     // Download button
     download: "ჩამოტვირთვა",
