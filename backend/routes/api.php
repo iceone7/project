@@ -99,7 +99,16 @@ Route::get('/recordings/{path}', function ($path) {
     $pbxUrl = 'http://10.150.20.117/recordings/' . $path;
     try {
         $file = file_get_contents($pbxUrl);
-        return response($file)->header('Content-Type', 'audio/wav');
+        $filename = basename($path);
+        $response = response($file)->header('Content-Type', 'audio/wav');
+        
+        // If download parameter is present, add Content-Disposition header to force download
+        if (request()->has('download')) {
+            $response->header('Content-Disposition', 'attachment; filename="' . $filename . '"')
+                     ->header('Content-Length', strlen($file));
+        }
+        
+        return $response;
     } catch (\Exception $e) {
         abort(404, 'File not found');
     }

@@ -173,10 +173,13 @@
 }
 
 .audioContainer {
+    display: flex;
   width: 100%;
-  margin-top: 8px;
+  margin: 10px 0;
   padding-top: 8px;
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .audioPlayer {
@@ -186,9 +189,37 @@
   border-radius: 20px;
 }
 
-.audioPlayer:focus {
-  outline: none;
-  box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
+.audioControls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.downloadButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background-color: #198754;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.2s;
+}
+
+.downloadButton:hover {
+  background-color: #157347;
+  transform: translateY(-2px);
+}
+
+.downloadButton svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
 }
 
 /* Status badges */
@@ -249,6 +280,14 @@
   padding-top: 8px;
   overflow: hidden;
   border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.commentSectionMain {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
 }
 
 .commentToggle {
@@ -395,8 +434,10 @@
 }
 
 .commentButton {
+    display: flex;
+    justify-content: flex-end;
   padding: 8px 16px;
-  background-color: #007bff;
+  background-color: #017cbf;
   color: white;
   border: none;
   border-radius: 6px;
@@ -404,14 +445,11 @@
   font-size: 0.9rem;
   font-weight: 500;
   transition: background-color 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   min-width: 120px;
 }
 
 .commentButton:hover {
-  background-color: #0069d9;
+  background-color: #017cbf;
 }
 
 .commentButton:disabled {

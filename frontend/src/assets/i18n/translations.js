@@ -135,6 +135,10 @@ const translations = {
     unknownUser: "Unknown User",
     showComments: "Show Comments",
     hideComments: "Hide Comments",
+
+    // Download button
+    download: "Download",
+    downloadRecording: "Download recording",
   },
   ru: {
     companyDashboard: "Dashboard компании",
@@ -259,6 +263,10 @@ const translations = {
     // Date range display
     dateRange: "Диапазон дат",
     tableShows: "Таблица показывает",
+
+    // Download button
+    download: "Скачать",
+    downloadRecording: "Скачать запись",
   },
   ka: {
     companyDashboard: "კომპანიის Dashboard",
@@ -383,6 +391,10 @@ const translations = {
     // Date range display
     dateRange: "თარიღების დიაპაზონი",
     tableShows: "ცხრილში ნაჩვენებია",
+
+    // Download button
+    download: "ჩამოტვირთვა",
+    downloadRecording: "ჩანაწერის ჩამოტვირთვა",
   }
 };
 
