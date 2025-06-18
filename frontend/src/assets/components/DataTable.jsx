@@ -420,22 +420,37 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
     return phoneNumber.replace(/\D/g, '');
   };
 
-  // Формирует путь вида: 2025/04/29/имя_файла.wav
+  // Improved path formatting function with better error handling
   const getPath = (recordingfile) => {
     if (!recordingfile) return '';
-    const parts = recordingfile.split('-');
-    if (parts.length < 5) return recordingfile;
+    try {
+      const parts = recordingfile.split('-');
+      if (parts.length < 5) return recordingfile;
 
-    const dateStr = parts[3]; // например: 20250429
-    if (!/^\d{8}$/.test(dateStr)) return recordingfile;
+      const dateStr = parts[3]; // например: 20250429
+      if (!/^\d{8}$/.test(dateStr)) return recordingfile;
 
-    const yyyy = dateStr.substring(0, 4);
-    const mm = dateStr.substring(4, 6);
-    const dd = dateStr.substring(6, 8);
+      const yyyy = dateStr.substring(0, 4);
+      const mm = dateStr.substring(4, 6);
+      const dd = dateStr.substring(6, 8);
 
-    return `${yyyy}/${mm}/${dd}/${recordingfile}`;
+      return `${yyyy}/${mm}/${dd}/${recordingfile}`;
+    } catch (error) {
+      console.error('Error formatting recording path:', error);
+      return recordingfile;
+    }
   };
 
+  // Add a function to handle audio errors more gracefully
+  const handleAudioError = (e, recordingfile) => {
+    console.error('Audio error for file:', recordingfile, e);
+    
+    // Log additional information for debugging
+    const audioSrc = `${recordingsBaseUrl}/${getPath(recordingfile)}`;
+    console.log('Attempted to load audio from:', audioSrc);
+    
+    // You could update UI state here to show a user-friendly error message
+  };
 
   // Functions for editing
   const startEdit = (row) => {
@@ -889,7 +904,7 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                                   {call.recordingfile ? (
                                     <audio
                                       controls
-                                      onError={(e) => console.error('Audio error for file:', call.recordingfile, e)}
+                                      onError={(e) => handleAudioError(e, call.recordingfile)}
                                     >
                                       <source
                                         src={`${recordingsBaseUrl}/${getPath(call.recordingfile)}`}
