@@ -303,11 +303,14 @@ class CdrController extends Controller
             
             // Process each record to extract caller information
             $processedRecords = collect($cdrRecords)->map(function($record) {
+                // Ensure calldate includes time part and is in a standard format
+                $formattedCallDate = date('Y-m-d H:i:s', strtotime($record->calldate));
+                
                 return [
                     'cdr_id' => $record->uniqueid,
                     'callerNumber' => $this->extractCallerNumber($record),
                     'receiverNumber' => $record->dst,
-                    'callDate' => $record->calldate,
+                    'callDate' => $formattedCallDate, // Standardized format with time
                     'rawDuration' => $record->duration,
                     'formattedDuration' => $this->formatCallDuration($record->duration),
                     'callStatus' => $record->disposition,

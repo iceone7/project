@@ -814,11 +814,7 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                                 <td>{call.callerName || call.caller_name || 'N/A'}</td>
                                 <td>{call.callerNumber || call.caller_number || 'N/A'}</td>
                                 <td>{call.receiverName || call.receiver_name || 'N/A'}</td>
-                                <td>
-                                  {(call.receiverNumber === 'N/A' || call.receiver_number === 'N/A') ? 
-                                    'N/A' : 
-                                    (call.receiverNumber || call.receiver_number || 'N/A')}
-                                </td>
+                                <td>{call.receiverNumber || call.receiver_number || 'N/A'}</td>
                                 <td>{call.callCount || call.call_count || '0'}</td>
                                 <td>{call.answeredCalls || call.answered_calls || '0'}</td>
                                 <td>{call.noAnswerCalls || call.no_answer_calls || '0'}</td>
