@@ -12,7 +12,7 @@ const translations = {
     cancel: "Cancel",
     delete: "Delete",
 
-    //Company dashboard
+    // Company dashboard
     tenderNumber: "Tender Number",
     buyer: "Buyer",
     contactPerson1: "Contact Person #1",
@@ -32,7 +32,7 @@ const translations = {
     status: "Status",
     editDelete: "Edit / Delete",
 
-    //Caller dashboard
+    // Caller dashboard
     companyName: "Company Name",
     identificationCode: "Identification Code or ID",
     contactPerson3: "Contact Person #3",
@@ -50,20 +50,20 @@ const translations = {
     aNumber: "A Number",
     bNumber: "B Number",
     date: "Date",
-    actions: "Actions", // new translation
-    calls: "Calls", // new translation
-    callRecordings: "Call Recordings", // new translation
+    actions: "Actions",
+    calls: "Calls",
+    callRecordings: "Call Recordings",
     recordingsFound: "Recordings Found",
     noRecordingsFound: "No recordings found for this caller-receiver pair.",
 
-    //Craftsmen dashboard
+    // Craftsmen dashboard
     aNumber: "A Number",
     bNumber: "B Number",
     date: "Date",
     callTime: "Call Time",
     actions: "Actions",
 
-    //Add Company
+    // Add Company
     addCompany: "Add Company",
     main: "Main",
     contacts: "Contacts",
@@ -77,7 +77,7 @@ const translations = {
     save: "Save",
     saving: "Saving...",
 
-    //filter
+    // Filter
     callFilter: "Call Filter",
     companyFilter: "Company Filter",
     callCountMin: "Min. Call Count",
@@ -116,7 +116,7 @@ const translations = {
     downloadCustomFormat: 'Download data with the selected date range in a custom format',
     downloadWithCustomFormat: 'Download With Custom Format',
     callDateRangeExport: 'Call Date Range for Export',
-    
+
     // Download animation
     downloading: 'Downloading your data...',
     downloadComplete: 'Download Complete!',
@@ -125,6 +125,16 @@ const translations = {
     // Date range display
     dateRange: "Date range",
     tableShows: "Table shows",
+
+    // Comment section translations
+    addComment: "Add Comment",
+    addCommentForRecording: "Add a comment about this recording...",
+    saving: "Saving...",
+    previousComments: "Comments",
+    noCommentsYet: "No comments yet",
+    unknownUser: "Unknown User",
+    showComments: "Show Comments",
+    hideComments: "Hide Comments",
   },
   ru: {
     companyDashboard: "Dashboard компании",
@@ -139,7 +149,7 @@ const translations = {
     cancel: "Отмена",
     delete: "Удалить",
 
-    //Company dashboard
+    // Company dashboard
     tenderNumber: "Номер тендера",
     buyer: "Закупщик",
     contactPerson1: "Контактное лицо #1",
@@ -159,7 +169,7 @@ const translations = {
     status: "Статус",
     editDelete: "Редактировать / Удалить",
 
-    //Caller dashboard
+    // Caller dashboard
     companyName: "Название компании",
     identificationCode: "ИНН или ID",
     contactPerson3: "Контактное лицо #3",
@@ -180,14 +190,14 @@ const translations = {
     recordingsFound: "Найденные записи",
     noRecordingsFound: "Записи звонков для этой пары звонящий-получатель не найдены.",
 
-    //Craftsmen dashboard
+    // Craftsmen dashboard
     aNumber: "A Номер",
     bNumber: "B Номер",
     date: "Дата",
     callTime: "Время разговора",
     actions: "Действия",
 
-    //Add Company
+    // Add Company
     addCompany: "Добавить компанию",
     main: "Основное",
     contacts: "Контакты",
@@ -201,7 +211,7 @@ const translations = {
     save: "Сохранить",
     saving: "Сохраняется...",
 
-    //filter
+    // Filter
     callFilter: "Фильтр звонков",
     companyFilter: "Фильтр компании",
     callCountMin: "Мин. количество звонков",
@@ -216,7 +226,7 @@ const translations = {
     contractValueMin: "Мин. сумма контракта",
     contractValueMax: "Макс. сумма контракта",
     totalValueGorgiaMin: "Мин. общая сумма Горгия",
-    totalValueGorgiaMax: "Макс. общая сумма Горгია",
+    totalValueGorgiaMax: "Макс. общая сумма Горгія",
     lastPurchaseDateStart: "Дата начала последней покупки",
     lastPurchaseDateEnd: "Дата окончания последней покупки",
     contractEndDateStart: "Дата начала окончания контракта",
@@ -226,7 +236,7 @@ const translations = {
 
     // Company to Caller Transform
     companyToCallerTransform: "Преобразование компании в вызывающий",
-    uploadGeorgianExcel: "Загрузить грузინский Excel",
+    uploadGeorgianExcel: "Загрузить грузинский Excel",
     transformingData: "Преобразование данных...",
     georgianToCallerMapping: "Грузинский в формат вызывающего",
 
@@ -240,7 +250,7 @@ const translations = {
     downloadCustomFormat: 'Скачать данные с выбранным диапазоном дат в пользовательском формате',
     downloadWithCustomFormat: 'Скачать в пользовательском формате',
     callDateRangeExport: 'Диапазон дат звонков для экспорта',
-    
+
     // Download animation
     downloading: 'Загрузка данных...',
     downloadComplete: 'Загрузка завершена!',
@@ -248,22 +258,22 @@ const translations = {
 
     // Date range display
     dateRange: "Диапазон дат",
-    tableShows: "В таблице показано",
+    tableShows: "Таблица показывает",
   },
   ka: {
-    companyDashboard: "კომპანიის დაფა",
-    callerDashboard: "დამრეკის დაფა",
-    adminDashboard: "ადმინის დაფა",
-    vipDepartment: "VIP დეპარტამენტი",
-    workerDepartment: "ხელოსნების დეპარტამენტი",
-    logout: "გასვლა",
-    reload: "გვერდის განახლება",
+    companyDashboard: "კომპანიის Dashboard",
+    callerDashboard: "დამრეკავის Dashboard",
+    adminDashboard: "ადმინის Dashboard",
+    vipDepartment: "VIP განყოფილება",
+    workerDepartment: "მუშაკთა განყოფილება",
+    logout: "გამოსვლა",
+    reload: "გვერდის გადატვირთვა",
     confirmDeletion: "წაშლის დადასტურება",
     areYouSureDelete: "დარწმუნებული ხართ, რომ გსურთ კომპანიის წაშლა?",
     cancel: "გაუქმება",
     delete: "წაშლა",
 
-    //Company dashboard
+    // Company dashboard
     tenderNumber: "ტენდერის N",
     buyer: "შემსყიდველი",
     contactPerson1: "საკ. პირი #1",
@@ -283,7 +293,7 @@ const translations = {
     status: "სტატუსი",
     editDelete: "რედაქტირება / წაშლა",
 
-    //Caller dashboard
+    // Caller dashboard
     companyName: "კომპანიის სახელი",
     identificationCode: "საიდენტიფიკაციო კოდი ან ID",
     contactPerson3: "საკ. პირი #3",
@@ -304,14 +314,14 @@ const translations = {
     recordingsFound: "ნაპოვნი ჩანაწერები",
     noRecordingsFound: "ამ დამრეკავ-მიმღები წყვილისთვის ჩანაწერები არ მოიძებნა.",
 
-    //Craftsmen dashboard
+    // Craftsmen dashboard
     aNumber: "A ნომერი",
     bNumber: "B ნომერი",
     date: "თარიღი",
     callTime: "საუბრის დრო",
     actions: "ქმედებები",
 
-    //Add Company
+    // Add Company
     addCompany: "კომპანიის დამატება",
     main: "ძირითადი",
     contacts: "საკონტაქტო",
@@ -325,7 +335,7 @@ const translations = {
     save: "შენახვა",
     saving: "შენახვა...",
 
-    //filter
+    // Filter
     callFilter: "ზარების ფილტრი",
     companyFilter: "კომპანიის ფილტრი",
     callCountMin: "ზარების მინ. რაოდენობა",
@@ -364,7 +374,7 @@ const translations = {
     downloadCustomFormat: 'ჩამოტვირთეთ მონაცემები არჩეული თარიღების დიაპაზონით მორგებული ფორმატით',
     downloadWithCustomFormat: 'ჩამოტვირთვა მორგებული ფორმატით',
     callDateRangeExport: 'ზარის თარიღის დიაპაზონი ექსპორტისთვის',
-    
+
     // Download animation
     downloading: 'მონაცემების ჩამოტვირთვა...',
     downloadComplete: 'ჩამოტვირთვა დასრულდა!',

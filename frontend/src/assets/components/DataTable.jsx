@@ -795,6 +795,92 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
     return normalizePhoneForMatching(cdrRecord.src || '');
   };
 
+  // Add these new state variables inside the DataTable component
+  const [recordingComments, setRecordingComments] = useState({});
+  const [activeCommentPanel, setActiveCommentPanel] = useState(null);
+  const [recordingComment, setRecordingComment] = useState('');
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+
+  // Add these new functions inside the DataTable component before the return statement
+
+  // Toggle comment panel for a recording
+  const toggleCommentPanel = (recordingId) => {
+    if (activeCommentPanel === recordingId) {
+      setActiveCommentPanel(null);
+    } else {
+      setActiveCommentPanel(recordingId);
+      fetchRecordingComments(recordingId);
+    }
+  };
+
+  // Fetch comments for a recording
+  const fetchRecordingComments = async (recordingId) => {
+    try {
+      setIsLoading(true);
+      
+      console.log(`Fetching comments for recording: ${recordingId}`);
+      const response = await defaultInstance.get(`/recording-comments/${recordingId}`);
+      
+      if (Array.isArray(response.data)) {
+        console.log(`Found ${response.data.length} comments for recording ${recordingId}`);
+        setRecordingComments(prev => ({
+          ...prev,
+          [recordingId]: response.data
+        }));
+      } else {
+        console.error('Invalid comments response format:', response.data);
+        setRecordingComments(prev => ({
+          ...prev,
+          [recordingId]: []
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching recording comments:', error);
+      setRecordingComments(prev => ({
+        ...prev,
+        [recordingId]: []
+      }));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Save a comment for a recording
+  const saveRecordingComment = async (recordingId) => {
+    if (!recordingComment.trim()) {
+      alert('Comment cannot be empty');
+      return;
+    }
+    
+    try {
+      setIsSubmittingComment(true);
+      
+      const response = await defaultInstance.post('/recording-comments', {
+        recording_id: recordingId,
+        comment: recordingComment
+      });
+      
+      console.log('Comment saved successfully:', response.data);
+      
+      // Add new comment to the list (prepend to beginning)
+      setRecordingComments(prev => {
+        const currentComments = prev[recordingId] || [];
+        return {
+          ...prev,
+          [recordingId]: [response.data, ...currentComments]
+        };
+      });
+      
+      // Clear the comment input
+      setRecordingComment('');
+    } catch (error) {
+      console.error('Error saving recording comment:', error);
+      alert(`Failed to save comment: ${error?.response?.data?.error || error.message}`);
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
+
   return (
     <>
       {isDepartamentVip && activeDashboard === 'company' && (
@@ -1215,6 +1301,77 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                           </audio>
                         </div>
                       )}
+                      
+                      {/* Add comment section */}
+                      <div className={modalStyles.commentSection}>
+                        <button 
+                          className={`${modalStyles.commentToggle} ${
+                            activeCommentPanel === recording.recordingfile ? modalStyles.commentToggleActive : ''
+                          }`}
+                          onClick={() => toggleCommentPanel(recording.recordingfile)}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                            <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+                          </svg>
+                          {activeCommentPanel === recording.recordingfile ? 'Hide Comments' : 'Show Comments'}
+                        </button>
+                        
+                        <div 
+                          className={`${modalStyles.commentPanel} ${
+                            activeCommentPanel === recording.recordingfile ? modalStyles.commentPanelOpen : ''
+                          }`}
+                        >
+                          <textarea
+                            className={modalStyles.commentTextarea}
+                            value={recordingComment}
+                            onChange={(e) => setRecordingComment(e.target.value)}
+                            placeholder={t('addCommentForRecording')}
+                            disabled={isSubmittingComment}
+                          />
+                          
+                          <div className={modalStyles.commentActionRow}>
+                            <button
+                              className={modalStyles.saveCommentButton}
+                              onClick={() => saveRecordingComment(recording.recordingfile)}
+                              disabled={!recordingComment.trim() || isSubmittingComment}
+                            >
+                              {isSubmittingComment ? (
+                                <>
+                                  <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                  {t('saving')}
+                                </>
+                              ) : t('addComment')}
+                            </button>
+                          </div>
+                          
+                          {recordingComments[recording.recordingfile]?.length > 0 && (
+                            <div className={modalStyles.commentsListHeader}>
+                              {t('previousComments')} ({recordingComments[recording.recordingfile]?.length})
+                            </div>
+                          )}
+                          
+                          <div className={modalStyles.commentsList}>
+                            {recordingComments[recording.recordingfile]?.length > 0 ? (
+                              recordingComments[recording.recordingfile].map((comment, idx) => (
+                                <div key={idx} className={modalStyles.commentItem}>
+                                  <p className={modalStyles.commentAuthor}>
+                                    <span className={modalStyles.commentAuthorName}>
+                                      {comment.user?.name || t('unknownUser')}
+                                    </span>
+                                    <span className={modalStyles.commentDate}>
+                                      {new Date(comment.created_at).toLocaleString()}
+                                    </span>
+                                  </p>
+                                  <p className={modalStyles.commentText}>{comment.comment}</p>
+                                </div>
+                              ))
+                            ) : (
+                              <p className={modalStyles.noComments}>{t('noCommentsYet')}</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>

@@ -116,3 +116,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/comments/{cdrId}', [App\Http\Controllers\CommentsController::class, 'index']);
     Route::post('/comments', [App\Http\Controllers\CommentsController::class, 'store']);
 });
+
+// Recording Comments routes
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/recording-comments/{recordingId}', [App\Http\Controllers\RecordingCommentController::class, 'index']);
+    Route::post('/recording-comments', [App\Http\Controllers\RecordingCommentController::class, 'store']);
+});
