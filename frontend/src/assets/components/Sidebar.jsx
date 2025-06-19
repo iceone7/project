@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import logo from '../images/logo.png';
 import styles from '../css/Logout.module.css';
 import sidebarStyles from '../css/Sidebar.module.css';
@@ -12,6 +12,29 @@ const Sidebar = () => {
   const [vipOpen, setVipOpen] = useState(false);
   const [workerOpen, setWorkerOpen] = useState(false);
   const { language, setLanguage, t } = useLanguage();
+  const [activeDashboard, setActiveDashboard] = useState(null);
+  const [activeDepartment, setActiveDepartment] = useState(null);
+
+  // Load active dashboard from localStorage on initial render
+  useEffect(() => {
+    const storedDashboard = localStorage.getItem('activeDashboard');
+    const storedDepartment = localStorage.getItem('department_id');
+    
+    if (storedDashboard) {
+      setActiveDashboard(storedDashboard);
+    }
+    
+    if (storedDepartment) {
+      setActiveDepartment(storedDepartment);
+    }
+    
+    // Set initial dropdown state based on active department
+    if (storedDepartment === '1') {
+      setVipOpen(true);
+    } else if (storedDepartment === '2') {
+      setWorkerOpen(true);
+    }
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -75,14 +98,39 @@ const Sidebar = () => {
   };
 
   // Enhanced styles for dropdown items
-  const dropdownItemStyle = {
+  const dropdownItemStyle = (isActive) => ({
     borderRadius: '8px',
     transition: 'all 0.3s ease',
     margin: '8px 0',
     padding: '12px 15px',
-    backgroundColor: '#f0f0f8',
-    border: '#f0f0f8',
+    backgroundColor: isActive ? '#0173b1' : '#f0f0f8',
+    border: isActive ? '#0173b1' : '#f0f0f8',
+    color: isActive ? '#fff' : 'inherit',
     cursor: 'pointer'
+  });
+
+  const isActiveItem = (dashboardType, departmentId) => {
+    return activeDashboard === dashboardType && 
+           (departmentId ? activeDepartment === departmentId : true);
+  };
+
+  const handleDashboardClick = (dashboardType, departmentId) => {
+    // Store active dashboard type and department in localStorage
+    localStorage.setItem('activeDashboard', dashboardType);
+    setActiveDashboard(dashboardType);
+    
+    // Set department_id if provided
+    if (departmentId) {
+      localStorage.setItem('department_id', departmentId);
+      setActiveDepartment(departmentId);
+    } else {
+      // Clear department if not specified
+      localStorage.removeItem('department_id');
+      setActiveDepartment(null);
+    }
+    
+    // Use React Router's navigate instead of window.location.href to prevent page reload
+    navigate(`/${dashboardType}`);
   };
 
   return (
@@ -140,7 +188,10 @@ const Sidebar = () => {
                   <NavLink
                     to="/company-dashboard"
                     className={({ isActive }) => `fade-in nav-link ${isActive ? 'my-active' : ''}`}
-                    onClick={handleMobileLinkClick}
+                    onClick={() => {
+                      handleMobileLinkClick();
+                      handleDashboardClick('company-dashboard');
+                    }}
                   >
                     <i className="fa fa-fw fa-user-circle"></i>{t('companyDashboard')}
                   </NavLink>
@@ -151,7 +202,11 @@ const Sidebar = () => {
                   <NavLink
                     to="/caller-dashboard"
                     className={({ isActive }) => `fade-in nav-link ${isActive ? 'my-active' : ''}`}
-                    onClick={handleMobileLinkClick}
+                    onClick={() => {
+                      handleMobileLinkClick();
+                      setActiveDashboard('caller-dashboard');
+                      localStorage.setItem('activeDashboard', 'caller-dashboard');
+                    }}
                   >
                     <i className="fa fa-fw fa-user-circle"></i>{t('callerDashboard')}
                   </NavLink>
@@ -184,25 +239,25 @@ const Sidebar = () => {
                   >
                     <ul className={sidebarStyles.dropdownList}>
                       <li
-                        className={sidebarStyles.dropdownItem}
-                        style={dropdownItemStyle}
-                        onClick={() => {
-                          localStorage.setItem('department_id', '1');
-                          window.location.href = '/company-dashboard';
+                        className={`${sidebarStyles.dropdownItem} ${isActiveItem('company-dashboard', '1') ? sidebarStyles.dropdownItemActive : ''}`}
+                        style={dropdownItemStyle(isActiveItem('company-dashboard', '1'))}
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent dropdown from closing
+                          handleDashboardClick('company-dashboard', '1');
                         }}
                       >
-                        <i className="fa fa-fw fa-building" style={{ color: '#0173b1', marginRight: '10px' }}></i>
+                        <i className="fa fa-fw fa-building" style={{ color: isActiveItem('company-dashboard', '1') ? '#fff' : '#017cbf', marginRight: '10px' }}></i>
                         <span style={{ fontWeight: '500' }}>{t('companyDashboard')}</span>
                       </li>
                       <li
-                        className={sidebarStyles.dropdownItem}
-                        style={dropdownItemStyle}
-                        onClick={() => {
-                          localStorage.setItem('department_id', '1');
-                          window.location.href = '/caller-dashboard';
+                        className={`${sidebarStyles.dropdownItem} ${isActiveItem('caller-dashboard', '1') ? sidebarStyles.dropdownItemActive : ''}`}
+                        style={dropdownItemStyle(isActiveItem('caller-dashboard', '1'))}
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent dropdown from closing
+                          handleDashboardClick('caller-dashboard', '1');
                         }}
                       >
-                        <i className="fa fa-fw fa-phone" style={{ color: '#0173b1', marginRight: '10px' }}></i>
+                        <i className="fa fa-fw fa-phone" style={{ color: isActiveItem('caller-dashboard', '1') ? '#fff' : '#017cbf', marginRight: '10px' }}></i>
                         <span style={{ fontWeight: '500' }}>{t('callerDashboard')}</span>
                       </li>
                     </ul>
@@ -236,14 +291,14 @@ const Sidebar = () => {
                   >
                     <ul className={sidebarStyles.dropdownList}>
                       <li
-                        className={sidebarStyles.dropdownItem}
-                        style={dropdownItemStyle}
-                        onClick={() => {
-                          localStorage.setItem('department_id', '2');
-                          window.location.href = '/company-dashboard';
+                        className={`${sidebarStyles.dropdownItem} ${isActiveItem('company-dashboard', '2') ? sidebarStyles.dropdownItemActive : ''}`}
+                        style={dropdownItemStyle(isActiveItem('company-dashboard', '2'))}
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent dropdown from closing
+                          handleDashboardClick('company-dashboard', '2');
                         }}
                       >
-                        <i className="fa fa-fw fa-building" style={{ color: '#0173b1', marginRight: '10px' }}></i>
+                        <i className="fa fa-fw fa-building" style={{ color: isActiveItem('company-dashboard', '2') ? '#fff' : '#0173b1', marginRight: '10px' }}></i>
                         <span style={{ fontWeight: '500' }}>{t('companyDashboard')}</span>
                       </li>
                     </ul>
@@ -255,7 +310,10 @@ const Sidebar = () => {
                   <NavLink
                     to="/admin-dahsboard"
                     className={({ isActive }) => `fade-in nav-link ${isActive ? 'my-active' : ''}`}
-                    onClick={handleMobileLinkClick}
+                    onClick={() => {
+                      handleMobileLinkClick();
+                      handleDashboardClick('admin-dashboard');
+                    }}
                   >
                     <i className="fa fa-fw fa-user-circle"></i>{t('adminDashboard')}
                   </NavLink>
