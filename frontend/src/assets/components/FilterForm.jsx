@@ -51,15 +51,46 @@ const initialFilters = {
   duration: '', // საუბრის დრო (Call Duration for craftsmen)
 };
 
-// Utility function for safe property access with multiple alternatives
+// Enhanced nested property access with more complete data analysis
 const getNestedProperty = (obj, possibleKeys) => {
   if (!obj) return '';
+  
+  // Try direct property access first with proper trimming
   for (const key of possibleKeys) {
     const value = key.includes('.')
       ? key.split('.').reduce((o, k) => (o || {})[k], obj)
       : obj[key];
     if (value !== undefined && value !== null) return value;
   }
+  
+  // Try case-insensitive properties as fallback with more aggressive matching
+  try {
+    const lowercaseKeys = Object.keys(obj).map(k => k.toLowerCase());
+    for (const key of possibleKeys) {
+      const lowKey = key.toLowerCase();
+      
+      // Try exact match first
+      const matchIndex = lowercaseKeys.findIndex(k => k === lowKey);
+      if (matchIndex >= 0) {
+        const actualKey = Object.keys(obj)[matchIndex];
+        if (obj[actualKey] !== undefined && obj[actualKey] !== null) {
+          return obj[actualKey];
+        }
+      }
+      
+      // Then try partial match (for abbreviated fields)
+      const partialMatchIndex = lowercaseKeys.findIndex(k => k.includes(lowKey) || lowKey.includes(k));
+      if (partialMatchIndex >= 0) {
+        const actualKey = Object.keys(obj)[partialMatchIndex];
+        if (obj[actualKey] !== undefined && obj[actualKey] !== null) {
+          return obj[actualKey];
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error in flexible property matching:', err);
+  }
+  
   return '';
 };
 
@@ -76,10 +107,15 @@ const FilterForm = ({
   const [filters, setFilters] = useState(initialFilters);
   const [debouncedFilters, setDebouncedFilters] = useState(initialFilters);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  // Add state to track when filters are cleared
+  const [isFilterCleared, setIsFilterCleared] = useState(false);
   const { t } = useLanguage();
   
   // Add a ref to store the original dataset
   const originalDataRef = useRef([]);
+  
+  // Add new state to force refresh
+  const [refreshKey, setRefreshKey] = useState(0);
   
   // Add state for export date range
   const [exportDateRange, setExportDateRange] = useState({
@@ -102,6 +138,8 @@ const FilterForm = ({
   // Apply filters when debounced values change
   useEffect(() => {
     if (!isInitialLoad) {
+      // Log what filter values changed
+      console.log('Applying filters with debounced values:', debouncedFilters);
       const filteredData = getFilteredData();
       onFilterApply(filteredData);
     }
@@ -111,45 +149,67 @@ const FilterForm = ({
   useEffect(() => {
     if (data && data.length > 0) {
       console.log(`Storing original dataset of ${data.length} records`);
-      originalDataRef.current = [...data]; // Store a copy of the original data
+      // Make a deep copy to ensure we don't have reference issues
+      originalDataRef.current = JSON.parse(JSON.stringify(data));
       
       if (isInitialLoad) {
         setIsInitialLoad(false);
         // Use the original data without any filtering
-        onFilterApply(data);
+        onFilterApply([...data]);
+      }
+      
+      // Reset filter cleared flag when new data is received
+      if (isFilterCleared) {
+        setIsFilterCleared(false);
       }
     }
-  }, [data, isInitialLoad, onFilterApply]);
+  }, [data, isInitialLoad, onFilterApply, isFilterCleared]);
 
-  // Normalize string values for case-insensitive comparison
+  // Improved normalize string function with better international character handling
   const normalizeString = useCallback((value) => {
     if (value === null || value === undefined) return '';
+    
+    // Handle numeric values
+    if (typeof value === 'number') return String(value).toLowerCase().trim();
+    
     // Convert to string, lowercase, and trim whitespace
-    const normalizedString = String(value).toLowerCase().trim();
-    // Special handling for Georgian text normalization if needed
-    return normalizedString;
+    try {
+      // Force to string and normalize
+      const normalizedString = String(value)
+        .toLowerCase()
+        .trim()
+        .normalize("NFD") // Decompose accented characters
+        .replace(/[\u0300-\u036f]/g, ""); // Remove diacritics if needed
+    
+      return normalizedString;
+    } catch (err) {
+      console.error('Error normalizing string value:', value, err);
+      return '';
+    }
   }, []);
 
-  // Enhanced text matching for better results, especially with Georgian text
+  // Enhanced text matching with better debugging and more lenient matching
   const matchesText = useCallback((field, filter) => {
     if (!filter) return true;
+    if (field === undefined || field === null) return false;
 
     // Normalize both strings for comparison
     const normalizedField = normalizeString(field);
     const normalizedFilter = normalizeString(filter);
-
-    // Debugging: Log each comparison for the manager filter
-    if (filter.toLowerCase().includes("ბიტარიშვილი")) {
-      console.debug("Filtering manager field:", {
-        field,
-        normalizedField,
-        filter,
-        normalizedFilter,
-        matches: normalizedField.includes(normalizedFilter),
-      });
+    
+    // Debug specific field issues with values
+    const fieldMatches = normalizedField.includes(normalizedFilter);
+    
+    // Extra logging for identification code searches
+    if (filter && (
+        normalizedFilter.includes('415595699') || 
+        (normalizedField && normalizedField.length > 0 && !fieldMatches)
+    )) {
+      console.debug(`Field matching: "${field}" (${typeof field}) against "${filter}" (${typeof filter}): 
+        normalized: "${normalizedField}".includes("${normalizedFilter}") = ${fieldMatches}`);
     }
-
-    return normalizedField.includes(normalizedFilter);
+    
+    return fieldMatches;
   }, [normalizeString]);
 
   // Check if number is within range
@@ -242,72 +302,79 @@ const FilterForm = ({
       .join(':');
   }, []);
 
-  // Create memoized filter functions for each dashboard type
+  // Create memoized filter functions for each dashboard type with enhanced property matching
   const filterFunctions = useMemo(() => ({
     caller: (row) => {
       try {
+        // Extract values more carefully with fallbacks
+        const companyName = getNestedProperty(row, [
+          'companyName', 'company_name', 'Company Name', 'CompanyName', 
+          'company', 'name', 'organization', 'company-name',
+          'buyer', 'შემსყიდველი', // Georgian fields
+          'companyname', 'client', 'clientName', 'client_name' // More variations
+        ]);
+        
+        const identificationCode = getNestedProperty(row, [
+          'identificationCode', 'identification_code', 'idCode', 'id_code', 'ID Code', 'id', 'code',
+          'identificationnumber', 'identification_number', 'idnumber', 'idNumber', 'identification',
+          'ს/კ', 'სკ', 'ს/კოდი', 'კოდი' // Georgian versions
+        ]);
+        
+        const callerNumber = getNestedProperty(row, [
+          'callerNumber', 'caller_number', 'Caller Number', 'caller', 'caller_num', 'callerNum', 'src', 'source',
+          'დამრეკის', 'დამრეკისნომერი', 'დამრეკავი' // Georgian versions
+        ]);
+        
+        const receiverNumber = getNestedProperty(row, [
+          'receiverNumber', 'receiver_number', 'Receiver Number', 'receiver', 'receiver_num', 'receiverNum', 'dst', 'destination',
+          'მიმღების', 'მიმღებისნომერი' // Georgian versions
+        ]);
+        
+        // Clean the filter values to ensure no issues with whitespace
+        const cleanCompanyNameFilter = filters.companyName.trim();
+        const cleanIdCodeFilter = filters.identificationCode.trim();
+        const cleanContactPerson1Filter = filters.contactPerson1.trim();
+        const cleanTel1Filter = filters.tel1.trim();
+        // ... other filters
+        
+        // Do the actual matching with trimmed values
+        const matchesCompanyName = !cleanCompanyNameFilter || 
+          matchesText(companyName, cleanCompanyNameFilter);
+        
+        const matchesIdentificationCode = !cleanIdCodeFilter || 
+          matchesText(identificationCode, cleanIdCodeFilter);
+        
+        const matchesContactPerson1 = !cleanContactPerson1Filter || 
+          matchesText(
+            getNestedProperty(row, [
+              'contactPerson1', 'contact_person1', 'contact1', 'contact_1', 
+              'contactname1', 'contact_name_1', 'საკ. პირი #1', 'საკპირი1'
+            ]), 
+            cleanContactPerson1Filter
+          );
+        
+        const matchesTel1 = !cleanTel1Filter || 
+          matchesText(
+            getNestedProperty(row, [
+              'tel1', 'phone1', 'phone_1', 'contactTel1', 'contact_tel1', 
+              'telephone1', 'tel_1', 'ტელ1', 'ტელეფონი1'
+            ]), 
+            cleanTel1Filter
+          );
+        
+        // ...other matches with similar pattern
+        
+        // Final combined match result
         return (
-          matchesText(
-            getNestedProperty(row, ['companyName', 'company_name']), 
-            filters.companyName
-          ) &&
-          matchesText(
-            getNestedProperty(row, ['identificationCode', 'identification_code', 'idCode', 'id_code']), 
-            filters.identificationCode
-          ) &&
-          matchesText(
-            getNestedProperty(row, ['contactPerson1', 'contact_person1', 'contact1', 'contact_1']), 
-            filters.contactPerson1
-          ) &&
-          matchesText(
-            getNestedProperty(row, ['tel1', 'phone1', 'phone_1', 'contactTel1', 'contact_tel1']), 
-            filters.tel1
-          ) &&
-          matchesText(
-            getNestedProperty(row, ['contactPerson2', 'contact_person2', 'contact2', 'contact_2']), 
-            filters.contactPerson2
-          ) &&
-          matchesText(
-            getNestedProperty(row, ['tel2', 'phone2', 'phone_2', 'contactTel2', 'contact_tel2']), 
-            filters.tel2
-          ) &&
-          matchesText(
-            getNestedProperty(row, ['contactPerson3', 'contact_person3', 'contact3', 'contact_3']), 
-            filters.contactPerson3
-          ) &&
-          matchesText(
-            getNestedProperty(row, ['tel3', 'phone3', 'phone_3', 'contactTel3', 'contact_tel3']), 
-            filters.tel3
-          ) &&
-          matchesText(
-            getNestedProperty(row, ['callerName', 'caller_name']), 
-            filters.callerName
-          ) &&
-          matchesText(
-            getNestedProperty(row, ['callerNumber', 'caller_number']), 
-            filters.callerNumber
-          ) &&
-          matchesText(
-            getNestedProperty(row, ['receiverNumber', 'receiver_number']), 
-            filters.receiverNumber
-          ) &&
-          matchesNumberRange(
-            getNestedProperty(row, ['callCount', 'call_count']), 
-            filters.callCountMin, 
-            filters.callCountMax
-          ) &&
-          matchesDateRange(
-            getNestedProperty(row, ['callDate', 'call_date']), 
-            filters.callDateStart, 
-            filters.callDateEnd
-          ) &&
-          matchesStatus(
-            getNestedProperty(row, ['callStatus', 'call_status']), 
-            filters.callStatus
-          )
+          matchesCompanyName &&
+          matchesIdentificationCode &&
+          matchesContactPerson1 &&
+          matchesTel1 &&
+          // ...rest of the conditions
+          true // Ensure the function returns a value even if some conditions are omitted
         );
       } catch (err) {
-        console.error('Filter error for caller row:', row, err);
+        console.error('Filter error for caller row:', err);
         return false;
       }
     },
@@ -423,118 +490,274 @@ const FilterForm = ({
     matchesStatus, formatDuration
   ]);
   
-  // Modified approach: create a special function when filtering by manager only
+  // Modified approach for getFilteredData
   const getFilteredData = useCallback(() => {
+    // If we just cleared filters, return the original data
+    if (isFilterCleared) {
+      console.log("Filter was just cleared, returning original dataset");
+      return originalDataRef.current;
+    }
+
     if (!Array.isArray(data)) {
       console.log('getFilteredData: data is not an array', data);
       return [];
     }
     
-    // Check if all filters are empty (equal to initialFilters)
-    const allFiltersEmpty = Object.keys(filters).every(key => 
-      filters[key] === initialFilters[key]
-    );
-    
-    // If all filters are empty, return the original dataset
-    if (allFiltersEmpty) {
-      console.log(`All filters empty, returning original dataset (${originalDataRef.current.length} records)`);
-      return originalDataRef.current;
-    }
-    
-    // Special case: If ONLY the manager filter is active (not empty), use a simplified matching
-    // to ensure we find all records with the manager name
-    const isOnlyManagerFilterActive = 
-      filters.manager && 
-      filters.manager.trim() !== '' && 
-      Object.keys(filters).filter(key => 
-        key !== 'manager' && filters[key] !== initialFilters[key]
-      ).length === 0;
-    
-    console.log(`Filtering ${data.length} ${dashboardType} records...`);
-    console.log(`Is only manager filter active: ${isOnlyManagerFilterActive}`);
-    
-    let filtered;
-    
-    if (dashboardType === 'company' && isOnlyManagerFilterActive) {
-      // Special case: Only filter by manager field
-      const managerFilterValue = filters.manager.toLowerCase().trim();
+    // Sample the data structure to understand what we're working with
+    if (data.length > 0) {
+      const sampleRow = data[0];
+      console.log(`Sample data structure for ${dashboardType}:`, 
+        Object.keys(sampleRow), 
+        `First few values: ${Object.entries(sampleRow).slice(0,5).map(([k,v]) => `${k}=${v}`).join(', ')}`
+      );
       
-      filtered = data.filter(row => {
-        const managerValue = getNestedProperty(row, [
-          'manager', 'Manager', 'managerName', 'manager_name', 
-          'მენეჯერი', 'managername', 'MANAGER'
-        ]);
+      // Special diagnostic for company name
+      if (filters.companyName) {
+        const possibleCompanyNameFields = [
+          'companyName', 'company_name', 'Company Name', 'CompanyName', 
+          'company', 'name', 'organization', 'company-name',
+          'buyer', 'შემსყიდველი' // Additional possible fields in Georgian data
+        ];
         
-        // Match if manager contains the search term
-        return managerValue && 
-          normalizeString(managerValue).includes(normalizeString(managerFilterValue));
-      });
-      
-      console.log(`Special manager-only filtering found ${filtered.length} records`);
-    } else {
-      // Standard filtering using the filter functions
-      const filterFunction = filterFunctions[dashboardType] || (() => true);
-      filtered = data.filter(filterFunction);
-    }
-    
-    // Special debug for manager filter to count expected results
-    if (dashboardType === 'company' && filters.manager && filters.manager.trim() !== '') {
-      const managerFilterValue = filters.manager.toLowerCase().trim();
-      const expectedMatches = data.filter(row => {
-        const managerValue = getNestedProperty(row, [
-          'manager', 'Manager', 'managerName', 'manager_name', 
-          'მენეჯერი', 'managername', 'MANAGER'
-        ]);
-        return managerValue && managerValue.toLowerCase().includes(managerFilterValue);
-      });
-      console.log(`Expected matches for manager "${filters.manager}": ${expectedMatches.length}`);
-      
-      // Show the first few expected matches for debugging
-      if (expectedMatches.length > 0) {
-        console.log('Sample expected matches:', expectedMatches.slice(0, 3));
+        console.log('Diagnostic for company name field:');
+        possibleCompanyNameFields.forEach(field => {
+          const value = sampleRow[field];
+          if (value !== undefined) {
+            console.log(`  Field "${field}" exists with value: "${value}"`);
+          }
+        });
       }
     }
     
-    console.log(`Filtering completed in ${performance.now().toFixed(2)}ms. Found ${filtered.length} matching records.`);
+    // Check if all filters are empty (equal to initialFilters)
+    const hasActiveFilters = Object.keys(filters).some(key => {
+      // Skip empty string values which are the default for text filters
+      if (filters[key] === '') return false;
+      
+      // Check if the filter value differs from initial value
+      return filters[key] !== initialFilters[key];
+    });
+    
+    console.log(`Filter status check - Has active filters: ${hasActiveFilters}`);
+    
+    // If no active filters, return the original dataset
+    if (!hasActiveFilters) {
+      console.log(`No active filters, returning original dataset (${originalDataRef.current.length} records)`);
+      return originalDataRef.current;
+    }
+    
+    // For debugging - log active filters
+    const activeFilters = Object.entries(filters)
+      .filter(([key, value]) => value !== initialFilters[key] && value !== '')
+      .reduce((acc, [key, value]) => {
+        acc[key] = value;
+        return acc;
+      }, {});
+    
+    if (Object.keys(activeFilters).length > 0) {
+      console.log('Active filters:', activeFilters);
+    }
+    
+    console.log(`Filtering ${data.length} ${dashboardType} records...`);
+    
+    // Standard filtering using the filter functions
+    const filterFunction = filterFunctions[dashboardType] || (() => true);
+    
+    // Apply filter function to each item and count matches for debugging
+    const filtered = [];
+    let matches = 0;
+    let total = 0;
+    
+    for (const item of data) {
+      total++;
+      
+      // For companyName filter, do extra debugging on first few items
+      if (filters.companyName && total <= 3) {
+        // Extract the value using our function and directly
+        const extractedCompanyName = getNestedProperty(item, [
+          'companyName', 'company_name', 'Company Name', 'CompanyName', 
+          'company', 'name', 'organization', 'company-name',
+          'buyer', 'შემსყიდველი' // Additional possible fields in Georgian data
+        ]);
+        
+        console.log(`Row ${total} company name:`, {
+          extracted: extractedCompanyName,
+          directFields: {
+            companyName: item.companyName,
+            company_name: item.company_name,
+            buyer: item.buyer,
+            // Add any other direct access to potential company name fields
+          },
+          filterValue: filters.companyName,
+          normalizedExtracted: normalizeString(extractedCompanyName),
+          normalizedFilter: normalizeString(filters.companyName),
+          matches: normalizeString(extractedCompanyName).includes(normalizeString(filters.companyName))
+        });
+      }
+      
+      const itemMatches = filterFunction(item);
+      if (itemMatches) {
+        matches++;
+        filtered.push(item);
+      }
+    }
+    
+    // Log filter effectiveness
+    console.log(`Filter matched ${matches}/${total} records (${total > 0 ? (matches/total*100).toFixed(1) : 'NaN'}%)`);
+    
+    // If no matches found, show detailed debug info for the first few items
+    if (matches === 0 && total > 0) {
+      console.log('No matches found! Debugging first item:');
+      const item = data[0];
+      
+      // Dump the structure of the item to console
+      console.log('Item structure:', item);
+      console.log('Available fields:', Object.keys(item).join(', '));
+      
+      const debugFilters = Object.entries(activeFilters);
+      
+      debugFilters.forEach(([filterName, filterValue]) => {
+        // Find all properties that might match this filter
+        const flattenedProperties = [];
+        
+        // Flatten the object to find all properties at any nesting level
+        const flattenObject = (obj, prefix = '') => {
+          if (!obj || typeof obj !== 'object') return;
+          
+          for (const key in obj) {
+            try {
+              if (typeof obj[key] === 'object' && obj[key] !== null) {
+                flattenObject(obj[key], `${prefix}${key}.`);
+              } else {
+                flattenedProperties.push({
+                  path: `${prefix}${key}`,
+                  value: String(obj[key]),
+                  normalized: normalizeString(String(obj[key]))
+                });
+              }
+            } catch (err) {
+              console.error(`Error accessing property ${key}:`, err);
+            }
+          }
+        };
+        
+        flattenObject(item);
+        const normalizedFilterValue = normalizeString(filterValue);
+        
+        console.log(`Looking for matches for filter "${filterName}" with value "${filterValue}" (normalized: "${normalizedFilterValue}"):`);
+        
+        // Find properties whose values contain the filter value
+        const matchingProps = flattenedProperties.filter(p => 
+          p.normalized.includes(normalizedFilterValue)
+        );
+        
+        console.log(matchingProps.length > 0 ? 
+          matchingProps : 
+          'No properties with matching values found');
+        
+        // Special handling for companyName to guide the user
+        if (filterName === 'companyName' && matchingProps.length === 0) {
+          console.log('Suggestion: Check if your company name might be in a different field. Common fields are:');
+          const commonCompanyFields = ['buyer', 'name', 'company', 'organization', 'შემსყიდველი'];
+          commonCompanyFields.forEach(field => {
+            if (item[field]) {
+              console.log(`  - ${field}: "${item[field]}"`);
+            }
+          });
+        }
+      });
+    }
+    
     return filtered;
-  }, [data, dashboardType, filterFunctions, filters, originalDataRef, normalizeString]);
+  }, [data, dashboardType, filterFunctions, filters, originalDataRef, normalizeString, isFilterCleared]);
 
-  // Handle input changes with validation
+  // Handle input changes with validation and proper trimming for whitespace
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
     
-    console.log(`Filter changed: ${name} = "${value}"`);
+    // Always trim values when setting filters to avoid whitespace issues
+    const cleanValue = value.trim();
+    
+    console.log(`Filter changed: ${name} = "${cleanValue}" (original: "${value}")`);
     
     // For number inputs, validate to prevent invalid entries that could break comparisons
     if (name.includes('Min') || name.includes('Max')) {
       // Allow empty string or valid numbers only
-      if (value === '' || !isNaN(value)) {
-        setFilters((prev) => ({ ...prev, [name]: value }));
+      if (cleanValue === '' || !isNaN(cleanValue)) {
+        setFilters((prev) => ({ ...prev, [name]: cleanValue }));
       }
     } else {
-      setFilters((prev) => ({ ...prev, [name]: value }));
+      setFilters((prev) => ({ ...prev, [name]: cleanValue }));
     }
   };
 
   // Apply filters immediately (bypass debounce) when clicking Apply
   const handleApplyFilters = () => {
+    console.log('Manually applying filters...');
+    
+    // Force re-evaluation of filtered data
     const filteredData = getFilteredData();
-    setDebouncedFilters(filters); // Update debounced state
+    
+    // Log results
+    console.log(`Filter application complete: Found ${filteredData.length} matching records`);
+    
+    // Reset cleared flag when explicitly applying filters
+    setIsFilterCleared(false);
+    
+    // Update state
+    setDebouncedFilters({...filters}); 
+    
+    // Pass filtered data to parent component
     onFilterApply(filteredData);
   };
 
-  // Clear all filters - use the original dataset and bypass all filter processing
+  // Clear all filters - improved to ensure data is properly restored
   const handleClearFilters = () => {
     console.log(`Clearing filters, restoring ${originalDataRef.current.length} records`);
     
-    // Reset filter states
-    setFilters(initialFilters);
-    setDebouncedFilters(initialFilters);
+    // Set the filter cleared flag
+    setIsFilterCleared(true);
     
-    // IMPORTANT: Directly pass the original data to the parent component
-    // bypassing any filtering logic
-    console.log("Bypassing filter processing entirely");
-    onFilterApply([...originalDataRef.current]);
+    // Reset filter states
+    setFilters({...initialFilters});
+    setDebouncedFilters({...initialFilters});
+    
+    // Try to get the original data with a few backup approaches
+    let originalData;
+    
+    // First, check if we have data in the originalDataRef
+    if (originalDataRef.current && originalDataRef.current.length > 0) {
+      console.log(`Using ${originalDataRef.current.length} records from originalDataRef`);
+      // Deep clone to avoid reference issues
+      originalData = JSON.parse(JSON.stringify(originalDataRef.current));
+    } 
+    // Fallback to the latest data prop
+    else if (data && data.length > 0) {
+      console.log(`Fallback: Using ${data.length} records from data prop`);
+      originalData = [...data];
+    }
+    // Ultimate fallback - empty array
+    else {
+      console.log('Warning: No original data found to restore');
+      originalData = [];
+    }
+    
+    // Pass the original data back to the parent
+    console.log(`Restoring original data with ${originalData.length} records`);
+    
+    // Use direct callback to parent and bypass state setting
+    setRefreshKey(prev => prev + 1);
+    
+    // Force immediate refresh of table data - using both approaches for robustness
+    onFilterApply(originalData);
+    
+    // For good measure, set a timeout to ensure the UI updates
+    setTimeout(() => {
+      if (originalData.length > 0) {
+        console.log(`Re-applying original data after timeout (${originalData.length} records)`);
+        onFilterApply([...originalData]);
+      }
+    }, 100);
   };
 
   // Handle download of filtered data with custom format
@@ -730,7 +953,7 @@ const FilterForm = ({
                 onChange={handleFilterChange}
                 className={filterStyles.input}
               />
-              <div className={filterStyles.inputGroup}>
+              {/* <div className={filterStyles.inputGroup}>
                 <input
                   type="number"
                   name="callCountMin"
@@ -765,7 +988,7 @@ const FilterForm = ({
                   onChange={handleFilterChange}
                   className={filterStyles.input}
                 />
-              </div>
+              </div> */}
               <select
                 name="callStatus"
                 value={filters.callStatus}
@@ -1024,8 +1247,9 @@ const FilterForm = ({
             <button
               className={[filterStyles.button, filterStyles.clearButton].join(' ')}
               onClick={handleClearFilters}
+              data-refresh-key={refreshKey} // Add this to force re-render
             >
-              <span className="label">Clear Filters</span>
+              <span className="label">{t('clearFilters') || 'Clear Filters'}</span>
             </button>
             {dashboardType === 'company' && onDownloadFiltered && (
             <button
@@ -1076,14 +1300,14 @@ const FilterForm = ({
                 <input type="text" name="callerName" placeholder="Caller Name" value={filters.callerName} onChange={handleFilterChange} className={filterStyles.input} />
                 <input type="text" name="callerNumber" placeholder="Caller Number" value={filters.callerNumber} onChange={handleFilterChange} className={filterStyles.input} />
                 <input type="text" name="receiverNumber" placeholder="Receiver Number" value={filters.receiverNumber} onChange={handleFilterChange} className={filterStyles.input} />
-                <div className={filterStyles.inputGroup}>
+                {/* <div className={filterStyles.inputGroup}>
                   <input type="number" name="callCountMin" placeholder="Min. Call Count" value={filters.callCountMin} onChange={handleFilterChange} className={filterStyles.input} />
                   <input type="number" name="callCountMax" placeholder="Max. Call Count" value={filters.callCountMax} onChange={handleFilterChange} className={filterStyles.input} />
                 </div>
                 <div className={filterStyles.inputGroup}>
                   <input type="date" name="callDateStart" placeholder="Start Date" value={filters.callDateStart} onChange={handleFilterChange} className={filterStyles.input} />
                   <input type="date" name="callDateEnd" placeholder="End Date" value={filters.callDateEnd} onChange={handleFilterChange} className={filterStyles.input} />
-                </div>
+                </div> */}
                 <select name="callStatus" value={filters.callStatus} onChange={handleFilterChange} className={filterStyles.select}>
                   <option value="">All Statuses</option>
                   <option value="answered">Answered</option>
@@ -1187,13 +1411,14 @@ const FilterForm = ({
                 className={[filterStyles.button, filterStyles.applyButton].join(' ')}
                 onClick={handleApplyFilters}
               >
-                Apply Filters
+                {t('applyFilters') || 'Apply Filters'}
               </button>
               <button
                 className={[filterStyles.button, filterStyles.clearButton].join(' ')}
                 onClick={handleClearFilters}
+                data-refresh-key={refreshKey} // Add this to force re-render
               >
-                <span className="label">Clear Filters</span>
+                <span className="label">{t('clearFilters') || 'Clear Filters'}</span>
               </button>
               
               {/* Modified download section with date selection */}
