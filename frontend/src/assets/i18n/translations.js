@@ -110,6 +110,7 @@ const translations = {
     ANSWERED: 'Answered',
     NOANSWERED: 'No Answer',
     BUSY: 'Busy',
+    Callfailed: "Call failed",
 
     // Export tooltip
     exportCallInformation: 'Export Call Information',
@@ -252,6 +253,7 @@ const translations = {
     ANSWERED: 'Отвечено',
     NOANSWERED: 'Нет ответа',
     BUSY: 'Занято',
+    Callfailed: "Звонок не состоялся",
 
     // Export tooltip
     exportCallInformation: 'Экспорт информации о звонках',
@@ -271,7 +273,7 @@ const translations = {
     // Download button
     download: "Скачать",
     downloadRecording: "Скачать запись",
-    
+
     // Comment section translations
     addComment: "Добавить комментарий",
     addCommentForRecording: "Добавить комментарий к этой записи...",
@@ -394,6 +396,7 @@ const translations = {
     ANSWERED: 'პასუხი გაცემულია',
     NOANSWERED: 'პასუხი არ არის',
     BUSY: 'დაკავებული',
+    Callfailed: "ზარი არ გასულა",
 
     // Export tooltip
     exportCallInformation: 'ზარის ინფორმაციის ექსპორტი',

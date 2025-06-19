@@ -54,7 +54,7 @@ const initialFilters = {
 // Enhanced nested property access with more complete data analysis
 const getNestedProperty = (obj, possibleKeys) => {
   if (!obj) return '';
-  
+
   // Try direct property access first with proper trimming
   for (const key of possibleKeys) {
     const value = key.includes('.')
@@ -62,13 +62,13 @@ const getNestedProperty = (obj, possibleKeys) => {
       : obj[key];
     if (value !== undefined && value !== null) return value;
   }
-  
+
   // Try case-insensitive properties as fallback with more aggressive matching
   try {
     const lowercaseKeys = Object.keys(obj).map(k => k.toLowerCase());
     for (const key of possibleKeys) {
       const lowKey = key.toLowerCase();
-      
+
       // Try exact match first
       const matchIndex = lowercaseKeys.findIndex(k => k === lowKey);
       if (matchIndex >= 0) {
@@ -77,7 +77,7 @@ const getNestedProperty = (obj, possibleKeys) => {
           return obj[actualKey];
         }
       }
-      
+
       // Then try partial match (for abbreviated fields)
       const partialMatchIndex = lowercaseKeys.findIndex(k => k.includes(lowKey) || lowKey.includes(k));
       if (partialMatchIndex >= 0) {
@@ -90,7 +90,7 @@ const getNestedProperty = (obj, possibleKeys) => {
   } catch (err) {
     console.error('Error in flexible property matching:', err);
   }
-  
+
   return '';
 };
 
@@ -110,31 +110,31 @@ const FilterForm = ({
   // Add state to track when filters are cleared
   const [isFilterCleared, setIsFilterCleared] = useState(false);
   const { t } = useLanguage();
-  
+
   // Add a ref to store the original dataset
   const originalDataRef = useRef([]);
-  
+
   // Add new state to force refresh
   const [refreshKey, setRefreshKey] = useState(0);
-  
+
   // Add state for export date range
   const [exportDateRange, setExportDateRange] = useState({
     startDate: '',
     endDate: ''
   });
-  
+
   // New state for download tooltip
   const [showDownloadTooltip, setShowDownloadTooltip] = useState(false);
-  
+
   // Debounce filter changes
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       setDebouncedFilters(filters);
     }, 300); // 300ms debounce
-    
+
     return () => clearTimeout(timeoutId);
   }, [filters]);
-  
+
   // Apply filters when debounced values change
   useEffect(() => {
     if (!isInitialLoad) {
@@ -151,13 +151,13 @@ const FilterForm = ({
       console.log(`Storing original dataset of ${data.length} records`);
       // Make a deep copy to ensure we don't have reference issues
       originalDataRef.current = JSON.parse(JSON.stringify(data));
-      
+
       if (isInitialLoad) {
         setIsInitialLoad(false);
         // Use the original data without any filtering
         onFilterApply([...data]);
       }
-      
+
       // Reset filter cleared flag when new data is received
       if (isFilterCleared) {
         setIsFilterCleared(false);
@@ -168,10 +168,10 @@ const FilterForm = ({
   // Improved normalize string function with better international character handling
   const normalizeString = useCallback((value) => {
     if (value === null || value === undefined) return '';
-    
+
     // Handle numeric values
     if (typeof value === 'number') return String(value).toLowerCase().trim();
-    
+
     // Convert to string, lowercase, and trim whitespace
     try {
       // Force to string and normalize
@@ -180,7 +180,7 @@ const FilterForm = ({
         .trim()
         .normalize("NFD") // Decompose accented characters
         .replace(/[\u0300-\u036f]/g, ""); // Remove diacritics if needed
-    
+
       return normalizedString;
     } catch (err) {
       console.error('Error normalizing string value:', value, err);
@@ -196,26 +196,26 @@ const FilterForm = ({
     // Normalize both strings for comparison
     const normalizedField = normalizeString(field);
     const normalizedFilter = normalizeString(filter);
-    
+
     // Debug specific field issues with values
     const fieldMatches = normalizedField.includes(normalizedFilter);
-    
+
     // Extra logging for identification code searches
     if (filter && (
-        normalizedFilter.includes('415595699') || 
-        (normalizedField && normalizedField.length > 0 && !fieldMatches)
+      normalizedFilter.includes('415595699') ||
+      (normalizedField && normalizedField.length > 0 && !fieldMatches)
     )) {
       console.debug(`Field matching: "${field}" (${typeof field}) against "${filter}" (${typeof filter}): 
         normalized: "${normalizedField}".includes("${normalizedFilter}") = ${fieldMatches}`);
     }
-    
+
     return fieldMatches;
   }, [normalizeString]);
 
   // Check if number is within range
   const matchesNumberRange = useCallback((value, min, max) => {
     if (value == null || value === '') return true;
-    
+
     // Try to convert to number, handling various formats
     let numValue;
     if (typeof value === 'string') {
@@ -225,22 +225,22 @@ const FilterForm = ({
     } else {
       numValue = Number(value);
     }
-    
+
     if (isNaN(numValue)) return false;
-    
+
     const numMin = min !== '' ? Number(min) : null;
     const numMax = max !== '' ? Number(max) : null;
-    
+
     if (numMin !== null && !isNaN(numMin) && numValue < numMin) return false;
     if (numMax !== null && !isNaN(numMax) && numValue > numMax) return false;
-    
+
     return true;
   }, []);
 
   // Check if date is within range (with timezone safety)
   const matchesDateRange = useCallback((dateValue, start, end) => {
     if (!dateValue) return true;
-    
+
     // Try to parse the date safely
     let dateObj;
     try {
@@ -248,13 +248,13 @@ const FilterForm = ({
       if (typeof dateValue === 'string') {
         // Try parsing as ISO format first
         dateObj = new Date(dateValue);
-        
+
         // If invalid, try DD/MM/YYYY format
         if (isNaN(dateObj.getTime()) && dateValue.includes('/')) {
           const [day, month, year] = dateValue.split('/');
           dateObj = new Date(`${year}-${month}-${day}`);
         }
-        
+
         // If still invalid, return false
         if (isNaN(dateObj.getTime())) return false;
       } else if (dateValue instanceof Date) {
@@ -266,21 +266,21 @@ const FilterForm = ({
       console.error('Date parsing error:', e);
       return false;
     }
-    
+
     const startDate = start ? new Date(start) : null;
     const endDate = end ? new Date(end) : null;
-    
+
     // Set hours to beginning/end of day for consistent comparison
     if (dateObj) dateObj.setHours(12, 0, 0, 0);
     if (startDate) startDate.setHours(0, 0, 0, 0);
-    
+
     if (startDate && dateObj < startDate) return false;
-    
+
     if (endDate) {
       endDate.setHours(23, 59, 59, 999);
       if (dateObj > endDate) return false;
     }
-    
+
     return true;
   }, []);
 
@@ -308,70 +308,75 @@ const FilterForm = ({
       try {
         // Extract values more carefully with fallbacks
         const companyName = getNestedProperty(row, [
-          'companyName', 'company_name', 'Company Name', 'CompanyName', 
+          'companyName', 'company_name', 'Company Name', 'CompanyName',
           'company', 'name', 'organization', 'company-name',
           'buyer', 'შემსყიდველი', // Georgian fields
           'companyname', 'client', 'clientName', 'client_name' // More variations
         ]);
-        
+
         const identificationCode = getNestedProperty(row, [
           'identificationCode', 'identification_code', 'idCode', 'id_code', 'ID Code', 'id', 'code',
           'identificationnumber', 'identification_number', 'idnumber', 'idNumber', 'identification',
           'ს/კ', 'სკ', 'ს/კოდი', 'კოდი' // Georgian versions
         ]);
-        
+
         const callerNumber = getNestedProperty(row, [
           'callerNumber', 'caller_number', 'Caller Number', 'caller', 'caller_num', 'callerNum', 'src', 'source',
           'დამრეკის', 'დამრეკისნომერი', 'დამრეკავი' // Georgian versions
         ]);
-        
+
         const receiverNumber = getNestedProperty(row, [
           'receiverNumber', 'receiver_number', 'Receiver Number', 'receiver', 'receiver_num', 'receiverNum', 'dst', 'destination',
           'მიმღების', 'მიმღებისნომერი' // Georgian versions
         ]);
-        
+
         // Clean the filter values to ensure no issues with whitespace
         const cleanCompanyNameFilter = filters.companyName.trim();
         const cleanIdCodeFilter = filters.identificationCode.trim();
         const cleanContactPerson1Filter = filters.contactPerson1.trim();
         const cleanTel1Filter = filters.tel1.trim();
         // ... other filters
-        
+
         // Do the actual matching with trimmed values
-        const matchesCompanyName = !cleanCompanyNameFilter || 
+        const matchesCompanyName = !cleanCompanyNameFilter ||
           matchesText(companyName, cleanCompanyNameFilter);
-        
-        const matchesIdentificationCode = !cleanIdCodeFilter || 
+
+        const matchesIdentificationCode = !cleanIdCodeFilter ||
           matchesText(identificationCode, cleanIdCodeFilter);
-        
-        const matchesContactPerson1 = !cleanContactPerson1Filter || 
+
+        const matchesContactPerson1 = !cleanContactPerson1Filter ||
           matchesText(
             getNestedProperty(row, [
-              'contactPerson1', 'contact_person1', 'contact1', 'contact_1', 
+              'contactPerson1', 'contact_person1', 'contact1', 'contact_1',
               'contactname1', 'contact_name_1', 'საკ. პირი #1', 'საკპირი1'
-            ]), 
+            ]),
             cleanContactPerson1Filter
           );
-        
-        const matchesTel1 = !cleanTel1Filter || 
+
+        const matchesTel1 = !cleanTel1Filter ||
           matchesText(
             getNestedProperty(row, [
-              'tel1', 'phone1', 'phone_1', 'contactTel1', 'contact_tel1', 
+              'tel1', 'phone1', 'phone_1', 'contactTel1', 'contact_tel1',
               'telephone1', 'tel_1', 'ტელ1', 'ტელეფონი1'
-            ]), 
+            ]),
             cleanTel1Filter
           );
-        
-        // ...other matches with similar pattern
-        
+
+        // Special logic for Call Status 'Callfailed'
+        let matchesCallStatus = true;
+        if (filters.callStatus === 'Callfailed') {
+          // Only show rows where Call Count is 0
+          const callCount = row.callCount ?? row.call_count ?? 0;
+          matchesCallStatus = (Number(callCount) === 0);
+        }
+
         // Final combined match result
         return (
           matchesCompanyName &&
           matchesIdentificationCode &&
           matchesContactPerson1 &&
           matchesTel1 &&
-          // ...rest of the conditions
-          true // Ensure the function returns a value even if some conditions are omitted
+          matchesCallStatus // <-- add this to the AND chain
         );
       } catch (err) {
         console.error('Filter error for caller row:', err);
@@ -382,22 +387,22 @@ const FilterForm = ({
       try {
         // Debug log for the row being processed when manager filter is active
         const isManagerFilterActive = filters.manager && filters.manager.trim() !== '';
-        
+
         // Get manager value for this row
         const managerValue = getNestedProperty(row, [
           'manager', 'Manager', 'managerName', 'manager_name',
           'მენეჯერი', 'managername', 'MANAGER'
         ]);
-        
+
         // Check if manager matches
         const matchesManager = filters.manager === '' ||
           matchesText(managerValue, filters.manager) ||
           (row.executor && matchesText(row.executor, filters.manager));
-        
+
         // If we're filtering for manager and this row matches, do detailed debugging
         if (isManagerFilterActive && matchesManager) {
           console.debug(`Row ${row.id} matches manager "${filters.manager}": ${managerValue}`);
-          
+
           // Create an object to track which filters pass/fail for this row
           const filterResults = {
             tenderNumber: matchesText(getNestedProperty(row, ['tenderNumber', 'tender_number']), filters.tenderNumber),
@@ -405,7 +410,7 @@ const FilterForm = ({
             contact1: matchesText(getNestedProperty(row, ['contact1', 'contact_1']), filters.contact1),
             phone1: matchesText(getNestedProperty(row, ['phone1', 'phone_1']), filters.phone1),
             contact2: matchesText(getNestedProperty(row, ['contact2', 'contact_2']), filters.contact2),
-            phone2: matchesText(getNestedProperty(row, ['phone2', 'phone_2']), filters.phone2), 
+            phone2: matchesText(getNestedProperty(row, ['phone2', 'phone_2']), filters.phone2),
             contact3: matchesText(getNestedProperty(row, ['contact3', 'contact_3']), filters.contact3),
             phone3: matchesText(getNestedProperty(row, ['phone3', 'phone_3']), filters.phone3),
             email: matchesText(getNestedProperty(row, ['email']), filters.email),
@@ -420,15 +425,15 @@ const FilterForm = ({
             managerNumber: matchesText(getNestedProperty(row, ['managerNumber', 'manager_number']), filters.managerNumber),
             status: matchesStatus(getNestedProperty(row, ['status']), filters.status)
           };
-          
+
           // Find failing filters
           const failingFilters = Object.entries(filterResults)
             .filter(([_, passes]) => !passes)
             .map(([name]) => name);
-          
+
           if (failingFilters.length > 0) {
             console.debug(`Row ${row.id} failed on filters: ${failingFilters.join(', ')}`);
-            
+
             // Print the expected vs actual values for failing filters
             failingFilters.forEach(filter => {
               const filterValue = filters[filter];
@@ -436,7 +441,7 @@ const FilterForm = ({
               console.debug(`  Filter ${filter}: Expected "${filterValue}", Got "${rowValue}"`);
             });
           }
-          
+
           // Overall result is the AND of all filter results
           const result = Object.values(filterResults).every(Boolean);
           return result;
@@ -477,8 +482,8 @@ const FilterForm = ({
           matchesText(row.src, filters.src) &&
           matchesText(row.dst, filters.dst) &&
           matchesText(row.calldate, filters.callDate) &&
-          (filters.duration === '' || 
-           (row.duration && formatDuration(Number(row.duration)).includes(filters.duration)))
+          (filters.duration === '' ||
+            (row.duration && formatDuration(Number(row.duration)).includes(filters.duration)))
         );
       } catch (err) {
         console.error('Filter error for craftsmen row:', row, err);
@@ -486,10 +491,10 @@ const FilterForm = ({
       }
     }
   }), [
-    filters, matchesText, matchesNumberRange, matchesDateRange, 
+    filters, matchesText, matchesNumberRange, matchesDateRange,
     matchesStatus, formatDuration
   ]);
-  
+
   // Modified approach for getFilteredData
   const getFilteredData = useCallback(() => {
     // If we just cleared filters, return the original data
@@ -502,23 +507,23 @@ const FilterForm = ({
       console.log('getFilteredData: data is not an array', data);
       return [];
     }
-    
+
     // Sample the data structure to understand what we're working with
     if (data.length > 0) {
       const sampleRow = data[0];
-      console.log(`Sample data structure for ${dashboardType}:`, 
-        Object.keys(sampleRow), 
-        `First few values: ${Object.entries(sampleRow).slice(0,5).map(([k,v]) => `${k}=${v}`).join(', ')}`
+      console.log(`Sample data structure for ${dashboardType}:`,
+        Object.keys(sampleRow),
+        `First few values: ${Object.entries(sampleRow).slice(0, 5).map(([k, v]) => `${k}=${v}`).join(', ')}`
       );
-      
+
       // Special diagnostic for company name
       if (filters.companyName) {
         const possibleCompanyNameFields = [
-          'companyName', 'company_name', 'Company Name', 'CompanyName', 
+          'companyName', 'company_name', 'Company Name', 'CompanyName',
           'company', 'name', 'organization', 'company-name',
           'buyer', 'შემსყიდველი' // Additional possible fields in Georgian data
         ];
-        
+
         console.log('Diagnostic for company name field:');
         possibleCompanyNameFields.forEach(field => {
           const value = sampleRow[field];
@@ -528,24 +533,24 @@ const FilterForm = ({
         });
       }
     }
-    
+
     // Check if all filters are empty (equal to initialFilters)
     const hasActiveFilters = Object.keys(filters).some(key => {
       // Skip empty string values which are the default for text filters
       if (filters[key] === '') return false;
-      
+
       // Check if the filter value differs from initial value
       return filters[key] !== initialFilters[key];
     });
-    
+
     console.log(`Filter status check - Has active filters: ${hasActiveFilters}`);
-    
+
     // If no active filters, return the original dataset
     if (!hasActiveFilters) {
       console.log(`No active filters, returning original dataset (${originalDataRef.current.length} records)`);
       return originalDataRef.current;
     }
-    
+
     // For debugging - log active filters
     const activeFilters = Object.entries(filters)
       .filter(([key, value]) => value !== initialFilters[key] && value !== '')
@@ -553,33 +558,33 @@ const FilterForm = ({
         acc[key] = value;
         return acc;
       }, {});
-    
+
     if (Object.keys(activeFilters).length > 0) {
       console.log('Active filters:', activeFilters);
     }
-    
+
     console.log(`Filtering ${data.length} ${dashboardType} records...`);
-    
+
     // Standard filtering using the filter functions
     const filterFunction = filterFunctions[dashboardType] || (() => true);
-    
+
     // Apply filter function to each item and count matches for debugging
     const filtered = [];
     let matches = 0;
     let total = 0;
-    
+
     for (const item of data) {
       total++;
-      
+
       // For companyName filter, do extra debugging on first few items
       if (filters.companyName && total <= 3) {
         // Extract the value using our function and directly
         const extractedCompanyName = getNestedProperty(item, [
-          'companyName', 'company_name', 'Company Name', 'CompanyName', 
+          'companyName', 'company_name', 'Company Name', 'CompanyName',
           'company', 'name', 'organization', 'company-name',
           'buyer', 'შემსყიდველი' // Additional possible fields in Georgian data
         ]);
-        
+
         console.log(`Row ${total} company name:`, {
           extracted: extractedCompanyName,
           directFields: {
@@ -594,36 +599,36 @@ const FilterForm = ({
           matches: normalizeString(extractedCompanyName).includes(normalizeString(filters.companyName))
         });
       }
-      
+
       const itemMatches = filterFunction(item);
       if (itemMatches) {
         matches++;
         filtered.push(item);
       }
     }
-    
+
     // Log filter effectiveness
-    console.log(`Filter matched ${matches}/${total} records (${total > 0 ? (matches/total*100).toFixed(1) : 'NaN'}%)`);
-    
+    console.log(`Filter matched ${matches}/${total} records (${total > 0 ? (matches / total * 100).toFixed(1) : 'NaN'}%)`);
+
     // If no matches found, show detailed debug info for the first few items
     if (matches === 0 && total > 0) {
       console.log('No matches found! Debugging first item:');
       const item = data[0];
-      
+
       // Dump the structure of the item to console
       console.log('Item structure:', item);
       console.log('Available fields:', Object.keys(item).join(', '));
-      
+
       const debugFilters = Object.entries(activeFilters);
-      
+
       debugFilters.forEach(([filterName, filterValue]) => {
         // Find all properties that might match this filter
         const flattenedProperties = [];
-        
+
         // Flatten the object to find all properties at any nesting level
         const flattenObject = (obj, prefix = '') => {
           if (!obj || typeof obj !== 'object') return;
-          
+
           for (const key in obj) {
             try {
               if (typeof obj[key] === 'object' && obj[key] !== null) {
@@ -640,21 +645,21 @@ const FilterForm = ({
             }
           }
         };
-        
+
         flattenObject(item);
         const normalizedFilterValue = normalizeString(filterValue);
-        
+
         console.log(`Looking for matches for filter "${filterName}" with value "${filterValue}" (normalized: "${normalizedFilterValue}"):`);
-        
+
         // Find properties whose values contain the filter value
-        const matchingProps = flattenedProperties.filter(p => 
+        const matchingProps = flattenedProperties.filter(p =>
           p.normalized.includes(normalizedFilterValue)
         );
-        
-        console.log(matchingProps.length > 0 ? 
-          matchingProps : 
+
+        console.log(matchingProps.length > 0 ?
+          matchingProps :
           'No properties with matching values found');
-        
+
         // Special handling for companyName to guide the user
         if (filterName === 'companyName' && matchingProps.length === 0) {
           console.log('Suggestion: Check if your company name might be in a different field. Common fields are:');
@@ -667,19 +672,19 @@ const FilterForm = ({
         }
       });
     }
-    
+
     return filtered;
   }, [data, dashboardType, filterFunctions, filters, originalDataRef, normalizeString, isFilterCleared]);
 
   // Handle input changes with validation and proper trimming for whitespace
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
-    
+
     // Always trim values when setting filters to avoid whitespace issues
     const cleanValue = value.trim();
-    
+
     console.log(`Filter changed: ${name} = "${cleanValue}" (original: "${value}")`);
-    
+
     // For number inputs, validate to prevent invalid entries that could break comparisons
     if (name.includes('Min') || name.includes('Max')) {
       // Allow empty string or valid numbers only
@@ -694,19 +699,19 @@ const FilterForm = ({
   // Apply filters immediately (bypass debounce) when clicking Apply
   const handleApplyFilters = () => {
     console.log('Manually applying filters...');
-    
+
     // Force re-evaluation of filtered data
     const filteredData = getFilteredData();
-    
+
     // Log results
     console.log(`Filter application complete: Found ${filteredData.length} matching records`);
-    
+
     // Reset cleared flag when explicitly applying filters
     setIsFilterCleared(false);
-    
+
     // Update state
-    setDebouncedFilters({...filters}); 
-    
+    setDebouncedFilters({ ...filters });
+
     // Pass filtered data to parent component
     onFilterApply(filteredData);
   };
@@ -714,23 +719,23 @@ const FilterForm = ({
   // Clear all filters - improved to ensure data is properly restored
   const handleClearFilters = () => {
     console.log(`Clearing filters, restoring ${originalDataRef.current.length} records`);
-    
+
     // Set the filter cleared flag
     setIsFilterCleared(true);
-    
+
     // Reset filter states
-    setFilters({...initialFilters});
-    setDebouncedFilters({...initialFilters});
-    
+    setFilters({ ...initialFilters });
+    setDebouncedFilters({ ...initialFilters });
+
     // Try to get the original data with a few backup approaches
     let originalData;
-    
+
     // First, check if we have data in the originalDataRef
     if (originalDataRef.current && originalDataRef.current.length > 0) {
       console.log(`Using ${originalDataRef.current.length} records from originalDataRef`);
       // Deep clone to avoid reference issues
       originalData = JSON.parse(JSON.stringify(originalDataRef.current));
-    } 
+    }
     // Fallback to the latest data prop
     else if (data && data.length > 0) {
       console.log(`Fallback: Using ${data.length} records from data prop`);
@@ -741,16 +746,16 @@ const FilterForm = ({
       console.log('Warning: No original data found to restore');
       originalData = [];
     }
-    
+
     // Pass the original data back to the parent
     console.log(`Restoring original data with ${originalData.length} records`);
-    
+
     // Use direct callback to parent and bypass state setting
     setRefreshKey(prev => prev + 1);
-    
+
     // Force immediate refresh of table data - using both approaches for robustness
     onFilterApply(originalData);
-    
+
     // For good measure, set a timeout to ensure the UI updates
     setTimeout(() => {
       if (originalData.length > 0) {
@@ -765,37 +770,37 @@ const FilterForm = ({
     // Check if only date range is selected (no other filters)
     const hasOtherFilters = Object.entries(filters).some(([key, value]) => {
       // Skip empty values and date-related filters
-      return value && 
-             !['callDateStart', 'callDateEnd', 'lastPurchaseDateStart', 
-                'lastPurchaseDateEnd', 'contractEndDateStart', 'contractEndDateEnd', 
-                'foundationDateStart', 'foundationDateEnd'].includes(key);
+      return value &&
+        !['callDateStart', 'callDateEnd', 'lastPurchaseDateStart',
+          'lastPurchaseDateEnd', 'contractEndDateStart', 'contractEndDateEnd',
+          'foundationDateStart', 'foundationDateEnd'].includes(key);
     });
-    
+
     // Use all data if only date range is selected, otherwise use filtered data
     const dataToProcess = hasOtherFilters ? getFilteredData() : (Array.isArray(data) ? data : []);
-    
+
     if (dataToProcess.length === 0) {
       alert('No data to download');
       return;
     }
-    
+
     console.log("Preparing download with", dataToProcess.length, "records");
     console.log("Using date range:", exportDateRange);
-    
+
     // Format date string nicely if available
-    const formattedDate = exportDateRange.startDate ? 
-      (exportDateRange.endDate ? 
-        `${exportDateRange.startDate} - ${exportDateRange.endDate}` : 
-        exportDateRange.startDate) : 
+    const formattedDate = exportDateRange.startDate ?
+      (exportDateRange.endDate ?
+        `${exportDateRange.startDate} - ${exportDateRange.endDate}` :
+        exportDateRange.startDate) :
       "";
-    
+
     // Transform data according to requested mapping
     const transformedData = dataToProcess.map((row, index) => {
       // Log occasionally for debugging
       if (index % 500 === 0) {
         console.log(`Processing row ${index}`);
       }
-      
+
       const transformedRow = {
         "Company Name": getNestedProperty(row, ['buyer']),
         "ID Code": getNestedProperty(row, ['idCode', 'id_code']),
@@ -807,7 +812,7 @@ const FilterForm = ({
         "Phone #3": getNestedProperty(row, ['phone3', 'phone_3']),
         "Caller Name": getNestedProperty(row, ['manager']),
         "Caller Number": getNestedProperty(row, ['managerNumber', 'manager_number']),
-        
+
         // Empty columns as requested
         "Receiver Name": "",
         "Receiver Number": "",
@@ -818,16 +823,16 @@ const FilterForm = ({
         "Call Date": formattedDate, // Single date field with formatted date range
         "Call Duration": ""
       };
-      
+
       return transformedRow;
     });
-    
+
     console.log("Transformed data ready for download:", transformedData.length, "records");
-    
+
     // Pass transformed data to download handler
     onDownloadFiltered([...transformedData]);
   };
-  
+
   // Handle date range changes for export
   const handleExportDateChange = (e) => {
     const { name, value } = e.target;
@@ -855,12 +860,12 @@ const FilterForm = ({
   // Only form mode (just show filter form if enabled)
   if (onlyForm) {
     if (!showFilters) return null;
-    
+
     // Return the filter form - the rest of the component remains the same
     return (
       <div className={filterStyles.filterContainer} style={{ marginBottom: '20px' }}>
         <h3 className={filterStyles.filterTitle}>
-          {dashboardType === 'caller' ?  t('callFilter') : dashboardType === 'craftsmen' ? t('craftsmanFilter') : t('companyFilter')}
+          {dashboardType === 'caller' ? t('callFilter') : dashboardType === 'craftsmen' ? t('craftsmanFilter') : t('companyFilter')}
         </h3>
         <div className={filterStyles.filterGrid}>
           {dashboardType === 'caller' ? (
@@ -996,10 +1001,10 @@ const FilterForm = ({
                 className={filterStyles.select}
               >
                 <option value="">{t('allStatuses')}</option>
-                <option value="answered">{t('answered')}</option>
+                {/* <option value="answered">{t('answered')}</option>
                 <option value="no answer">{t('noAnswer')}</option>
-                <option value="busy">{t('busy')}</option>
-                <option value="failed">{t('failed')}</option>
+                <option value="busy">{t('busy')}</option> */}
+                <option value="Callfailed">{t('Callfailed')}</option>
               </select>
             </>
           ) : dashboardType === 'company' ? (
@@ -1200,43 +1205,43 @@ const FilterForm = ({
         </div>
         <div>
           {/* Modified download section with date selection */}
-            {dashboardType === 'company' && onDownloadFiltered && (
-              <div className={filterStyles.downloadSection}>
-                <div className={filterStyles.dateSelectionGroup}>
-                  <label className={filterStyles.dateLabel}>
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512">
-                      <path d="M128 0c17.7 0 32 14.3 32 32V64H288V32c0-17.7 14.3-32 32-32s32 14.3 32 32V64h48c26.5 0 48 21.5 48 48v48H0V112C0 85.5 21.5 64 48 64H96V32c0-17.7 14.3-32 32-32zM0 192H448V464c0 26.5-21.5 48-48 48H48c-26.5 0-48-21.5-48-48V192zm64 80v32c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V272c0-8.8-7.2-16-16-16H80c-8.8 0-16 7.2-16 16zm128 0v32c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V272c0-8.8-7.2-16-16-16H208c-8.8 0-16 7.2-16 16zm144-16c-8.8 0-16 7.2-16 16v32c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V272c0-8.8-7.2-16-16-16H336z"/>
-                    </svg>
-                    {t('callDateRangeExport') || 'Call Date Range for Export:'}
-                  </label>
-                  <div className={filterStyles.dateInputs}>
-                    <input
-                      type="date"
-                      name="startDate"
-                      placeholder="Start Date"
-                      value={exportDateRange.startDate}
-                      onChange={handleExportDateChange}
-                      className={filterStyles.input}
-                    />
-                    <input
-                      type="date"
-                      name="endDate"
-                      placeholder="End Date"
-                      value={exportDateRange.endDate}
-                      onChange={handleExportDateChange}
-                      className={filterStyles.input}
-                    />
-                  </div>
-                </div>
-                <div className={filterStyles.tooltipContainer}
-                     onMouseEnter={() => setShowDownloadTooltip(true)}
-                     onMouseLeave={() => setShowDownloadTooltip(false)}>
-                  <div className={`${filterStyles.tooltip} ${showDownloadTooltip ? filterStyles.tooltipVisible : ''}`}>
-                    {t('downloadCustomFormat') || 'Download data with the selected date range in a custom format'}
-                  </div>
+          {dashboardType === 'company' && onDownloadFiltered && (
+            <div className={filterStyles.downloadSection}>
+              <div className={filterStyles.dateSelectionGroup}>
+                <label className={filterStyles.dateLabel}>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512">
+                    <path d="M128 0c17.7 0 32 14.3 32 32V64H288V32c0-17.7 14.3-32 32-32s32 14.3 32 32V64h48c26.5 0 48 21.5 48 48v48H0V112C0 85.5 21.5 64 48 64H96V32c0-17.7 14.3-32 32-32zM0 192H448V464c0 26.5-21.5 48-48 48H48c-26.5 0-48-21.5-48-48V192zm64 80v32c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V272c0-8.8-7.2-16-16-16H80c-8.8 0-16 7.2-16 16zm128 0v32c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V272c0-8.8-7.2-16-16-16H208c-8.8 0-16 7.2-16 16zm144-16c-8.8 0-16 7.2-16 16v32c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V272c0-8.8-7.2-16-16-16H336z" />
+                  </svg>
+                  {t('callDateRangeExport') || 'Call Date Range for Export:'}
+                </label>
+                <div className={filterStyles.dateInputs}>
+                  <input
+                    type="date"
+                    name="startDate"
+                    placeholder="Start Date"
+                    value={exportDateRange.startDate}
+                    onChange={handleExportDateChange}
+                    className={filterStyles.input}
+                  />
+                  <input
+                    type="date"
+                    name="endDate"
+                    placeholder="End Date"
+                    value={exportDateRange.endDate}
+                    onChange={handleExportDateChange}
+                    className={filterStyles.input}
+                  />
                 </div>
               </div>
-            )}
+              <div className={filterStyles.tooltipContainer}
+                onMouseEnter={() => setShowDownloadTooltip(true)}
+                onMouseLeave={() => setShowDownloadTooltip(false)}>
+                <div className={`${filterStyles.tooltip} ${showDownloadTooltip ? filterStyles.tooltipVisible : ''}`}>
+                  {t('downloadCustomFormat') || 'Download data with the selected date range in a custom format'}
+                </div>
+              </div>
+            </div>
+          )}
           <div className={filterStyles.buttonGroup}>
             <button
               className={[filterStyles.button, filterStyles.applyButton].join(' ')}
@@ -1252,16 +1257,16 @@ const FilterForm = ({
               <span className="label">{t('clearFilters') || 'Clear Filters'}</span>
             </button>
             {dashboardType === 'company' && onDownloadFiltered && (
-            <button
-              className={filterStyles.downloadButton}
-              onClick={handleDownloadFiltered}
-              disabled={Array.isArray(data) ? data.length === 0 : true}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512">
-                <path d="M144 480C64.5 480 0 415.5 0 336c0-62.8 40.2-116.2 96.2-135.9c-.1-2.7-.2-5.4-.2-8.1c0-88.4 71.6-160 160-160c59.3 0 111 32.2 138.7 80.2C409.9 102 428.3 96 448 96c53 0 96 43 96 96c0 12.2-2.3 23.8-6.4 34.6C596 238.4 640 290.1 640 352c0 70.7-57.3 128-128 128H144zm79-167l80 80c9.4 9.4 24.6 9.4 33.9 0l80-80c9.4-9.4 9.4-24.6 0-33.9s-24.6-9.4-33.9 0l-39 39V184c0-13.3-10.7-24-24-24s-24 10.7-24 24V318.1l-39-39c-9.4-9.4-24.6-9.4-33.9 0s-9.4 24.6 0 33.9z" fill="white"/>
-              </svg>
-              {t('downloadWithCustomFormat') || 'Download With Custom Format'}
-            </button>
+              <button
+                className={filterStyles.downloadButton}
+                onClick={handleDownloadFiltered}
+                disabled={Array.isArray(data) ? data.length === 0 : true}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512">
+                  <path d="M144 480C64.5 480 0 415.5 0 336c0-62.8 40.2-116.2 96.2-135.9c-.1-2.7-.2-5.4-.2-8.1c0-88.4 71.6-160 160-160c59.3 0 111 32.2 138.7 80.2C409.9 102 428.3 96 448 96c53 0 96 43 96 96c0 12.2-2.3 23.8-6.4 34.6C596 238.4 640 290.1 640 352c0 70.7-57.3 128-128 128H144zm79-167l80 80c9.4 9.4 24.6 9.4 33.9 0l80-80c9.4-9.4 9.4-24.6 0-33.9s-24.6-9.4-33.9 0l-39 39V184c0-13.3-10.7-24-24-24s-24 10.7-24 24V318.1l-39-39c-9.4-9.4-24.6-9.4-33.9 0s-9.4 24.6 0 33.9z" fill="white" />
+                </svg>
+                {t('downloadWithCustomFormat') || 'Download With Custom Format'}
+              </button>
             )}
           </div>
         </div>
@@ -1420,14 +1425,14 @@ const FilterForm = ({
               >
                 <span className="label">{t('clearFilters') || 'Clear Filters'}</span>
               </button>
-              
+
               {/* Modified download section with date selection */}
               {dashboardType === 'company' && onDownloadFiltered && (
                 <div className={filterStyles.downloadSection}>
                   <div className={filterStyles.dateSelectionGroup}>
                     <label className={filterStyles.dateLabel}>
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512">
-                        <path d="M128 0c17.7 0 32 14.3 32 32V64H288V32c0-17.7 14.3-32 32-32s32 14.3 32 32V64h48c26.5 0 48 21.5 48 48v48H0V112C0 85.5 21.5 64 48 64H96V32c0-17.7 14.3-32 32-32zM0 192H448V464c0 26.5-21.5 48-48 48H48c-26.5 0-48-21.5-48-48V192zm64 80v32c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V272c0-8.8-7.2-16-16-16H80c-8.8 0-16 7.2-16 16zm128 0v32c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V272c0-8.8-7.2-16-16-16H208c-8.8 0-16 7.2-16 16zm144-16c-8.8 0-16 7.2-16 16v32c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V272c0-8.8-7.2-16-16-16H336z"/>
+                        <path d="M128 0c17.7 0 32 14.3 32 32V64H288V32c0-17.7 14.3-32 32-32s32 14.3 32 32V64h48c26.5 0 48 21.5 48 48v48H0V112C0 85.5 21.5 64 48 64H96V32c0-17.7 14.3-32 32-32zM0 192H448V464c0 26.5-21.5 48-48 48H48c-26.5 0-48-21.5-48-48V192zm64 80v32c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V272c0-8.8-7.2-16-16-16H80c-8.8 0-16 7.2-16 16zm128 0v32c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V272c0-8.8-7.2-16-16-16H208c-8.8 0-16 7.2-16 16zm144-16c-8.8 0-16 7.2-16 16v32c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V272c0-8.8-7.2-16-16-16H336z" />
                       </svg>
                       {t('callDateRangeExport') || 'Call Date Range for Export:'}
                     </label>
@@ -1451,8 +1456,8 @@ const FilterForm = ({
                     </div>
                   </div>
                   <div className={filterStyles.tooltipContainer}
-                       onMouseEnter={() => setShowDownloadTooltip(true)}
-                       onMouseLeave={() => setShowDownloadTooltip(false)}>
+                    onMouseEnter={() => setShowDownloadTooltip(true)}
+                    onMouseLeave={() => setShowDownloadTooltip(false)}>
                     <div className={`${filterStyles.tooltip} ${showDownloadTooltip ? filterStyles.tooltipVisible : ''}`}>
                       {t('downloadCustomFormat') || 'Download data with the selected date range in a custom format'}
                     </div>
@@ -1462,7 +1467,7 @@ const FilterForm = ({
                       disabled={Array.isArray(data) ? data.length === 0 : true}
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512">
-                        <path d="M144 480C64.5 480 0 415.5 0 336c0-62.8 40.2-116.2 96.2-135.9c-.1-2.7-.2-5.4-.2-8.1c0-88.4 71.6-160 160-160c59.3 0 111 32.2 138.7 80.2C409.9 102 428.3 96 448 96c53 0 96 43 96 96c0 12.2-2.3 23.8-6.4 34.6C596 238.4 640 290.1 640 352c0 70.7-57.3 128-128 128H144zm79-167l80 80c9.4 9.4 24.6 9.4 33.9 0l80-80c9.4-9.4 9.4-24.6 0-33.9s-24.6-9.4-33.9 0l-39 39V184c0-13.3-10.7-24-24-24s-24 10.7-24 24V318.1l-39-39c-9.4-9.4-24.6-9.4-33.9 0s-9.4 24.6 0 33.9z" fill="white"/>
+                        <path d="M144 480C64.5 480 0 415.5 0 336c0-62.8 40.2-116.2 96.2-135.9c-.1-2.7-.2-5.4-.2-8.1c0-88.4 71.6-160 160-160c59.3 0 111 32.2 138.7 80.2C409.9 102 428.3 96 448 96c53 0 96 43 96 96c0 12.2-2.3 23.8-6.4 34.6C596 238.4 640 290.1 640 352c0 70.7-57.3 128-128 128H144zm79-167l80 80c9.4 9.4 24.6 9.4 33.9 0l80-80c9.4-9.4 9.4-24.6 0-33.9s-24.6-9.4-33.9 0l-39 39V184c0-13.3-10.7-24-24-24s-24 10.7-24 24V318.1l-39-39c-9.4-9.4-24.6-9.4-33.9 0s-9.4 24.6 0 33.9z" fill="white" />
                       </svg>
                       {t('downloadWithCustomFormat') || 'Download With Custom Format'}
                     </button>
