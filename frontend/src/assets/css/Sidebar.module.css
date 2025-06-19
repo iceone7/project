@@ -1,28 +1,27 @@
 .dropdownToggle {
+  position: relative;
   cursor: pointer;
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  user-select: none;
-  font-weight: 500;
-  transition: background 0.2s;
-  border-radius: 6px;
-  padding: 8px 12px;
+  align-items: center;
+  padding: 12px 15px;
+  transition: all 0.3s ease;
 }
 
-.dropdownToggle:hover, .dropdownToggle:focus {
-  outline: none;
+.dropdownToggle:hover {
+  background-color: rgba(1, 115, 177, 0.1);
+  border-radius: 8px;
 }
 
 .arrow {
-  margin-left: 8px;
-  border: solid #fff;
-  border-width: 0 2px 2px 0;
-  display: inline-block;
-  padding: 3px;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid #fff;
+  border-bottom: 2px solid #fff;
   transform: rotate(45deg);
-  transition: transform 0.3s;
-  
+  transition: transform 0.3s ease;
+  display: inline-block;
+  margin-right: 10px;
 }
 
 .arrow.open {
@@ -32,42 +31,42 @@
 .dropdownPanel {
   max-height: 0;
   overflow: hidden;
-  transition: max-height 0.35s cubic-bezier(0.4,0,0.2,1), opacity 0.3s;
+  transition: max-height 0.3s ease, opacity 0.3s ease, transform 0.3s ease;
   opacity: 0;
-  border-radius: 0 0 8px 8px;
-  margin-left: 16px;
-  margin-top: 2px;
-  background-color: none;
+  transform: translateY(-10px);
 }
 
 .dropdownPanel.open {
   max-height: 200px;
-  width: 100%;
   opacity: 1;
+  transform: translateY(0);
 }
 
 .dropdownList {
   list-style: none;
+  padding: 0;
   margin: 0;
-  padding: 8px 0;
 }
 
 .dropdownItem {
-  padding: 8px 16px;
-  color: #000;
   display: flex;
   align-items: center;
-  border-radius: 4px;
-  transition: background 0.2s;
-  font-size: 15px;
-  cursor: pointer;
-  transition: background-color 0.3s ease-in-out, transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s ease;
 }
 
 .dropdownItem:hover {
-  background-color: rgba(255, 255, 255, 0.15); /* Hover effect */
-  transform: translateX(6px); /* Slightly increased shift for emphasis */
+  background-color: rgba(1, 115, 177, 0.15);
+  transform: translateX(5px);
+  box-shadow: 0 2px 10px rgba(1, 115, 177, 0.1);
 }
+
+.vip, .worker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+}
+
 
 .dropdownItem i {
   margin-right: 10px;

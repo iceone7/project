@@ -74,6 +74,17 @@ const Sidebar = () => {
     }
   };
 
+  // Enhanced styles for dropdown items
+  const dropdownItemStyle = {
+    borderRadius: '8px',
+    transition: 'all 0.3s ease',
+    margin: '8px 0',
+    padding: '12px 15px',
+    backgroundColor: '#f0f0f8',
+    border: '#f0f0f8',
+    cursor: 'pointer'
+  };
+
   return (
     <div className="nav-left-sidebar sidebar-dark">
       <div className="menu-list">
@@ -136,7 +147,7 @@ const Sidebar = () => {
                 )}
               </li>
               {isAdmin && (
-                <li className="nav-item" style={{ marginTop: '20px' }}>
+                <li className="nav-item">
                   <NavLink
                     to="/caller-dashboard"
                     className={({ isActive }) => `fade-in nav-link ${isActive ? 'my-active' : ''}`}
@@ -147,12 +158,16 @@ const Sidebar = () => {
                 </li>
               )}
               {isSuperAdmin && (
-                <li className="nav-item" style={{ marginTop: '20px' }}>
+                <li className="nav-item">
                   <div
                     className={`${sidebarStyles.dropdownToggle} fade-in nav-link`}
                     onClick={() => setVipOpen((open) => !open)}
                     tabIndex={0}
                     role="button"
+                    style={{ 
+                      borderRadius: '8px',
+                      transition: 'all 0.3s ease'
+                    }}
                   >
                     <div className={sidebarStyles.vip}>
                       <i className="fa fa-fw fa-star"></i>{t('vipDepartment')}
@@ -161,37 +176,50 @@ const Sidebar = () => {
                   </div>
                   <div
                     className={`${sidebarStyles.dropdownPanel} ${vipOpen ? sidebarStyles.open : ''}`}
+                    style={{ 
+                      padding: '5px 10px',
+                      borderRadius: '10px',
+                      margin: '8px 0'
+                    }}
                   >
                     <ul className={sidebarStyles.dropdownList}>
                       <li
                         className={sidebarStyles.dropdownItem}
+                        style={dropdownItemStyle}
                         onClick={() => {
                           localStorage.setItem('department_id', '1');
                           window.location.href = '/company-dashboard';
                         }}
                       >
-                        <i className="fa fa-fw fa-building"></i>{t('companyDashboard')}
+                        <i className="fa fa-fw fa-building" style={{ color: '#0173b1', marginRight: '10px' }}></i>
+                        <span style={{ fontWeight: '500' }}>{t('companyDashboard')}</span>
                       </li>
                       <li
                         className={sidebarStyles.dropdownItem}
+                        style={dropdownItemStyle}
                         onClick={() => {
                           localStorage.setItem('department_id', '1');
                           window.location.href = '/caller-dashboard';
                         }}
                       >
-                        <i className="fa fa-fw fa-phone"></i>{t('callerDashboard')}
+                        <i className="fa fa-fw fa-phone" style={{ color: '#0173b1', marginRight: '10px' }}></i>
+                        <span style={{ fontWeight: '500' }}>{t('callerDashboard')}</span>
                       </li>
                     </ul>
                   </div>
                 </li>
               )}
               {isSuperAdmin && (
-                <li className="nav-item" style={{ marginTop: '20px' }}>
+                <li className="nav-item">
                   <div
                     className={`${sidebarStyles.dropdownToggle} fade-in nav-link`}
                     onClick={() => setWorkerOpen((open) => !open)}
                     tabIndex={0}
                     role="button"
+                    style={{ 
+                      borderRadius: '8px',
+                      transition: 'all 0.3s ease'
+                    }}
                   >
                     <div className={sidebarStyles.worker}>
                       <i className="fa fa-fw fa-user-circle"></i>{t('workerDepartment')}
@@ -200,23 +228,30 @@ const Sidebar = () => {
                   </div>
                   <div
                     className={`${sidebarStyles.dropdownPanel} ${workerOpen ? sidebarStyles.open : ''}`}
+                    style={{ 
+                      padding: '5px 10px',
+                      borderRadius: '10px',
+                      margin: '8px 0'
+                    }}
                   >
                     <ul className={sidebarStyles.dropdownList}>
                       <li
                         className={sidebarStyles.dropdownItem}
+                        style={dropdownItemStyle}
                         onClick={() => {
                           localStorage.setItem('department_id', '2');
                           window.location.href = '/company-dashboard';
                         }}
                       >
-                        <i className="fa fa-fw fa-building"></i>{t('companyDashboard')}
+                        <i className="fa fa-fw fa-building" style={{ color: '#0173b1', marginRight: '10px' }}></i>
+                        <span style={{ fontWeight: '500' }}>{t('companyDashboard')}</span>
                       </li>
                     </ul>
                   </div>
                 </li>
               )}
               {(isAdmin || isSuperAdmin) && (
-                <li className="nav-item" style={{ marginTop: '20px' }}>
+                <li className="nav-item">
                   <NavLink
                     to="/admin-dahsboard"
                     className={({ isActive }) => `fade-in nav-link ${isActive ? 'my-active' : ''}`}
