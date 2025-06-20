@@ -2,6 +2,7 @@ const translations = {
   en: {
     companyDashboard: "Company Dashboard",
     callerDashboard: "Caller Dashboard",
+    workerDashboard: "Worker Dashboard",
     adminDashboard: "Admin Dashboard",
     vipDepartment: "VIP Department",
     workerDepartment: "Worker Department",
@@ -30,7 +31,7 @@ const translations = {
     manager: "Manager",
     managerNumber: "Manager Number",
     status: "Status",
-    editDelete: "Edit / Delete",
+    editDelete: "Actions",
 
     // Caller dashboard
     companyName: "Company Name",
@@ -152,6 +153,7 @@ const translations = {
   },
   ru: {
     companyDashboard: "Панель компании",
+    workerDashboard: "Панель сотрудника",
     callerDashboard: "Панель оператора",
     adminDashboard: "Панель администратора",
     vipDepartment: "VIP-отдел",
@@ -180,7 +182,7 @@ const translations = {
     manager: "Менеджер",
     managerNumber: "Номер менеджера",
     status: "Статус",
-    editDelete: "Редактировать / Удалить",
+    editDelete: "Действия",
 
     companyName: "Название компании",
     identificationCode: "ИНН или ID",
@@ -283,6 +285,7 @@ const translations = {
   },
   ka: {
     companyDashboard: "კომპანიის დაფა",
+    workerDashboard: "ხელოსნების დაფა",
     callerDashboard: "დამრეკავის დაფა",
     adminDashboard: "ადმინის დაფა",
     vipDepartment: "VIP განყოფილება",
@@ -311,7 +314,7 @@ const translations = {
     manager: "მენეჯერი",
     managerNumber: "მენეჯერის ნომერი",
     status: "სტატუსი",
-    editDelete: "რედაქტირება / წაშლა",
+    editDelete: "ქმედებები",
 
     companyName: "კომპანიის სახელი",
     identificationCode: "საიდენტიფიკაციო კოდი ან ID",

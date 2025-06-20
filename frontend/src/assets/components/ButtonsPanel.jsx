@@ -1,5 +1,6 @@
 import styles from '../css/CreateButton.module.css';
 import download_button from '../css/UploadButton.module.css';
+import animationStyles from '../css/DownloadAnimation.module.css';
 import FilterForm from './FilterForm';
 import UploadExcel from './UploadExcel';
 import UploadCompanyExcel from './UploadCompanyExcel';
@@ -212,6 +213,16 @@ const ButtonsPanel = ({
         'Call Duration'
       ];
       
+      // Generate today's date for the date range
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      const todayFormatted = `${yyyy}-${mm}-${dd}`;
+      
+      // Create the date range string
+      const dateRangeString = `2025-01-01 - ${todayFormatted}`;
+      
       // Map data according to the specified field mapping
       const exportData = companies.map(company => {
         // Helper function to safely extract values with multiple possible field names
@@ -262,7 +273,7 @@ const ButtonsPanel = ({
           '', // Answered Calls
           '', // No Answer Calls
           '', // Busy Calls
-          '', // Call Date
+          dateRangeString,  // Call Date - now using the date range string
           ''  // Call Duration
         ];
       });
@@ -285,10 +296,6 @@ const ButtonsPanel = ({
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Companies');
       
       // Generate filename with current date
-      const today = new Date();
-      const yyyy = today.getFullYear();
-      const mm = String(today.getMonth() + 1).padStart(2, '0');
-      const dd = String(today.getDate()).padStart(2, '0');
       const dateStr = `${dd}-${mm}-${yyyy}`;
       const fileName = `company_data_${dateStr}.xlsx`;
       
@@ -538,251 +545,77 @@ const ButtonsPanel = ({
 
   return (
     <div className="buttons" style={{ marginBottom: '20px' }}>
-      {/* Full-screen download animation overlay - enhanced with exit animation */}
+      {/* Full-screen download animation overlay */}
       {showFullscreenAnimation && (
-        <div 
-          className={`download-animation-overlay ${animationState}`}
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'radial-gradient(circle, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.5) 100%)',
-            zIndex: 9999,
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            backdropFilter: 'blur(5px)',
-            WebkitBackdropFilter: 'blur(5px)',
-          }}
-        >
+        <div className={`${animationStyles.downloadAnimationOverlay} ${animationStyles[animationState]}`}>
           {/* Canvas for confetti animation */}
           {showConfetti && (
-            <canvas 
-              ref={confettiRef} 
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                pointerEvents: 'none',
-                zIndex: 10000
-              }} 
-            />
+            <canvas ref={confettiRef} className={animationStyles.confettiCanvas} />
           )}
           
           {/* Download animation */}
-          <div className="download-icon-container" style={{
-            position: 'relative',
-            width: '150px', // Increased from 120px to 150px
-            height: '150px', // Increased from 120px to 150px
-            marginBottom: '30px' // Increased from 20px to 30px
-          }}>
+          <div className={animationStyles.downloadIconContainer}>
             {/* Animated cloud with download arrow */}
-            <div className="cloud-download-icon" style={{
-              position: 'relative',
-              width: '100%',
-              height: '100%'
-            }}>
-              <div className="cloud-base" style={{
-                position: 'absolute',
-                width: '130px', // Increased from 100px to 130px
-                height: '78px', // Increased from 60px to 78px
-                backgroundColor: '#ffffff',
-                borderRadius: '39px', // Increased from 30px to 39px
-                top: '50px', // Adjusted from 40px to 50px
-                left: '10px',
-                boxShadow: '0 8px 25px rgba(0,0,0,0.4)', // Enhanced shadow
-                animation: showConfetti ? 'none' : 'pulse 2s infinite'
-              }}></div>
-              <div className="cloud-top1" style={{
-                position: 'absolute',
-                width: '65px', // Increased from 50px to 65px
-                height: '65px', // Increased from 50px to 65px
-                backgroundColor: '#ffffff',
-                borderRadius: '50%',
-                top: '30px', // Adjusted from 25px to 30px
-                left: '30px', // Adjusted from 25px to 30px
-                boxShadow: '0 5px 15px rgba(0,0,0,0.2)', // Added shadow
-              }}></div>
-              <div className="cloud-top2" style={{
-                position: 'absolute',
-                width: '52px', // Increased from 40px to 52px
-                height: '52px', // Increased from 40px to 52px
-                backgroundColor: '#ffffff',
-                borderRadius: '50%',
-                top: '25px', // Adjusted from 20px to 25px
-                left: '75px', // Adjusted from 60px to 75px
-                boxShadow: '0 5px 15px rgba(0,0,0,0.2)', // Added shadow
-              }}></div>
+            <div className={animationStyles.cloudDownloadIcon}>
+              <div className={`${animationStyles.cloudBase} ${showConfetti ? '' : animationStyles.cloudBasePulse}`}></div>
+              <div className={animationStyles.cloudTop1}></div>
+              <div className={animationStyles.cloudTop2}></div>
               
               {/* Download arrow */}
-              <div className="download-arrow" style={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                width: '52px', // Increased from 40px to 52px
-                height: '52px', // Increased from 40px to 52px
-                animation: !showConfetti ? 'bounce 1.5s infinite' : 'none', // Added bounce animation
-              }}>
-                <div style={{
-                  width: '10px', // Increased from 8px to 10px
-                  height: '38px', // Increased from 30px to 38px
-                  backgroundColor: showConfetti ? '#4CAF50' : '#2196F3',
-                  margin: '0 auto',
-                  transition: 'background-color 0.5s ease',
-                  boxShadow: '0 2px 5px rgba(0,0,0,0.2)', // Added shadow
-                }}></div>
-                <div style={{
-                  width: '0',
-                  height: '0',
-                  borderLeft: '16px solid transparent', // Increased from 12px to 16px
-                  borderRight: '16px solid transparent', // Increased from 12px to 16px
-                  borderTop: `20px solid ${showConfetti ? '#4CAF50' : '#2196F3'}`, // Increased from 16px to 20px
-                  margin: '0 auto',
-                  transition: 'border-top-color 0.5s ease',
-                  filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.2))', // Added shadow
-                }}></div>
+              <div className={`${animationStyles.downloadArrow} ${!showConfetti ? animationStyles.downloadArrowActive : ''}`}>
+                <div 
+                  className={animationStyles.arrowStem}
+                  style={{ backgroundColor: showConfetti ? '#4CAF50' : '#2196F3' }}
+                ></div>
+                <div 
+                  className={animationStyles.arrowHead}
+                  style={{ borderTop: `20px solid ${showConfetti ? '#4CAF50' : '#2196F3'}` }}
+                ></div>
               </div>
             </div>
             
             {/* Circles animation */}
             {!showConfetti && (
               <>
-                <div className="circle-1" style={{
-                  position: 'absolute',
-                  top: '50%',
-                  left: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  width: '140%', // Increased from 100% to 140%
-                  height: '140%', // Increased from 100% to 140%
-                  border: '5px solid rgba(33, 150, 243, 0.3)', // Increased from 4px to 5px
-                  borderRadius: '50%',
-                  animation: 'ripple 2s linear infinite'
-                }}></div>
-                <div className="circle-2" style={{
-                  position: 'absolute',
-                  top: '50%',
-                  left: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  width: '120%', // Increased from 100% to 120%
-                  height: '120%', // Increased from 100% to 120%
-                  border: '5px solid rgba(33, 150, 243, 0.3)', // Increased from 4px to 5px
-                  borderRadius: '50%',
-                  animation: 'ripple 2s linear 0.5s infinite'
-                }}></div>
-                
-                {/* Added third circle for more visual effect */}
-                <div className="circle-3" style={{
-                  position: 'absolute',
-                  top: '50%',
-                  left: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  width: '160%',
-                  height: '160%',
-                  border: '5px solid rgba(33, 150, 243, 0.2)',
-                  borderRadius: '50%',
-                  animation: 'ripple 2s linear 1s infinite'
-                }}></div>
+                <div className={`${animationStyles.circle} ${animationStyles.circle1}`}></div>
+                <div className={`${animationStyles.circle} ${animationStyles.circle2}`}></div>
+                <div className={`${animationStyles.circle} ${animationStyles.circle3}`}></div>
               </>
             )}
             
             {/* Success checkmark */}
             {showConfetti && (
-              <div className="success-checkmark" style={{
-                position: 'absolute',
-                top: '-40px', // Adjusted from -30px to -40px
-                right: '-40px', // Adjusted from -30px to -40px
-                width: '80px', // Increased from 60px to 80px
-                height: '80px', // Increased from 60px to 80px
-                backgroundColor: '#4CAF50',
-                borderRadius: '50%',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                boxShadow: '0 5px 15px rgba(0,0,0,0.3)', // Enhanced shadow
-                animation: 'scaleIn 0.5s forwards, pulse 2s 0.5s infinite' // Added additional pulse effect
-              }}>
-                <div style={{
-                  width: '40px', // Increased from 30px to 40px
-                  height: '25px', // Increased from 20px to 25px
-                  borderBottom: '7px solid white', // Increased from 5px to 7px
-                  borderLeft: '7px solid white', // Increased from 5px to 7px
-                  transform: 'rotate(-45deg) translate(2px, -5px)'
-                }}></div>
+              <div className={animationStyles.successCheckmark}>
+                <div className={animationStyles.checkmarkSymbol}></div>
               </div>
             )}
           </div>
           
           {/* Status text */}
-          <h2 style={{
-            color: '#ffffff',
-            fontFamily: 'Arial, sans-serif',
-            margin: '0',
-            textAlign: 'center',
-            fontWeight: 300,
-            fontSize: '36px', // Increased from 28px to 36px
-            textShadow: '0 2px 4px rgba(0,0,0,0.2)', // Added text shadow
-            animation: 'fadeInUp 0.8s forwards' // Added animation
-          }}>
+          <h2 className={animationStyles.statusText}>
             {showConfetti ? t('downloadComplete') : t('downloading')}
           </h2>
           
           {/* Progress bar */}
           {!showConfetti && (
-            <div style={{
-              width: '400px', // Increased from 300px to 400px
-              height: '10px', // Increased from 8px to 10px
-              backgroundColor: 'rgba(255, 255, 255, 0.2)',
-              marginTop: '30px', // Increased from 20px to 30px
-              borderRadius: '5px',
-              overflow: 'hidden',
-              boxShadow: '0 2px 5px rgba(0,0,0,0.2)' // Added shadow for depth
-            }}>
-              <div style={{
-                height: '100%',
-                backgroundColor: '#2196F3',
-                width: `${downloadProgress}%`,
-                borderRadius: '5px',
-                transition: 'width 0.3s ease',
-                background: 'linear-gradient(90deg, #2196F3, #64B5F6)', // Added gradient for more appeal
-                boxShadow: 'inset 0 1px 2px rgba(255, 255, 255, 0.3)' // Inner highlight
-              }}></div>
+            <div className={animationStyles.progressBarContainer}>
+              <div 
+                className={animationStyles.progressBar}
+                style={{ width: `${downloadProgress}%` }}
+              ></div>
             </div>
           )}
           
           {/* Progress percentage */}
           {!showConfetti && (
-            <div style={{
-              color: '#ffffff',
-              marginTop: '15px', // Increased from 10px to 15px
-              fontSize: '20px', // Increased from 16px to 20px
-              fontFamily: 'Arial, sans-serif',
-              fontWeight: 'bold', // Added bold for better visibility
-              textShadow: '0 1px 2px rgba(0,0,0,0.3)' // Added text shadow
-            }}>
+            <div className={animationStyles.progressPercentage}>
               {Math.round(downloadProgress)}%
             </div>
           )}
           
           {/* Completion message */}
           {showConfetti && (
-            <p style={{
-              color: '#ffffff',
-              marginTop: '20px', // Increased from 15px to 20px
-              fontSize: '18px', // Increased from 16px to 18px
-              maxWidth: '500px', // Increased from 400px to 500px
-              textAlign: 'center',
-              animation: 'fadeInUp 0.8s 0.3s forwards', // Added delay to sequence animations
-              opacity: 0,
-              lineHeight: '1.5', // Added line height for readability
-              textShadow: '0 1px 2px rgba(0,0,0,0.3)', // Added text shadow
-              padding: '0 20px' // Added padding for mobile devices
-            }}>
+            <p className={animationStyles.completionMessage}>
               {t('downloadSuccessMessage')}
             </p>
           )}

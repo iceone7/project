@@ -40,8 +40,10 @@ const Header = ({ activeDashboard }) => {
             ? t('callerDashboard')
             : activeDashboard === 'company'
             ? t('companyDashboard')
+            : activeDashboard === 'worker'
+            ? t('workerDashboard')
             : t('adminDashboard')}
-        </h2>
+        </h2> 
       </div>
     </>
   );

@@ -787,12 +787,16 @@ const FilterForm = ({
     console.log("Preparing download with", dataToProcess.length, "records");
     console.log("Using date range:", exportDateRange);
 
-    // Format date string nicely if available
+    // Generate today's date in YYYY-MM-DD format if no date range is selected
+    const today = new Date();
+    const formattedToday = today.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+
+    // Format date string nicely if available, otherwise use today's date
     const formattedDate = exportDateRange.startDate ?
       (exportDateRange.endDate ?
         `${exportDateRange.startDate} - ${exportDateRange.endDate}` :
         exportDateRange.startDate) :
-      "";
+      `${formattedToday} - ${formattedToday}`; // Use today's date when no date is selected
 
     // Transform data according to requested mapping
     const transformedData = dataToProcess.map((row, index) => {
