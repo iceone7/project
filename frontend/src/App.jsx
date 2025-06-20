@@ -490,14 +490,15 @@ function App({ dashboardType = 'company' }) {
                           dashboardType="caller"
                         />
                       )}
-                      <DataTable
-                        activeDashboard={dashboardType}
-                        excelData={excelData}
-                        filteredCompanies={filteredCompanies}
-                        handleDeleteCompany={handleDeleteCompany}
-                        handleEdit={handleEdit}
-                        handleCallerUploadSuccess={handleCallerUploadSuccess}
-                      />
+                        <DataTable
+                          activeDashboard={dashboardType}
+                          excelData={excelData}
+                          filteredCompanies={filteredCompanies}
+                          handleDeleteCompany={handleDeleteCompany}
+                          handleEdit={handleEdit}
+                          handleCallerUploadSuccess={handleCallerUploadSuccess}
+                          dashboardType="worker"
+                        />  
                     </div>
                   </div>
                 </div>

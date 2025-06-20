@@ -4,6 +4,7 @@ import button_comments from '../css/button_comments.module.css';
 import paginationStyles from '../css/pagination.module.css';
 import modalStyles from '../css/recordings-modal.module.css'; // Import the new styles
 import EditModal from './EditModal';
+import CompanyCommentsModal from './CompanyCommentsModal'; // Import CompanyCommentsModal
 import defaultInstance from '../../api/defaultInstance';
 import { useLanguage } from '../i18n/LanguageContext';
 
@@ -54,7 +55,7 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
       totalItems = filteredCompanies?.length || 0;
     } else if (activeDashboard === 'caller') {
       totalItems = excelData?.length || 0;
-    } else if (activeDashboard === 'company' && isDepartamentCraftsmen) {
+    } else if (activeDashboard === 'worker' && isDepartamentCraftsmen) {
       totalItems = calls?.length || 0;
     }
     
@@ -89,7 +90,7 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
 
   // Fetch call history data for craftsmen section
   useEffect(() => {
-    if (isDepartamentCraftsmen && activeDashboard === 'company') {
+    if (isDepartamentCraftsmen && activeDashboard === 'worker') {
       defaultInstance.get(`/cdr`)
         .then(response => {
           console.log('API response for /cdr:', response.data);
@@ -970,6 +971,26 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
     }
   };
 
+  // Add state variables for company comments modal
+  const [showCompanyCommentsModal, setShowCompanyCommentsModal] = useState(false);
+  const [selectedCompanyId, setSelectedCompanyId] = useState(null);
+  const [selectedCompanyName, setSelectedCompanyName] = useState('');
+  
+  // Function to open company comments modal
+  const openCompanyCommentsModal = (company) => {
+    console.log('Opening comments for company:', company);
+    setSelectedCompanyId(company.id);
+    setSelectedCompanyName(company.buyer || company.executor || `Company #${company.id}`);
+    setShowCompanyCommentsModal(true);
+  };
+
+  // Function to close company comments modal
+  const closeCompanyCommentsModal = () => {
+    setShowCompanyCommentsModal(false);
+    setSelectedCompanyId(null);
+    setSelectedCompanyName('');
+  };
+
   return (
     <>
       {isDepartamentVip && activeDashboard === 'company' && (
@@ -1045,6 +1066,16 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                                   <button onClick={() => startEdit(company)} className={edit_delete.editbutton}>
                                     <svg className={edit_delete.editsvgIcon} viewBox="0 0 512 512">
                                       <path d="M410.3 231l11.3-11.3-33.9-33.9-62.1-62.1L291.7 89.8l-11.3 11.3-22.6 22.6L58.6 322.9c-10.4 10.4-18 23.3-22.2 37.4L1 480.7c-2.5 8.4-.2 17.5 6.1 23.7s15.3 8.5 23.7 6.1l120.3-35.4c14.1-4.2 27-11.8 37.4-22.2L387.7 253.7 410.3 231zM160 399.4l-9.1 22.7c-4 3.1-8.5 5.4-13.3 6.9L59.4 452l23-78.1c1.4-4.9 3.8-9.4 6.9-13.3l22.7-9.1v32c0 8.8 7.2 16 16 16h32zM362.7 18.7L348.3 33.2 325.7 55.8 314.3 67.1l33.9 33.9 62.1 62.1 33.9 33.9 11.3-11.3 22.6-22.6 14.5-14.5c25-25 25-65.5 0-90.5L453.3 18.7c-25-25-65.5-25-90.5 0zm-47.4 168l-144 144c-6.2 6.2-16.4 6.2-22.6 0s-6.2-16.4 0-22.6l144-144c6.2-6.2 16.4-6.2 22.6 0s6.2 16.4 0 22.6z"></path>
+                                    </svg>
+                                  </button>
+                                  {/* Add comments button */}
+                                  <button
+                                    onClick={() => openCompanyCommentsModal(company)}
+                                    className={button_comments.commentButton}
+                                    title={t('companyComments')}
+                                  >
+                                    <svg className={button_comments.commentSvgIcon} viewBox="0 0 512 512">
+                                      <path d="M512 240c0 114.9-114.6 208-256 208-37.1 0-72.3-6.4-104.1-17.9-11.9 8.7-31.3 20.6-54.3 30.6C73.6 471.1 44.7 480 16 480c-6.5 0-12.3-3.9-14.8-9.9-2.5-6-.2-12.3 6.1-17.4 15.3-15.8 35.2-33.2 51.1-45.4C24.2 368.4 0 310.2 0 240 0 125.1 114.6 32 256 32s256 93.1 256 208z"/>
                                     </svg>
                                   </button>
                                 </td>
@@ -1180,7 +1211,7 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
         </div>
       )}
       
-      {isDepartamentCraftsmen && activeDashboard === 'company' && (
+      {isDepartamentCraftsmen && activeDashboard === 'worker' && (
         <div className="ecommerce-widget">
           <div className="row">
             <div className="col-12">
@@ -1508,7 +1539,7 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                   <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
                 </svg>
-                Close
+                               Close
               </button>
             </div> */}
           </div>
@@ -1546,6 +1577,16 @@ const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDelete
             </div>
           </div>
         </div>
+      )}
+      
+      {/* Company comments modal - new addition */}
+      {showCompanyCommentsModal && (
+        <CompanyCommentsModal
+          isOpen={showCompanyCommentsModal}
+          onClose={closeCompanyCommentsModal}
+          companyId={selectedCompanyId}
+          companyName={selectedCompanyName}
+        />
       )}
     </>
   );

@@ -14,11 +14,15 @@ const AppRouter = () => {
           element={isAuthenticated ? <App dashboardType="company" /> : <Navigate to="/login" />}
         />
         <Route
+          path="/worker-dashboard"
+          element={isAuthenticated ? <App dashboardType="worker" /> : <Navigate to="/login" />}
+        />
+        <Route
           path="/caller-dashboard"
           element={isAuthenticated ? <App dashboardType="caller" /> : <Navigate to="/login" />}
         />
         <Route
-          path="/admin-dahsboard"
+          path="/admin-dashboard"
           element={isAuthenticated ? <App dashboardType="admin" /> : <Navigate to="/login" />}
         />
         <Route

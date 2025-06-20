@@ -17,10 +17,12 @@
   justify-content: center;
   cursor: pointer;
   transition: background-color 0.2s ease;
+  margin-left: 4px; /* Add margin to separate from other buttons */
 }
 
 .commentButton:hover {
-  background-color: #017cbf;
+  background-color: #015a8e;
+  transform: translateY(-2px);
 }
 
 .commentSvgIcon {

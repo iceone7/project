@@ -144,6 +144,12 @@ const translations = {
     // Comment deletion translations
     deleteComment: "Delete Comment",
     confirmCommentDeletion: "Are you sure you want to delete this comment?",
+
+    // Company comments
+    companyComments: "Company Comments",
+    addCommentForCompany: "Add a comment about this company...",
+    loadingComments: "Loading comments...",
+    comments: "Comments",
   },
   ru: {
     companyDashboard: "Dashboard компании",
@@ -287,6 +293,12 @@ const translations = {
     // Comment deletion translations
     deleteComment: "Удалить комментарий",
     confirmCommentDeletion: "Вы уверены, რომ გსურთ ამ კომენტარის წაშლა?",
+
+    // Company comments
+    companyComments: "Company Comments",
+    addCommentForCompany: "Add a comment about this company...",
+    loadingComments: "Loading comments...",
+    comments: "Comments",
   },
   ka: {
     companyDashboard: "კომპანიის Dashboard",

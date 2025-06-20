@@ -291,14 +291,14 @@ const Sidebar = () => {
                   >
                     <ul className={sidebarStyles.dropdownList}>
                       <li
-                        className={`${sidebarStyles.dropdownItem} ${isActiveItem('company-dashboard', '2') ? sidebarStyles.dropdownItemActive : ''}`}
-                        style={dropdownItemStyle(isActiveItem('company-dashboard', '2'))}
+                        className={`${sidebarStyles.dropdownItem} ${isActiveItem('worker-dashboard', '2') ? sidebarStyles.dropdownItemActive : ''}`}
+                        style={dropdownItemStyle(isActiveItem('worker-dashboard', '2'))}
                         onClick={(e) => {
                           e.stopPropagation(); // Prevent dropdown from closing
-                          handleDashboardClick('company-dashboard', '2');
+                          handleDashboardClick('worker-dashboard', '2');
                         }}
                       >
-                        <i className="fa fa-fw fa-building" style={{ color: isActiveItem('company-dashboard', '2') ? '#fff' : '#0173b1', marginRight: '10px' }}></i>
+                        <i className="fa fa-fw fa-building" style={{ color: isActiveItem('worker-dashboard', '2') ? '#fff' : '#0173b1', marginRight: '10px' }}></i>
                         <span style={{ fontWeight: '500' }}>{t('companyDashboard')}</span>
                       </li>
                     </ul>
@@ -308,7 +308,7 @@ const Sidebar = () => {
               {(isAdmin || isSuperAdmin) && (
                 <li className="nav-item">
                   <NavLink
-                    to="/admin-dahsboard"
+                    to="/admin-dashboard"
                     className={({ isActive }) => `fade-in nav-link ${isActive ? 'my-active' : ''}`}
                     onClick={() => {
                       handleMobileLinkClick();
