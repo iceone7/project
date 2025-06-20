@@ -103,7 +103,7 @@ class CompanyCommentController extends Controller
 
     /**
      * Delete a comment
-     * Only admins or the user who created the comment can delete it
+     * Only super_admin can delete comments
      *
      * @param int $id
      * @return \Illuminate\Http\Response
@@ -114,10 +114,10 @@ class CompanyCommentController extends Controller
             $comment = CompanyComment::findOrFail($id);
             $user = Auth::user();
             
-            // Check if user is authorized to delete this comment
-            if ($user->role !== 'super_admin' && $user->role !== 'admin' && $user->id !== $comment->user_id) {
+            // Check if user is authorized to delete this comment - only super_admin
+            if ($user->role !== 'super_admin') {
                 return response()->json([
-                    'error' => 'You are not authorized to delete this comment'
+                    'error' => 'Only super admins can delete comments'
                 ], 403);
             }
             
