@@ -53,18 +53,40 @@ function App({ dashboardType = 'company' }) {
   const [isLoading, setIsLoading] = useState(false);
   const [isProcessingCDR, setIsProcessingCDR] = useState(false);
 
+  // Log when dashboardType changes for debugging
+  useEffect(() => {
+    console.log(`App component mounted/updated with dashboardType: ${dashboardType}`);
+    
+    // Clear any previous data when dashboard type changes to prevent stale data display
+    setExcelData([]);
+    setCompanies([]);
+    setFilteredCompanies([]);
+    
+    return () => {
+      console.log(`App component with dashboardType: ${dashboardType} is unmounting`);
+    };
+  }, [dashboardType]);
+
   useEffect(() => {
     if (dashboardType === 'company') {
+      console.log('Fetching company data...');
+      setIsLoading(true);
+      
       defaultInstance
         .get('/company-excel-uploads')
         .then((response) => {
           const data = response.data.data || [];
           console.log('Companies loaded successfully:', data.length);
+          if (data.length === 0) {
+            console.warn('Empty company data received from API');
+          }
           setCompanies(data);
           setFilteredCompanies(data);
+          setIsLoading(false);
         })
         .catch((error) => {
           console.error('Error loading companies:', error);
+          setIsLoading(false);
           // Show more detailed error info
           if (error.response) {
             // The request was made and the server responded with a status code
@@ -83,10 +105,13 @@ function App({ dashboardType = 'company' }) {
           }
         });
     }
-  }, [dashboardType]);
+  }, [dashboardType]); // Only depend on dashboardType to ensure refetch happens when switching dashboards
 
   useEffect(() => {
     if (dashboardType === 'caller') {
+      console.log('Fetching caller data...');
+      setIsLoading(true);
+      
       defaultInstance
         .get(`${import.meta.env.VITE_API_BASE_URL}/get-imported-companies`)
         .then((response) => {
@@ -118,12 +143,14 @@ function App({ dashboardType = 'company' }) {
           console.log('Normalized data:', normalizedData);
           setExcelData(normalizedData);
           setFilteredCompanies(normalizedData);
+          setIsLoading(false);
         })
         .catch((error) => {
           console.error('Error loading calls:', error);
+          setIsLoading(false);
         });
     }
-  }, [dashboardType]);
+  }, [dashboardType]); // Only depend on dashboardType to ensure refetch happens when switching dashboards
 
   const handleCallerUploadSuccess = (data) => {
     // Extract phone numbers for enhanced data fetching
@@ -443,7 +470,7 @@ function App({ dashboardType = 'company' }) {
                 <div className="container-fluid dashboard-content">
                   <div className="row">
                     <div className="col-12">
-                      <Header activeDashboard={dashboardType} />
+                      <Header activeDashboard={dashboardType} />                      
                       <ButtonsPanel
                         activeDashboard={dashboardType}
                         handleOpenModal={() => setShowCompanyModal(true)}
@@ -469,6 +496,7 @@ function App({ dashboardType = 'company' }) {
                           editMode={editMode}
                         />
                       )}
+                      
                       {dashboardType === 'company' && (
                         <FilterForm
                           data={companies}
@@ -490,14 +518,14 @@ function App({ dashboardType = 'company' }) {
                           dashboardType="caller"
                         />
                       )}
-                        <DataTable
-                          activeDashboard={dashboardType}
-                          excelData={excelData}
-                          filteredCompanies={filteredCompanies}
-                          handleDeleteCompany={handleDeleteCompany}
-                          handleEdit={handleEdit}
-                          handleCallerUploadSuccess={handleCallerUploadSuccess}
-                        />  
+                      <DataTable
+                        activeDashboard={dashboardType}
+                        excelData={excelData}
+                        filteredCompanies={filteredCompanies}
+                        handleDeleteCompany={handleDeleteCompany}
+                        handleEdit={handleEdit}
+                        handleCallerUploadSuccess={handleCallerUploadSuccess}
+                      />  
                     </div>
                   </div>
                 </div>

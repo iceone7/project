@@ -115,6 +115,9 @@ const Sidebar = () => {
   };
 
   const handleDashboardClick = (dashboardType, departmentId) => {
+    // Indicate that we are changing dashboards - for debugging
+    console.log(`Navigating from ${activeDashboard || 'unknown'} to ${dashboardType}`);
+    
     // Store active dashboard type and department in localStorage
     localStorage.setItem('activeDashboard', dashboardType);
     setActiveDashboard(dashboardType);
@@ -129,7 +132,20 @@ const Sidebar = () => {
       setActiveDepartment(null);
     }
     
-    // Use React Router's navigate instead of window.location.href to prevent page reload
+    // Force a hard refresh when switching between major dashboard types
+    // This is a more aggressive solution but ensures proper data loading
+    if (activeDashboard && activeDashboard !== dashboardType && 
+        (activeDashboard.includes('company') && dashboardType.includes('caller') || 
+         activeDashboard.includes('caller') && dashboardType.includes('company'))) {
+      console.log('Major dashboard change detected, forcing refresh');
+      // Use React Router's navigate with replace option to prevent back navigation issues
+      navigate(`/${dashboardType}`, { replace: true });
+      // Optionally force a reload if the above doesn't resolve all cases
+      // setTimeout(() => window.location.reload(), 100);
+      return;
+    }
+    
+    // Use React Router's navigate for normal navigation
     navigate(`/${dashboardType}`);
   };
 

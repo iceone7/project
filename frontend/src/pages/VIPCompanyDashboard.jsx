@@ -64,11 +64,21 @@ const VIPCompanyDashboard = ({ filteredCompanies, handleDeleteCompany, handleEdi
   useEffect(() => {
     console.log(`VIPCompanyDashboard received ${filteredCompanies?.length || 0} companies`);
     
-    // Add debug info to better understand data issues
-    if (filteredCompanies?.length > 0) {
-      console.log('First company sample:', filteredCompanies[0]);
+    // More detailed data validation
+    if (Array.isArray(filteredCompanies)) {
+      if (filteredCompanies.length > 0) {
+        console.log('First company sample:', filteredCompanies[0]);
+        // Check if data contains valid properties or just empty/null values
+        const sampleCompany = filteredCompanies[0];
+        const hasValidData = Object.values(sampleCompany).some(val => val && val !== 'N/A');
+        if (!hasValidData) {
+          console.warn('Company data appears to be invalid or empty');
+        }
+      } else {
+        console.warn('Company array is empty');
+      }
     } else {
-      console.log('No company data received');
+      console.error('filteredCompanies is not an array:', filteredCompanies);
     }
   }, [filteredCompanies]);
 
@@ -214,9 +224,19 @@ const VIPCompanyDashboard = ({ filteredCompanies, handleDeleteCompany, handleEdi
         <div className="row">
           <div className="col-12">
             <div className="card">
-              <h5 className="card-header">Recent Orders</h5>
+              <h5 className="card-header">Companies</h5>
               <div className="card-body p-0 text-center">
-                <p className="p-5">No company data available to display.</p>
+                <p className="p-5">
+                  No company data available. {
+                    !filteredCompanies ? 'Data may still be loading...' : 'Try refreshing the page.'
+                  }
+                </p>
+                <button 
+                  className="btn btn-primary mb-4"
+                  onClick={() => window.location.reload()}
+                >
+                  Refresh Data
+                </button>
               </div>
             </div>
           </div>

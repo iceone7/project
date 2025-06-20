@@ -11,19 +11,19 @@ const AppRouter = () => {
         <Route path="/login" element={<Login />} />
         <Route
           path="/company-dashboard"
-          element={isAuthenticated ? <App dashboardType="company" /> : <Navigate to="/login" />}
+          element={isAuthenticated ? <App key="company-dashboard" dashboardType="company" /> : <Navigate to="/login" />}
         />
         <Route
           path="/worker-dashboard"
-          element={isAuthenticated ? <App dashboardType="worker" /> : <Navigate to="/login" />}
+          element={isAuthenticated ? <App key="worker-dashboard" dashboardType="worker" /> : <Navigate to="/login" />}
         />
         <Route
           path="/caller-dashboard"
-          element={isAuthenticated ? <App dashboardType="caller" /> : <Navigate to="/login" />}
+          element={isAuthenticated ? <App key="caller-dashboard" dashboardType="caller" /> : <Navigate to="/login" />}
         />
         <Route
           path="/admin-dashboard"
-          element={isAuthenticated ? <App dashboardType="admin" /> : <Navigate to="/login" />}
+          element={isAuthenticated ? <App key="admin-dashboard" dashboardType="admin" /> : <Navigate to="/login" />}
         />
         <Route
           path="/*"
