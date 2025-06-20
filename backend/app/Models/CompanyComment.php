@@ -17,6 +17,7 @@ class CompanyComment extends Model
     protected $fillable = [
         'company_id',
         'user_id',
+        'parent_id',
         'comment',
         'source_table'
     ];
@@ -41,5 +42,13 @@ class CompanyComment extends Model
         
         // Default to the standard Company model
         return $this->belongsTo(Company::class);
+    }
+
+    /**
+     * Get the replies to this comment
+     */
+    public function replies()
+    {
+        return $this->hasMany(CompanyComment::class, 'parent_id')->with('user')->orderBy('created_at', 'asc');
     }
 }

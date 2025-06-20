@@ -30,7 +30,8 @@ class CompanyCommentController extends Controller
             
             $comments = CompanyComment::where('company_id', $companyId)
                 ->where('source_table', $companyInfo['table'])
-                ->with('user:id,name')
+                ->whereNull('parent_id')  // Only get top-level comments
+                ->with(['user:id,name', 'replies.user:id,name'])  // Load replies with their users
                 ->orderBy('created_at', 'desc')
                 ->get();
             
@@ -59,7 +60,8 @@ class CompanyCommentController extends Controller
             // First validate the basic required fields
             $validated = $request->validate([
                 'company_id' => 'required',
-                'comment' => 'required|string|max:1000'
+                'comment' => 'required|string|max:1000',
+                'parent_id' => 'nullable|exists:company_comments,id'
             ]);
             
             // Then manually check if the company exists and determine which table it's in
@@ -76,7 +78,8 @@ class CompanyCommentController extends Controller
                 'company_id' => $companyId,
                 'user_id' => Auth::id(),
                 'comment' => $validated['comment'],
-                'source_table' => $companyInfo['table']
+                'source_table' => $companyInfo['table'],
+                'parent_id' => $validated['parent_id'] ?? null
             ]);
             
             // Load the user relationship for the response
@@ -85,7 +88,8 @@ class CompanyCommentController extends Controller
             Log::info('Company comment created successfully', [
                 'comment_id' => $comment->id,
                 'company_id' => $companyId,
-                'source_table' => $companyInfo['table']
+                'source_table' => $companyInfo['table'],
+                'is_reply' => isset($validated['parent_id'])
             ]);
             
             return response()->json($comment, 201);

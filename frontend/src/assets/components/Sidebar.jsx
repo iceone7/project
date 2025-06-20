@@ -202,6 +202,7 @@ const Sidebar = () => {
                   <NavLink
                     to="/caller-dashboard"
                     className={({ isActive }) => `fade-in nav-link ${isActive ? 'my-active' : ''}`}
+                    style={{ marginTop: '20px' }}
                     onClick={() => {
                       handleMobileLinkClick();
                       setActiveDashboard('caller-dashboard');
@@ -306,7 +307,7 @@ const Sidebar = () => {
                 </li>
               )}
               {(isAdmin || isSuperAdmin) && (
-                <li className="nav-item">
+                <li className="nav-item" style={{ marginTop: '20px' }}>
                   <NavLink
                     to="/admin-dashboard"
                     className={({ isActive }) => `fade-in nav-link ${isActive ? 'my-active' : ''}`}

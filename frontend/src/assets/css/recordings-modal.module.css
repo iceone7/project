@@ -739,3 +739,163 @@
     opacity: 0;
   }
 }
+
+/* Reply form styles */
+.replyForm {
+  margin: 8px 0 10px 20px;
+  padding-left: 10px;
+  border-left: 3px solid #e0e0e0;
+}
+
+.replyInput {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  resize: vertical;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.replyFormButtons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.submitReplyButton {
+  background-color: #4a6cf7;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.submitReplyButton:hover {
+  background-color: #3a5be6;
+}
+
+.submitReplyButton:disabled {
+  background-color: #a0a0a0;
+  cursor: not-allowed;
+}
+
+.cancelReplyButton {
+  background-color: #f0f0f0;
+  color: #333;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.cancelReplyButton:hover {
+  background-color: #e0e0e0;
+}
+
+/* Replies list */
+.repliesList {
+  margin-top: 10px;
+  margin-left: 25px;
+  border-left: 2px solid #e9ecef;
+  padding-left: 15px;
+}
+
+.replyItem {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 8px;
+}
+
+.replyAuthor {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 5px;
+  font-size: 13px;
+}
+
+.replyAuthorName {
+  font-weight: 600;
+  color: #495057;
+}
+
+.replyDate {
+  color: #6c757d;
+  font-size: 12px;
+}
+
+.replyText {
+  margin-bottom: 5px;
+  font-size: 14px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.replyActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.deleteReplyButton {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: #dc3545;
+  font-size: 12px;
+  padding: 2px 5px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.deleteReplyButton:hover {
+  background-color: #fee;
+}
+
+/* Reply button in comment actions */
+.replyButton {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: #4a6cf7;
+  font-size: 13px;
+  padding: 3px 6px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.replyButton:hover {
+  background-color: #f0f4ff;
+}
+
+/* Comment actions container */
+.commentActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 5px;
+}
+
+.deleteCommentButton {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: #dc3545;
+  font-size: 13px;
+  padding: 3px 6px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.deleteCommentButton:hover {
+  background-color: #fee;
+}

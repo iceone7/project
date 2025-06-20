@@ -15,6 +15,8 @@ const CompanyCommentsModal = ({ isOpen, onClose, companyId, companyName }) => {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [commentToDelete, setCommentToDelete] = useState(null);
     const [errorMessage, setErrorMessage] = useState('');
+    const [replyingTo, setReplyingTo] = useState(null);
+    const [replyText, setReplyText] = useState('');
     const { t } = useLanguage();
 
     useEffect(() => {
@@ -60,11 +62,17 @@ const CompanyCommentsModal = ({ isOpen, onClose, companyId, companyName }) => {
             setNewComment('');
             setComments([]);
             setErrorMessage('');
+            setReplyingTo(null);
+            setReplyText('');
         }, 300);
     };
 
     const handleCommentChange = (e) => {
         setNewComment(e.target.value);
+    };
+
+    const handleReplyChange = (e) => {
+        setReplyText(e.target.value);
     };
 
     const handleSubmitComment = async () => {
@@ -102,6 +110,61 @@ const CompanyCommentsModal = ({ isOpen, onClose, companyId, companyName }) => {
         }
     };
 
+    const handleStartReply = (commentId) => {
+        setReplyingTo(commentId);
+        setReplyText('');
+    };
+
+    const handleCancelReply = () => {
+        setReplyingTo(null);
+        setReplyText('');
+    };
+
+    const handleSubmitReply = async (parentId) => {
+        if (!replyText.trim()) return;
+        if (!companyId) {
+            setErrorMessage('Company ID is missing');
+            return;
+        }
+        
+        setIsSaving(true);
+        setErrorMessage('');
+        
+        try {
+            const response = await defaultInstance.post('/company-comments', {
+                company_id: companyId,
+                comment: replyText,
+                parent_id: parentId
+            });
+            
+            // Update the comments state by adding the reply to the correct parent comment
+            setComments(prevComments => prevComments.map(comment => 
+                comment.id === parentId 
+                    ? {
+                        ...comment,
+                        replies: [...(comment.replies || []), response.data]
+                    }
+                    : comment
+            ));
+            
+            setReplyingTo(null);
+            setReplyText('');
+        } catch (error) {
+            console.error('Error saving reply:', error);
+            let errorMsg = 'Failed to save reply';
+            
+            if (error.response?.data?.error) {
+                errorMsg = error.response.data.error;
+            } else if (error.message) {
+                errorMsg = error.message;
+            }
+            
+            setErrorMessage(errorMsg);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     const handleDeleteComment = (commentId) => {
         setCommentToDelete(commentId);
         setShowDeleteConfirm(true);
@@ -112,7 +175,28 @@ const CompanyCommentsModal = ({ isOpen, onClose, companyId, companyName }) => {
         
         try {
             await defaultInstance.delete(`/company-comments/${commentToDelete}`);
-            setComments(prevComments => prevComments.filter(comment => comment.id !== commentToDelete));
+            
+            // Update comments state - handle both top-level comments and replies
+            setComments(prevComments => {
+                // First check if it's a top-level comment
+                const isTopLevel = prevComments.some(c => c.id === commentToDelete);
+                
+                if (isTopLevel) {
+                    return prevComments.filter(comment => comment.id !== commentToDelete);
+                } else {
+                    // It's a reply, so find the parent and filter out the reply
+                    return prevComments.map(comment => {
+                        if (comment.replies && comment.replies.some(r => r.id === commentToDelete)) {
+                            return {
+                                ...comment,
+                                replies: comment.replies.filter(reply => reply.id !== commentToDelete)
+                            };
+                        }
+                        return comment;
+                    });
+                }
+            });
+            
             setShowDeleteConfirm(false);
             setCommentToDelete(null);
         } catch (error) {
@@ -204,9 +288,22 @@ const CompanyCommentsModal = ({ isOpen, onClose, companyId, companyName }) => {
                                             </span>
                                         </p>
                                         <p className={modalStyles.commentText}>{comment.comment}</p>
-                                        {/* Only show delete button for super admins */}
-                                        {isSuperAdmin && (
-                                            <div className={modalStyles.commentActions}>
+                                        
+                                        <div className={modalStyles.commentActions}>
+                                            {/* Reply button */}
+                                            <button
+                                                className={modalStyles.replyButton}
+                                                onClick={() => handleStartReply(comment.id)}
+                                                title={t('reply')}
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                                    <path d="M5.921 11.9 1.353 8.62a.719.719 0 0 1 0-1.238L5.921 4.1A.716.716 0 0 1 7 4.719v2.066h1a7 7 0 0 1 7 7v.5a.5.5 0 0 1-.5.5c-.123 0-.243-.015-.358-.043a5.517 5.517 0 0 0-3.185.172A1.5 1.5 0 0 0 10 16H8a.5.5 0 0 1-.5-.5v-2.326a.5.5 0 0 0-.5-.5H7v2.066a.716.716 0 0 1-1.079.619Z"/>
+                                                </svg>
+                                                {t('reply')}
+                                            </button>
+                                            
+                                            {/* Delete button for super admins */}
+                                            {isSuperAdmin && (
                                                 <button
                                                     className={modalStyles.deleteCommentButton}
                                                     onClick={() => handleDeleteComment(comment.id)}
@@ -218,6 +315,70 @@ const CompanyCommentsModal = ({ isOpen, onClose, companyId, companyName }) => {
                                                     </svg>
                                                     {t('deleteComment')}
                                                 </button>
+                                            )}
+                                        </div>
+                                        
+                                        {/* Reply form */}
+                                        {replyingTo === comment.id && (
+                                            <div className={modalStyles.replyForm}>
+                                                <textarea
+                                                    className={modalStyles.replyInput}
+                                                    value={replyText}
+                                                    onChange={handleReplyChange}
+                                                    placeholder={t('typeYourReply')}
+                                                    rows="2"
+                                                ></textarea>
+                                                <div className={modalStyles.replyFormButtons}>
+                                                    <button 
+                                                        className={modalStyles.cancelReplyButton}
+                                                        onClick={handleCancelReply}
+                                                    >
+                                                        {t('cancel')}
+                                                    </button>
+                                                    <button 
+                                                        className={modalStyles.submitReplyButton}
+                                                        onClick={() => handleSubmitReply(comment.id)}
+                                                        disabled={isSaving || !replyText.trim()}
+                                                    >
+                                                        {isSaving ? t('sending') : t('reply')}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+                                        
+                                        {/* Display replies */}
+                                        {comment.replies && comment.replies.length > 0 && (
+                                            <div className={modalStyles.repliesList}>
+                                                {comment.replies.map(reply => (
+                                                    <div key={reply.id} className={modalStyles.replyItem}>
+                                                        <p className={modalStyles.replyAuthor}>
+                                                            <span className={modalStyles.replyAuthorName}>
+                                                                {reply.user?.name || t('unknownUser')}
+                                                            </span>
+                                                            <span className={modalStyles.replyDate}>
+                                                                {new Date(reply.created_at).toLocaleString()}
+                                                            </span>
+                                                        </p>
+                                                        <p className={modalStyles.replyText}>{reply.comment}</p>
+                                                        
+                                                        {/* Delete button for replies - super admin only */}
+                                                        {isSuperAdmin && (
+                                                            <div className={modalStyles.replyActions}>
+                                                                <button
+                                                                    className={modalStyles.deleteReplyButton}
+                                                                    onClick={() => handleDeleteComment(reply.id)}
+                                                                    title={t('deleteReply')}
+                                                                >
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                                                                        <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                                                                        <path fillRule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                                                                    </svg>
+                                                                    {t('delete')}
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
                                             </div>
                                         )}
                                     </div>
