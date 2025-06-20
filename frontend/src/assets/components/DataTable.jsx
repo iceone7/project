@@ -5,9 +5,12 @@ import VIPCallerDashboard from '../../pages/VIPCallerDashboard';
 const DataTable = ({ activeDashboard, excelData, filteredCompanies, handleDeleteCompany, handleEdit, handleCallerUploadSuccess }) => {
   return (
     <>
-      {activeDashboard === 'worker' && <Worker />}
+      {activeDashboard === 'worker' && (
+        <Worker key={`worker-dashboard-${Date.now()}`} />
+      )}
       {activeDashboard === 'company' && (
         <VIPCompanyDashboard
+          key={`company-dashboard-${Date.now()}`}
           filteredCompanies={filteredCompanies}
           handleDeleteCompany={handleDeleteCompany}
           handleEdit={handleEdit}
