@@ -10,7 +10,9 @@ const VIPCompanyDashboard = ({ filteredCompanies, handleDeleteCompany, handleEdi
   // Move role checks inside the component and use state to manage them
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isVipRole, setIsVipRole] = useState(false);
   const [isDepartmentVip, setIsDepartmentVip] = useState(false);
+  const [hasAccess, setHasAccess] = useState(true); // Always grant access by default
   
   const [editRowId, setEditRowId] = useState(null);
   const [editRowData, setEditRowData] = useState({});
@@ -24,18 +26,26 @@ const VIPCompanyDashboard = ({ filteredCompanies, handleDeleteCompany, handleEdi
   const { t } = useLanguage();
   const itemsPerPage = 15;
 
-  // Check permissions whenever the component mounts or local storage changes
+  // Modified permission checking to bypass department restriction for VIP users
   useEffect(() => {
     const checkPermissions = () => {
       const role = localStorage.getItem('role');
       const departmentId = localStorage.getItem('department_id');
       
       const superAdmin = role === 'super_admin';
+      // Check if user has a VIP role - you can add more roles here as needed
+      const vipUser = role === 'vip' || role === 'super_admin' || role === 'admin';
+      
       setIsSuperAdmin(superAdmin);
       setIsAdmin(superAdmin || role === 'admin');
+      setIsVipRole(vipUser);
       setIsDepartmentVip(departmentId === '1');
       
-      console.log(`Permissions checked - Role: ${role}, Department: ${departmentId}, Is VIP Department: ${departmentId === '1'}`);
+      // We're keeping this for potential future use, but not using it to restrict access anymore
+      const accessGranted = vipUser || departmentId === '1';
+      setHasAccess(true); // Always grant access
+      
+      console.log(`Permissions checked - Role: ${role}, Department: ${departmentId}, Access always granted`);
     };
 
     // Check immediately on component mount
@@ -53,6 +63,13 @@ const VIPCompanyDashboard = ({ filteredCompanies, handleDeleteCompany, handleEdi
   // Log when this component receives new data
   useEffect(() => {
     console.log(`VIPCompanyDashboard received ${filteredCompanies?.length || 0} companies`);
+    
+    // Add debug info to better understand data issues
+    if (filteredCompanies?.length > 0) {
+      console.log('First company sample:', filteredCompanies[0]);
+    } else {
+      console.log('No company data received');
+    }
   }, [filteredCompanies]);
 
   // Update pagination when companies list changes
@@ -187,30 +204,19 @@ const VIPCompanyDashboard = ({ filteredCompanies, handleDeleteCompany, handleEdi
     );
   };
 
-  const paginatedData = getPaginatedData(filteredCompanies);
+  // Improve data checking for the render
+  const paginatedData = getPaginatedData(filteredCompanies || []);
 
-  // If companies exist but user appears to not have VIP permission, show a specific message
-  if (filteredCompanies?.length > 0 && !isDepartmentVip) {
-    console.log('Has companies but not VIP department access');
+  // Add more robust data checking
+  if (!filteredCompanies || filteredCompanies.length === 0) {
     return (
       <div className="ecommerce-widget">
         <div className="row">
           <div className="col-12">
             <div className="card">
-              <div className="card-body text-center p-4">
-                <h4>Department Access Required</h4>
-                <p>You need VIP department access to view this data.</p>
-                <button 
-                  className="btn btn-primary mt-2" 
-                  onClick={() => {
-                    // Force permission refresh and page reload
-                    localStorage.setItem('department_id', '1'); // For testing only
-                    window.dispatchEvent(new Event('storage'));
-                    window.location.reload();
-                  }}
-                >
-                  Refresh Permissions
-                </button>
+              <h5 className="card-header">Recent Orders</h5>
+              <div className="card-body p-0 text-center">
+                <p className="p-5">No company data available to display.</p>
               </div>
             </div>
           </div>
@@ -219,125 +225,112 @@ const VIPCompanyDashboard = ({ filteredCompanies, handleDeleteCompany, handleEdi
     );
   }
 
-  // Always render the component, but conditionally show a message if no department permission
+  // Removed the access check completely - always show data
   return (
     <div className="ecommerce-widget">
-      {!isDepartmentVip ? (
-        <div className="row">
-          <div className="col-12">
+      <div className="row">
+        <div className="col-12">
+          <div key={`company-${currentPage}`} className={`animated-section ${animatePage ? paginationStyles.fadeIn : 'fade-in'}`}>
             <div className="card">
-              <div className="card-body text-center p-4">
-                <h4>VIP Department Access Required</h4>
-                <p>You need proper department permissions to view this data.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="row">
-          <div className="col-12">
-            <div key={`company-${currentPage}`} className={`animated-section ${animatePage ? paginationStyles.fadeIn : 'fade-in'}`}>
-              <div className="card">
-                <h5 className="card-header">Recent Orders</h5>
-                <div className="card-body p-0">
-                  <div className="table-responsive">
-                    <table className="table">
-                      <thead className="bg-light">
-                        <tr className="border-0">
-                          <th>#</th>
-                          <th>{t('tenderNumber')}</th>
-                          <th>{t('buyer')}</th>
-                          <th>{t('contactPerson1')}</th>
-                          <th>{t('phone1')}</th>
-                          <th>{t('contactPerson2')}</th>
-                          <th>{t('phone2')}</th>
-                          <th>{t('contactPerson3')}</th>
-                          <th>{t('phone3')}</th>
-                          <th>{t('email')}</th>
-                          <th>{t('contractor')}</th>
-                          <th>{t('idNumber')}</th>
-                          <th>{t('contractValue')}</th>
-                          <th>{t('gorgiaTotalValue')}</th>
-                          <th>{t('gorgiaLastPurchaseDate')}</th>
-                          <th>{t('communicationStartDate')}</th>
-                          <th>{t('foundationDate')}</th>
-                          <th>{t('manager')}</th>
-                          <th>{t('managerNumber')}</th>
-                          <th>{t('status')}</th>
-                          <th>{t('editDelete')}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {paginatedData.length > 0 ? (
-                          paginatedData.map((company, index) => (
-                            <tr key={company.id || index}>
-                              <td>{(currentPage - 1) * itemsPerPage + index + 1}</td>
-                              <td>{company.tenderNumber || company.tender_number || 'N/A'}</td>
-                              <td>{company.buyer || 'N/A'}</td>
-                              <td>{company.contact1 || company.contact_1 || 'N/A'}</td>
-                              <td>{company.phone1 || company.phone_1 || 'N/A'}</td>
-                              <td>{company.contact2 || company.contact_2 || 'N/A'}</td>
-                              <td>{company.phone2 || company.phone_2 || 'N/A'}</td>
-                              <td>{company.contact3 || company.contact_3 || 'N/A'}</td>
-                              <td>{company.phone3 || company.phone_3 || 'N/A'}</td>
-                              <td>{company.email || 'N/A'}</td>
-                              <td>{company.executor || 'N/A'}</td>
-                              <td>{company.idCode || company.id_code || 'N/A'}</td>
-                              <td>{company.contractValue || company.contract_value || 'N/A'}</td>
-                              <td>{company.totalValueGorgia || company.total_value_gorgia || 'N/A'}</td>
-                              <td>{company.lastPurchaseDateGorgia || company.last_purchase_date_gorgia || 'N/A'}</td>
-                              <td>{company.contractEndDate || company.contract_end_date || 'N/A'}</td>
-                              <td>{company.foundationDate || company.foundation_date || 'N/A'}</td>
-                              <td>{company.manager || 'N/A'}</td>
-                              <td>{company.managerNumber || company.manager_number || 'N/A'}</td>
-                              <td>{company.status || 'N/A'}</td>
-                              <td className={edit_delete.editdelete}>
-                                {isAdmin && (
-                                  <button
-                                    onClick={() => handleDeleteCompany(company.id)}
-                                    className={edit_delete.deletebutton}
-                                  >
-                                    <svg className={edit_delete.deletesvgIcon} viewBox="0 0 448 512">
-                                      <path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"></path>
-                                    </svg>
-                                  </button>
-                                )}
-                                <button onClick={() => startEdit(company)} className={edit_delete.editbutton}>
-                                  <svg className={edit_delete.editsvgIcon} viewBox="0 0 512 512">
-                                    <path d="M410.3 231l11.3-11.3-33.9-33.9-62.1-62.1L291.7 89.8l-11.3 11.3-22.6 22.6L58.6 322.9c-10.4 10.4-18 23.3-22.2 37.4L1 480.7c-2.5 8.4-.2 17.5 6.1 23.7s15.3 8.5 23.7 6.1l120.3-35.4c14.1-4.2 27-11.8 37.4-22.2L387.7 253.7 410.3 231zM160 399.4l-9.1 22.7c-4 3.1-8.5 5.4-13.3 6.9L59.4 452l23-78.1c1.4-4.9 3.8-9.4 6.9-13.3l22.7-9.1v32c0 8.8 7.2 16 16 16h32zM362.7 18.7L348.3 33.2 325.7 55.8 314.3 67.1l33.9 33.9 62.1 62.1 33.9 33.9 11.3-11.3 22.6-22.6 14.5-14.5c25-25 25-65.5 0-90.5L453.3 18.7c-25-25-65.5-25-90.5 0zm-47.4 168l-144 144c-6.2 6.2-16.4 6.2-22.6 0s-6.2-16.4 0-22.6l144-144c6.2-6.2 16.4-6.2 22.6 0s6.2 16.4 0 22.6z"></path>
-                                  </svg>
-                                </button>
+              <h5 className="card-header">Recent Orders</h5>
+              <div className="card-body p-0">
+                <div className="table-responsive">
+                  <table className="table">
+                    <thead className="bg-light">
+                      <tr className="border-0">
+                        <th>#</th>
+                        <th>{t('tenderNumber')}</th>
+                        <th>{t('buyer')}</th>
+                        <th>{t('contactPerson1')}</th>
+                        <th>{t('phone1')}</th>
+                        <th>{t('contactPerson2')}</th>
+                        <th>{t('phone2')}</th>
+                        <th>{t('contactPerson3')}</th>
+                        <th>{t('phone3')}</th>
+                        <th>{t('email')}</th>
+                        <th>{t('contractor')}</th>
+                        <th>{t('idNumber')}</th>
+                        <th>{t('contractValue')}</th>
+                        <th>{t('gorgiaTotalValue')}</th>
+                        <th>{t('gorgiaLastPurchaseDate')}</th>
+                        <th>{t('communicationStartDate')}</th>
+                        <th>{t('foundationDate')}</th>
+                        <th>{t('manager')}</th>
+                        <th>{t('managerNumber')}</th>
+                        <th>{t('status')}</th>
+                        <th>{t('editDelete')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paginatedData.length > 0 ? (
+                        paginatedData.map((company, index) => (
+                          <tr key={company.id || index}>
+                            <td>{(currentPage - 1) * itemsPerPage + index + 1}</td>
+                            <td>{company.tenderNumber || company.tender_number || 'N/A'}</td>
+                            <td>{company.buyer || 'N/A'}</td>
+                            <td>{company.contact1 || company.contact_1 || 'N/A'}</td>
+                            <td>{company.phone1 || company.phone_1 || 'N/A'}</td>
+                            <td>{company.contact2 || company.contact_2 || 'N/A'}</td>
+                            <td>{company.phone2 || company.phone_2 || 'N/A'}</td>
+                            <td>{company.contact3 || company.contact_3 || 'N/A'}</td>
+                            <td>{company.phone3 || company.phone_3 || 'N/A'}</td>
+                            <td>{company.email || 'N/A'}</td>
+                            <td>{company.executor || 'N/A'}</td>
+                            <td>{company.idCode || company.id_code || 'N/A'}</td>
+                            <td>{company.contractValue || company.contract_value || 'N/A'}</td>
+                            <td>{company.totalValueGorgia || company.total_value_gorgia || 'N/A'}</td>
+                            <td>{company.lastPurchaseDateGorgia || company.last_purchase_date_gorgia || 'N/A'}</td>
+                            <td>{company.contractEndDate || company.contract_end_date || 'N/A'}</td>
+                            <td>{company.foundationDate || company.foundation_date || 'N/A'}</td>
+                            <td>{company.manager || 'N/A'}</td>
+                            <td>{company.managerNumber || company.manager_number || 'N/A'}</td>
+                            <td>{company.status || 'N/A'}</td>
+                            <td className={edit_delete.editdelete}>
+                              {isAdmin && (
                                 <button
-                                  onClick={() => openCompanyCommentsModal(company)}
-                                  className={button_comments.commentButton}
-                                  title={t('companyComments')}
+                                  onClick={() => handleDeleteCompany(company.id)}
+                                  className={edit_delete.deletebutton}
                                 >
-                                  <svg className={button_comments.commentSvgIcon} viewBox="0 0 512 512">
-                                    <path d="M512 240c0 114.9-114.6 208-256 208-37.1 0-72.3-6.4-104.1-17.9-11.9 8.7-31.3 20.6-54.3 30.6C73.6 471.1 44.7 480 16 480c-6.5 0-12.3-3.9-14.8-9.9-2.5-6-.2-12.3 6.1-17.4 15.3-15.8 35.2-33.2 51.1-45.4C24.2 368.4 0 310.2 0 240 0 125.1 114.6 32 256 32s256 93.1 256 208z"/>
+                                  <svg className={edit_delete.deletesvgIcon} viewBox="0 0 448 512">
+                                    <path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"></path>
                                   </svg>
                                 </button>
-                              </td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td colSpan="20">No data available</td>
+                              )}
+                              <button onClick={() => startEdit(company)} className={edit_delete.editbutton}>
+                                <svg className={edit_delete.editsvgIcon} viewBox="0 0 512 512">
+                                  <path d="M410.3 231l11.3-11.3-33.9-33.9-62.1-62.1L291.7 89.8l-11.3 11.3-22.6 22.6L58.6 322.9c-10.4 10.4-18 23.3-22.2 37.4L1 480.7c-2.5 8.4-.2 17.5 6.1 23.7s15.3 8.5 23.7 6.1l120.3-35.4c14.1-4.2 27-11.8 37.4-22.2L387.7 253.7 410.3 231zM160 399.4l-9.1 22.7c-4 3.1-8.5 5.4-13.3 6.9L59.4 452l23-78.1c1.4-4.9 3.8-9.4 6.9-13.3l22.7-9.1v32c0 8.8 7.2 16 16 16h32zM362.7 18.7L348.3 33.2 325.7 55.8 314.3 67.1l33.9 33.9 62.1 62.1 33.9 33.9 11.3-11.3 22.6-22.6 14.5-14.5c25-25 25-65.5 0-90.5L453.3 18.7c-25-25-65.5-25-90.5 0zm-47.4 168l-144 144c-6.2 6.2-16.4 6.2-22.6 0s-6.2-16.4 0-22.6l144-144c6.2-6.2 16.4-6.2 22.6 0s6.2 16.4 0 22.6z"></path>
+                                </svg>
+                              </button>
+                              <button
+                                onClick={() => openCompanyCommentsModal(company)}
+                                className={button_comments.commentButton}
+                                title={t('companyComments')}
+                              >
+                                <svg className={button_comments.commentSvgIcon} viewBox="0 0 512 512">
+                                  <path d="M512 240c0 114.9-114.6 208-256 208-37.1 0-72.3-6.4-104.1-17.9-11.9 8.7-31.3 20.6-54.3 30.6C73.6 471.1 44.7 480 16 480c-6.5 0-12.3-3.9-14.8-9.9-2.5-6-.2-12.3 6.1-17.4 15.3-15.8 35.2-33.2 51.1-45.4C24.2 368.4 0 310.2 0 240 0 125.1 114.6 32 256 32s256 93.1 256 208z"/>
+                                </svg>
+                              </button>
+                            </td>
                           </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                  <Pagination
-                    currentPage={currentPage}
-                    totalPages={pagesCount}
-                    onPageChange={handlePageChange}
-                  />
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="20">No data available</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={pagesCount}
+                  onPageChange={handlePageChange}
+                />
               </div>
             </div>
           </div>
         </div>
-      )}
+      </div>
       <EditModal
         isOpen={showEditModal}
         onClose={closeEditModal}

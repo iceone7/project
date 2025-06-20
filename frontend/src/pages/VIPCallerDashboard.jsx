@@ -458,6 +458,20 @@ const VIPCallerDashboard = ({ excelData, handleCallerUploadSuccess }) => {
     fetchCallerData();
   }, []);
 
+  // Log when component mounts/unmounts to help debug race conditions
+  useEffect(() => {
+    console.log('VIPCallerDashboard mounted');
+    
+    return () => {
+      console.log('VIPCallerDashboard unmounting and cleaning up');
+    };
+  }, []);
+  
+  // Log when data changes
+  useEffect(() => {
+    console.log(`VIPCallerDashboard received ${excelData?.length || 0} records`);
+  }, [excelData]);
+
   const Pagination = ({ currentPage, totalPages, onPageChange }) => {
     const getPageNumbers = () => {
       const delta = 2;

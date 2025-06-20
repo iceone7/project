@@ -4,51 +4,30 @@ import paginationStyles from '../assets/css/pagination.module.css';
 import defaultInstance from '../api/defaultInstance';
 import { useLanguage } from '../assets/i18n/LanguageContext';
 
+const isDepartamentCraftsmen = localStorage.getItem('department_id') === '2';
+
 const Worker = () => {
   const [calls, setCalls] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pagesCount, setPagesCount] = useState(1);
   const [animatePage, setAnimatePage] = useState(false);
-  const [isDepartmentCraftsmen, setIsDepartmentCraftsmen] = useState(false);
   const paginationRef = useRef(null);
   const { t } = useLanguage();
   const recordingsBaseUrl = import.meta.env.VITE_RECORDINGS_URL;
   const itemsPerPage = 15;
 
-  // Check department on component mount and when localStorage changes
   useEffect(() => {
-    const checkDepartment = () => {
-      const department = localStorage.getItem('department_id');
-      setIsDepartmentCraftsmen(department === '2');
-    };
-
-    // Check immediately when component mounts
-    checkDepartment();
-    
-    // Set up listener for storage changes
-    const handleStorageChange = () => checkDepartment();
-    window.addEventListener('storage', handleStorageChange);
-    
-    // Cleanup listener
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
-
-  // Fetch calls when department check is complete
-  useEffect(() => {
-    if (isDepartmentCraftsmen) {
-      console.log('Fetching call data for craftsmen department');
+    if (isDepartamentCraftsmen) {
       defaultInstance.get(`/cdr`)
         .then(response => {
-          console.log(`Received ${response.data?.length || 0} call records`);
           setCalls(response.data);
         })
         .catch(error => {
           console.error('Error fetching calls:', error);
         });
     }
-  }, [isDepartmentCraftsmen]);
+  }, []);
 
-  // Update pagination when calls data changes
   useEffect(() => {
     const totalItems = calls?.length || 0;
     const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
@@ -166,14 +145,14 @@ const Worker = () => {
   const paginatedCalls = getPaginatedData(calls);
 
   return (
-    <div className="ecommerce-widget">
-      <div className="row">
-        <div className="col-12">
-          <div key={`worker-${currentPage}`} className={`animated-section ${animatePage ? paginationStyles.fadeIn : 'fade-in'}`}>
-            <div className="card">
-              <h5 className="card-header">Craftsmen Companies</h5>
-              <div className="card-body p-0">
-                {isDepartmentCraftsmen ? (
+    isDepartamentCraftsmen && (
+      <div className="ecommerce-widget">
+        <div className="row">
+          <div className="col-12">
+            <div key={`worker-${currentPage}`} className={`animated-section ${animatePage ? paginationStyles.fadeIn : 'fade-in'}`}>
+              <div className="card">
+                <h5 className="card-header">Craftsmen Companies</h5>
+                <div className="card-body p-0">
                   <div className="table-responsive">
                     <table className="table">
                       <thead className="bg-light">
@@ -231,22 +210,18 @@ const Worker = () => {
                       </tbody>
                     </table>
                   </div>
-                ) : (
-                  <div className="p-4 text-center">
-                    <p>You don't have access to craftsmen department data.</p>
-                  </div>
-                )}
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={pagesCount}
-                  onPageChange={handlePageChange}
-                />
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={pagesCount}
+                    onPageChange={handlePageChange}
+                  />
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    )
   );
 };
 

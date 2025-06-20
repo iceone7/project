@@ -123,16 +123,10 @@ const Sidebar = () => {
     if (departmentId) {
       localStorage.setItem('department_id', departmentId);
       setActiveDepartment(departmentId);
-      
-      // Dispatch a storage event to notify components of the change
-      window.dispatchEvent(new Event('storage'));
     } else {
       // Clear department if not specified
       localStorage.removeItem('department_id');
       setActiveDepartment(null);
-      
-      // Dispatch a storage event to notify components of the change
-      window.dispatchEvent(new Event('storage'));
     }
     
     // Use React Router's navigate instead of window.location.href to prevent page reload
