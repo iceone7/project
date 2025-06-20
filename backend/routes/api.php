@@ -132,3 +132,36 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/recording-comments', [App\Http\Controllers\RecordingCommentController::class, 'store']);
     Route::delete('/recording-comments/{id}', [App\Http\Controllers\RecordingCommentController::class, 'destroy']);
 });
+
+// Company Comments routes
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/company-comments/{companyId}', [App\Http\Controllers\CompanyCommentController::class, 'index']);
+    Route::post('/company-comments', [App\Http\Controllers\CompanyCommentController::class, 'store']);
+    Route::delete('/company-comments/{id}', [App\Http\Controllers\CompanyCommentController::class, 'destroy']);
+});
+
+// Temporary debugging endpoint - remove in production
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/debug/company-tables', function() {
+        // Only allow for admin users
+        if (auth()->user()->role !== 'admin' && auth()->user()->role !== 'super_admin') {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+        
+        $companies = \Illuminate\Support\Facades\DB::table('companies')
+            ->select('id', 'buyer', 'executor')
+            ->limit(10)
+            ->get();
+            
+        $companyUploads = \Illuminate\Support\Facades\DB::table('company_excel_uploads')
+            ->select('id', 'buyer', 'executor')
+            ->limit(10)
+            ->get();
+            
+        return [
+            'companies_table' => $companies,
+            'company_excel_uploads_table' => $companyUploads,
+            'company_comments_table_exists' => \Illuminate\Support\Facades\Schema::hasTable('company_comments'),
+        ];
+    });
+});
