@@ -4,29 +4,46 @@ import paginationStyles from '../assets/css/pagination.module.css';
 import defaultInstance from '../api/defaultInstance';
 import { useLanguage } from '../assets/i18n/LanguageContext';
 
-const isDepartamentCraftsmen = localStorage.getItem('department_id') === '2';
-
 const Worker = () => {
+  const isDepartamentCraftsmen = localStorage.getItem('department_id') === '2' || 
+                               localStorage.getItem('role') === 'super_admin'; // Allow super_admin to see data
+
   const [calls, setCalls] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pagesCount, setPagesCount] = useState(1);
   const [animatePage, setAnimatePage] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Add loading state
+  const [loadError, setLoadError] = useState(null); // Add error state
   const paginationRef = useRef(null);
   const { t } = useLanguage();
   const recordingsBaseUrl = import.meta.env.VITE_RECORDINGS_URL;
   const itemsPerPage = 15;
 
   useEffect(() => {
-    if (isDepartamentCraftsmen) {
-      defaultInstance.get(`/cdr`)
-        .then(response => {
-          setCalls(response.data);
-        })
-        .catch(error => {
-          console.error('Error fetching calls:', error);
-        });
-    }
+    console.log('Worker component mounted');
+    return () => console.log('Worker component unmounted');
   }, []);
+
+  useEffect(() => {
+    // Always try to fetch data, but handle permissions in the UI
+    setIsLoading(true);
+    setLoadError(null);
+    
+    // Log the current department setting
+    console.log(`Fetching CDR data, department status: ${isDepartamentCraftsmen ? 'Craftsmen' : 'Not Craftsmen'}`);
+    
+    defaultInstance.get(`/cdr`)
+      .then(response => {
+        console.log(`CDR data fetched successfully, ${response.data.length} records`);
+        setCalls(response.data);
+        setIsLoading(false);
+      })
+      .catch(error => {
+        console.error('Error fetching calls:', error);
+        setLoadError(error.message || 'Failed to load data');
+        setIsLoading(false);
+      });
+  }, [isDepartamentCraftsmen]); // Re-fetch if department changes
 
   useEffect(() => {
     const totalItems = calls?.length || 0;
@@ -144,15 +161,37 @@ const Worker = () => {
 
   const paginatedCalls = getPaginatedData(calls);
 
+  // Enhanced rendering with loading state
   return (
-    isDepartamentCraftsmen && (
-      <div className="ecommerce-widget">
-        <div className="row">
-          <div className="col-12">
-            <div key={`worker-${currentPage}`} className={`animated-section ${animatePage ? paginationStyles.fadeIn : 'fade-in'}`}>
-              <div className="card">
-                <h5 className="card-header">Craftsmen Companies</h5>
-                <div className="card-body p-0">
+    <div className="ecommerce-widget">
+      <div className="row">
+        <div className="col-12">
+          <div key={`worker-${currentPage}`} className={`animated-section ${animatePage ? paginationStyles.fadeIn : 'fade-in'}`}>
+            <div className="card">
+              <h5 className="card-header">
+                Craftsmen Companies
+                {isLoading && <span className="spinner-border spinner-border-sm ms-2" role="status"></span>}
+              </h5>
+              <div className="card-body p-0">
+                {isLoading ? (
+                  <div className="text-center py-5">
+                    <div className="spinner-border" role="status">
+                      <span className="visually-hidden">Loading...</span>
+                    </div>
+                    <p className="mt-2">Loading call data...</p>
+                  </div>
+                ) : loadError ? (
+                  <div className="text-center py-5 text-danger">
+                    <p>Error: {loadError}</p>
+                    <button className="btn btn-sm btn-outline-primary" onClick={() => window.location.reload()}>
+                      Retry
+                    </button>
+                  </div>
+                ) : !isDepartamentCraftsmen ? (
+                  <div className="text-center py-5">
+                    <p>You don't have permission to view this content.</p>
+                  </div>
+                ) : (
                   <div className="table-responsive">
                     <table className="table">
                       <thead className="bg-light">
@@ -209,19 +248,19 @@ const Worker = () => {
                         )}
                       </tbody>
                     </table>
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={pagesCount}
+                      onPageChange={handlePageChange}
+                    />
                   </div>
-                  <Pagination
-                    currentPage={currentPage}
-                    totalPages={pagesCount}
-                    onPageChange={handlePageChange}
-                  />
-                </div>
+                )}
               </div>
             </div>
           </div>
         </div>
       </div>
-    )
+    </div>
   );
 };
 

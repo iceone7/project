@@ -237,7 +237,7 @@ const Sidebar = () => {
                       margin: '8px 0'
                     }}
                   >
-                    <ul className={sidebarStyles.dropdownList}>
+                    <ul className={`${sidebarStyles.dropdownList} fade-in`}>
                       <li
                         className={`${sidebarStyles.dropdownItem} ${isActiveItem('company-dashboard', '1') ? sidebarStyles.dropdownItemActive : ''}`}
                         style={dropdownItemStyle(isActiveItem('company-dashboard', '1'))}
@@ -288,7 +288,7 @@ const Sidebar = () => {
                       margin: '8px 0'
                     }}
                   >
-                    <ul className={sidebarStyles.dropdownList}>
+                    <ul className={`${sidebarStyles.dropdownList} fade-in`}>
                       <li
                         className={`${sidebarStyles.dropdownItem} ${isActiveItem('worker-dashboard', '2') ? sidebarStyles.dropdownItemActive : ''}`}
                         style={dropdownItemStyle(isActiveItem('worker-dashboard', '2'))}

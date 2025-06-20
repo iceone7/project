@@ -497,7 +497,6 @@ function App({ dashboardType = 'company' }) {
                           handleDeleteCompany={handleDeleteCompany}
                           handleEdit={handleEdit}
                           handleCallerUploadSuccess={handleCallerUploadSuccess}
-                          dashboardType="worker"
                         />  
                     </div>
                   </div>
