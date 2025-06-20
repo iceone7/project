@@ -101,7 +101,7 @@ const Sidebar = () => {
   const dropdownItemStyle = (isActive) => ({
     borderRadius: '8px',
     transition: 'all 0.3s ease',
-    margin: '8px 0',
+    margin: '10px 0',
     padding: '12px 15px',
     backgroundColor: isActive ? '#0173b1' : '#f0f0f8',
     border: isActive ? '#0173b1' : '#f0f0f8',
@@ -233,7 +233,6 @@ const Sidebar = () => {
                   <div
                     className={`${sidebarStyles.dropdownPanel} ${vipOpen ? sidebarStyles.open : ''}`}
                     style={{ 
-                      padding: '5px 10px',
                       borderRadius: '10px',
                       margin: '8px 0'
                     }}
@@ -285,7 +284,6 @@ const Sidebar = () => {
                   <div
                     className={`${sidebarStyles.dropdownPanel} ${workerOpen ? sidebarStyles.open : ''}`}
                     style={{ 
-                      padding: '5px 10px',
                       borderRadius: '10px',
                       margin: '8px 0'
                     }}
@@ -307,7 +305,7 @@ const Sidebar = () => {
                 </li>
               )}
               {(isAdmin || isSuperAdmin) && (
-                <li className="nav-item" style={{ marginTop: '20px' }}>
+                <li className="nav-item">
                   <NavLink
                     to="/admin-dashboard"
                     className={({ isActive }) => `fade-in nav-link ${isActive ? 'my-active' : ''}`}
