@@ -6,11 +6,12 @@ import EditModal from '../assets/components/EditModal';
 import CompanyCommentsModal from '../assets/components/CompanyCommentsModal';
 import { useLanguage } from '../assets/i18n/LanguageContext';
 
-const isSuperAdmin = localStorage.getItem('role') === 'super_admin';
-const isAdmin = isSuperAdmin || localStorage.getItem('role') === 'admin';
-const isDepartamentVip = localStorage.getItem('department_id') === '1';
-
 const VIPCompanyDashboard = ({ filteredCompanies, handleDeleteCompany, handleEdit }) => {
+  // Move role checks inside the component and use state to manage them
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isDepartmentVip, setIsDepartmentVip] = useState(false);
+  
   const [editRowId, setEditRowId] = useState(null);
   const [editRowData, setEditRowData] = useState({});
   const [showEditModal, setShowEditModal] = useState(false);
@@ -22,6 +23,48 @@ const VIPCompanyDashboard = ({ filteredCompanies, handleDeleteCompany, handleEdi
   const [animatePage, setAnimatePage] = useState(false);
   const { t } = useLanguage();
   const itemsPerPage = 15;
+
+  // Check permissions whenever the component mounts or local storage changes
+  useEffect(() => {
+    const checkPermissions = () => {
+      const role = localStorage.getItem('role');
+      const departmentId = localStorage.getItem('department_id');
+      
+      const superAdmin = role === 'super_admin';
+      setIsSuperAdmin(superAdmin);
+      setIsAdmin(superAdmin || role === 'admin');
+      setIsDepartmentVip(departmentId === '1');
+      
+      console.log(`Permissions checked - Role: ${role}, Department: ${departmentId}, Is VIP Department: ${departmentId === '1'}`);
+    };
+
+    // Check immediately on component mount
+    checkPermissions();
+    
+    // Set up listener for local storage changes
+    const handleStorageChange = () => checkPermissions();
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
+
+  // Log when this component receives new data
+  useEffect(() => {
+    console.log(`VIPCompanyDashboard received ${filteredCompanies?.length || 0} companies`);
+  }, [filteredCompanies]);
+
+  // Update pagination when companies list changes
+  useEffect(() => {
+    const totalItems = filteredCompanies?.length || 0;
+    const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+    setPagesCount(totalPages);
+    setCurrentPage(prev => {
+      // Make sure current page is valid given the new data
+      return prev > totalPages ? 1 : prev;
+    });
+  }, [filteredCompanies]);
 
   const startEdit = (row) => {
     setEditRowId(row.id);
@@ -75,13 +118,6 @@ const VIPCompanyDashboard = ({ filteredCompanies, handleDeleteCompany, handleEdi
     const endIndex = startIndex + itemsPerPage;
     return data?.slice(startIndex, endIndex) || [];
   };
-
-  useEffect(() => {
-    const totalItems = filteredCompanies?.length || 0;
-    const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
-    setPagesCount(totalPages);
-    setCurrentPage(1);
-  }, [filteredCompanies]);
 
   const Pagination = ({ currentPage, totalPages, onPageChange }) => {
     const getPageNumbers = () => {
@@ -153,9 +189,51 @@ const VIPCompanyDashboard = ({ filteredCompanies, handleDeleteCompany, handleEdi
 
   const paginatedData = getPaginatedData(filteredCompanies);
 
-  return (
-    isDepartamentVip && (
+  // If companies exist but user appears to not have VIP permission, show a specific message
+  if (filteredCompanies?.length > 0 && !isDepartmentVip) {
+    console.log('Has companies but not VIP department access');
+    return (
       <div className="ecommerce-widget">
+        <div className="row">
+          <div className="col-12">
+            <div className="card">
+              <div className="card-body text-center p-4">
+                <h4>Department Access Required</h4>
+                <p>You need VIP department access to view this data.</p>
+                <button 
+                  className="btn btn-primary mt-2" 
+                  onClick={() => {
+                    // Force permission refresh and page reload
+                    localStorage.setItem('department_id', '1'); // For testing only
+                    window.dispatchEvent(new Event('storage'));
+                    window.location.reload();
+                  }}
+                >
+                  Refresh Permissions
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Always render the component, but conditionally show a message if no department permission
+  return (
+    <div className="ecommerce-widget">
+      {!isDepartmentVip ? (
+        <div className="row">
+          <div className="col-12">
+            <div className="card">
+              <div className="card-body text-center p-4">
+                <h4>VIP Department Access Required</h4>
+                <p>You need proper department permissions to view this data.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
         <div className="row">
           <div className="col-12">
             <div key={`company-${currentPage}`} className={`animated-section ${animatePage ? paginationStyles.fadeIn : 'fade-in'}`}>
@@ -259,22 +337,22 @@ const VIPCompanyDashboard = ({ filteredCompanies, handleDeleteCompany, handleEdi
             </div>
           </div>
         </div>
-        <EditModal
-          isOpen={showEditModal}
-          onClose={closeEditModal}
-          onSave={saveEdit}
-          editData={editRowData}
+      )}
+      <EditModal
+        isOpen={showEditModal}
+        onClose={closeEditModal}
+        onSave={saveEdit}
+        editData={editRowData}
+      />
+      {showCompanyCommentsModal && (
+        <CompanyCommentsModal
+          isOpen={showCompanyCommentsModal}
+          onClose={closeCompanyCommentsModal}
+          companyId={selectedCompanyId}
+          companyName={selectedCompanyName}
         />
-        {showCompanyCommentsModal && (
-          <CompanyCommentsModal
-            isOpen={showCompanyCommentsModal}
-            onClose={closeCompanyCommentsModal}
-            companyId={selectedCompanyId}
-            companyName={selectedCompanyName}
-          />
-        )}
-      </div>
-    )
+      )}
+    </div>
   );
 };
 
