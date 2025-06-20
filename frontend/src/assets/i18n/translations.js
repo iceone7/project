@@ -295,7 +295,7 @@ const translations = {
     confirmCommentDeletion: "Вы уверены, რომ გსურთ ამ კომენტარის წაშლა?",
 
     // Company comments
-    companyComments: "Company Comments",
+    companyComments: "Комментарии компании",
     addCommentForCompany: "Add a comment about this company...",
     loadingComments: "Loading comments...",
     comments: "Comments",
@@ -442,6 +442,12 @@ const translations = {
     // Comment deletion translations
     deleteComment: "კომენტარის წაშლა",
     confirmCommentDeletion: "დარწმუნებული ხართ, რომ გსურთ ამ კომენტარის წაშლა?",
+
+    // Company comments
+    companyComments: "კომპანიის კომენტარები",
+    addCommentForCompany: "ამ კომპანიაზე კომენტარის დამატება...",
+    loadingComments: "კომენტარების ჩატვირთვა...",
+    comments: "კომენტარები",
   }
 };
 

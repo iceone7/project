@@ -8,21 +8,15 @@
 .commentButton {
   background-color: #017cbf;
   border: none;
-  border-radius: 4px;
   color: white;
-  width: 30px;
-  height: 30px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: background-color 0.2s ease;
-  margin-left: 4px; /* Add margin to separate from other buttons */
-}
-
-.commentButton:hover {
-  background-color: #015a8e;
-  transform: translateY(-2px);
+  border-radius: 50%;
 }
 
 .commentSvgIcon {

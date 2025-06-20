@@ -230,7 +230,6 @@ const CompanyCommentsModal = ({ isOpen, onClose, companyId, companyName }) => {
                             <path d="M3 3.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zM3 6a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9A.5.5 0 0 1 3 6zm0 2.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5z"/>
                         </svg>
                         {t('companyComments')} - {companyName}
-                        <small className="ms-2 text-muted">(ID: {companyId})</small>
                     </h5>
                     <button type="button" className={modalStyles.closeButton} onClick={handleClose}>
                         ×
@@ -295,12 +294,24 @@ const CompanyCommentsModal = ({ isOpen, onClose, companyId, companyName }) => {
                                                 className={modalStyles.replyButton}
                                                 onClick={() => handleStartReply(comment.id)}
                                                 title={t('reply')}
-                                            >
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                                                    <path d="M5.921 11.9 1.353 8.62a.719.719 0 0 1 0-1.238L5.921 4.1A.716.716 0 0 1 7 4.719v2.066h1a7 7 0 0 1 7 7v.5a.5.5 0 0 1-.5.5c-.123 0-.243-.015-.358-.043a5.517 5.517 0 0 0-3.185.172A1.5 1.5 0 0 0 10 16H8a.5.5 0 0 1-.5-.5v-2.326a.5.5 0 0 0-.5-.5H7v2.066a.716.716 0 0 1-1.079.619Z"/>
+                                                style={{
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center', // выравнивание по вертикали
+                                                }}
+                                                >
+                                                <svg
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    width="16"
+                                                    height="16"
+                                                    fill="currentColor"
+                                                    viewBox="0 0 512 512"
+                                                    style={{ display: 'block' }}
+                                                >
+                                                    <path d="M205 34.8c11.5 5.1 19 16.6 19 29.2v64h112c97.2 0 176 78.8 176 176c0 113.3-81.5 163.9-100.2 174.1c-2.5 1.4-5.3 1.9-8.1 1.9c-10.9 0-19.7-8.9-19.7-19.7c0-7.5 4.3-14.4 9.8-19.5c9.4-8.8 22.2-26.4 22.2-56.7c0-53-43-96-96-96H224v64c0 12.6-7.4 24.1-19 29.2s-25 3-34.4-5.4l-160-144C3.9 225.7 0 217.1 0 208s3.9-17.7 10.6-23.8l160-144c9.4-8.5 22.9-10.6 34.4-5.4z"/>
                                                 </svg>
                                                 {t('reply')}
                                             </button>
+
                                             
                                             {/* Delete button for super admins */}
                                             {isSuperAdmin && (
