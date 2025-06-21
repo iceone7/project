@@ -105,49 +105,166 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Mobile Responsive Styles */
 @media only screen and (max-width: 768px) {
-  .buttons {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
+  .nav-left-sidebar {
+    display: none;
   }
-  
-  .create {
-    flex-direction: column;
-    width: 100%;
-  }
-  
-  .card-header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .card-header .float-end {
-    width: 100%;
-    margin-top: 10px;
-  }
-  
-  .logo {
-    padding: 15px 20px;
-  }
-}
 
-@media only screen and (max-width: 480px) {
-  .fade-in, 
-  .left-fade-in, 
-  .bottom-fade-in {
-    animation-duration: 0.5s;
+  .close-sidebar-btn {
+    display: none;
   }
-  
-  h1, h2, h3 {
-    font-size: 90%;
+
+  .button-container {
+    width: 100%;
+    text-align: center;
+    text-justify: center;
+
+  }
+
+  .buttons-panel {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .buttons-panel button {
+    width: 100%;
+    text-align: center;
   }
   
   .logo {
     padding: 10px 15px;
+    font-size: 90%;
   }
   
-  .card-header {
+  h1, h2, h3 {
+    font-size: 90%;
+    margin-bottom: 0.75rem;
+  }
+
+  h4, h5, h6 {
+    font-size: 85%;
+    margin-bottom: 0.5rem;
+  }
+  
+  .container, .container-fluid {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+  
+  .row {
+    margin-left: -5px;
+    margin-right: -5px;
+  }
+  
+  .col, [class*="col-"] {
+    padding-left: 5px;
+    padding-right: 5px;
+  }
+
+  /* Enhanced mobile styles */
+  .nav-link {
+    padding: 8px 12px;
+    font-size: 14px;
+    width: 100%;
+    text-align: center;
+    margin-bottom: 5px;
+  }
+
+  .fade-in, .left-fade-in, .bottom-fade-in {
+    animation-duration: 0.5s;
+  }
+
+  .table {
+    font-size: 14px;
+  }
+
+  .table td, .table th {
+    padding: 6px;
+  }
+
+  .form-control, .form-select, .btn {
+    padding: 8px 10px;
+    font-size: 14px;
+  }
+
+  .card {
+    margin-bottom: 15px;
+  }
+
+  .card-body {
     padding: 12px;
+  }
+  
+  /* Additional styles based on image */
+  /* Language selection buttons */
+  .language-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 15px;
+  }
+  
+  .language-buttons button {
+    padding: 6px 12px;
+    min-width: 60px;
+  }
+  
+  /* Download button */
+  .download-button {
+    width: 100%;
+    max-width: 200px;
+    margin: 0 auto 15px;
+    padding: 10px;
+    font-size: 14px;
+    text-align: center;
+    border-radius: 4px;
+  }
+  
+  /* Table responsive styles */
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .table-responsive table {
+    width: 100%;
+    min-width: 500px; /* Ensure table doesn't get too narrow */
+  }
+  
+  /* Table cells */
+  .table-responsive td, 
+  .table-responsive th {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  /* Adjust header and navigation for mobile */
+  header, .navigation {
+    padding: 10px;
+  }
+  
+  /* Fix for tables with many columns */
+  .mobile-scroll-indicator {
+    display: block;
+    text-align: center;
+    font-size: 12px;
+    color: #6c757d;
+    margin-bottom: 10px;
+  }
+  /* Custom number input styles for mobile */
+  input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+    width: 100%;
+  }
+
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
   }
 }
 

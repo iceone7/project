@@ -623,8 +623,8 @@ const ButtonsPanel = ({
       )}
 
       {activeDashboard === 'company' && !isDepartamentCraftsmen && (
-        <div className="fade-in" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          <div className="create">
+        <div className="fade-in buttons-panel" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <div className="create button-container">
             <button className={styles.button} onClick={handleOpenModal}>
               <span className={styles.text}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -638,7 +638,8 @@ const ButtonsPanel = ({
           <UploadCompanyExcel onPreviewSuccess={onCompanyUploadSuccess} />
           <div style={tooltipStyle.container}
                onMouseEnter={() => setShowTooltip(true)}
-               onMouseLeave={() => setShowTooltip(false)}>
+               onMouseLeave={() => setShowTooltip(false)}
+               className='button-container'>
             <button
               className={download_button.DownloadButton}
               onClick={handleDownloadAllData}
