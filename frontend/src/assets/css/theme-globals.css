@@ -110,9 +110,7 @@ body.dark-theme .table-hover tbody tr:hover {
   color: var(--text-primary);
 }
 
-body.dark-theme .nav-left-sidebar .navbar-nav .nav-link:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
+
 
 /* Modal styling */
 .modal-content {

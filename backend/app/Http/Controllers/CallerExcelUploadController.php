@@ -682,8 +682,10 @@ class CallerExcelUploadController extends Controller
                         $row['callDate'] = $latestCall->calldate;
                     }
                     
-                    $row['call_duration'] = $this->formatCallDuration($latestCall->duration);
-                    $row['callDuration'] = $this->formatCallDuration($latestCall->duration);
+                    $row['call_duration'] = $latestCall->disposition === 'ANSWERED' ? 
+                                            $this->formatCallDuration($latestCall->duration) : 
+                                            '00:00:00';
+                    $row['callDuration'] = $row['call_duration'];
                     $row['call_status'] = $latestCall->disposition;
                     $row['callStatus'] = $latestCall->disposition;
                 }

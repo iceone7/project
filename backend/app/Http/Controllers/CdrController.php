@@ -66,7 +66,7 @@ class CdrController extends Controller
                     $latestCall = $calls[0]; // Assuming calls are already sorted by date desc
                     
                     // Format the duration
-                    $formattedDuration = $this->formatCallDuration($latestCall->duration);
+                    $formattedDuration = $this->formatCallDuration($latestCall->duration, $latestCall->disposition);
                     
                     // Store the call data for this caller
                     $response[$callerNumber] = [
@@ -255,7 +255,7 @@ class CdrController extends Controller
                     'noAnswerCalls' => $stats['noAnswerCalls'],
                     'busyCalls' => $stats['busyCalls'],
                     'callDate' => $lastCall->calldate,
-                    'callDuration' => $this->formatCallDuration($lastCall->duration),
+                    'callDuration' => $this->formatCallDuration($lastCall->duration, $lastCall->disposition),
                     'callStatus' => $lastCall->disposition
                 ];
             }
@@ -312,7 +312,7 @@ class CdrController extends Controller
                     'receiverNumber' => $record->dst,
                     'callDate' => $formattedCallDate, // Standardized format with time
                     'rawDuration' => $record->duration,
-                    'formattedDuration' => $this->formatCallDuration($record->duration),
+                    'formattedDuration' => $this->formatCallDuration($record->duration, $record->disposition),
                     'callStatus' => $record->disposition,
                     'recordingfile' => $record->recordingfile ?? '',
                 ];
@@ -376,9 +376,15 @@ class CdrController extends Controller
     
     /**
      * Format call duration from seconds to HH:MM:SS
+     * Returns empty string if disposition is not ANSWERED
      */
-    private function formatCallDuration($seconds)
+    private function formatCallDuration($seconds, $disposition = null)
     {
+        // For NO ANSWER or BUSY calls, return empty duration string
+        if ($disposition && ($disposition === 'NO ANSWER' || $disposition === 'BUSY')) {
+            return '00:00:00';
+        }
+        
         if (!$seconds) return '00:00:00';
         return sprintf('%02d:%02d:%02d', 
             floor($seconds / 3600),
@@ -529,7 +535,7 @@ class CdrController extends Controller
                     return [
                         'calldate' => $recording->calldate,
                         'duration' => $recording->duration,
-                        'formattedDuration' => $this->formatCallDuration($recording->duration),
+                        'formattedDuration' => $this->formatCallDuration($recording->duration, $recording->disposition),
                         'disposition' => $recording->disposition,
                         'recordingfile' => $recording->recordingfile,
                         'dst' => $recording->dst,
@@ -672,7 +678,7 @@ class CdrController extends Controller
                     return [
                         'calldate' => $recording->calldate,
                         'duration' => $recording->duration,
-                        'formattedDuration' => $this->formatCallDuration($recording->duration),
+                        'formattedDuration' => $this->formatCallDuration($recording->duration, $recording->disposition),
                         'disposition' => $recording->disposition,
                         'recordingfile' => $recording->recordingfile,
                         'dst' => $recording->dst,

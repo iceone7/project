@@ -199,6 +199,13 @@ const VIPCallerDashboard = ({ excelData, handleCallerUploadSuccess }) => {
       matches.sort((a, b) => b.callCount - a.callCount);
       const primaryMatch = matches[0];
       const originalCallDate = result[rowIndex].callDate || result[rowIndex].call_date || '';
+      
+      // Format duration considering call status
+      let callDuration = primaryMatch.callDuration || '';
+      if (primaryMatch.callStatus === 'NO ANSWER' || primaryMatch.callStatus === 'BUSY') {
+        callDuration = '00:00:00';
+      }
+      
       result[rowIndex] = {
         ...result[rowIndex],
         receiver_number: primaryMatch.receiverNumber || '',
@@ -209,7 +216,7 @@ const VIPCallerDashboard = ({ excelData, handleCallerUploadSuccess }) => {
         cdr_call_date: primaryMatch.callDate || '',
         call_date: originalCallDate || primaryMatch.callDate || '',
         callDate: originalCallDate || primaryMatch.callDate || '',
-        call_duration: primaryMatch.callDuration || '',
+        call_duration: callDuration,
         call_status: primaryMatch.callStatus || '',
         hasRecentCalls: true,
         all_matched_calls: matches
@@ -240,15 +247,6 @@ const VIPCallerDashboard = ({ excelData, handleCallerUploadSuccess }) => {
     }
   };
 
-  const formatCallDuration = (seconds) => {
-    if (!seconds) return '00:00:00';
-    const secondsNum = parseInt(seconds, 10);
-    if (isNaN(secondsNum)) return '00:00:00';
-    const hours = Math.floor(secondsNum / 3600);
-    const minutes = Math.floor((secondsNum / 60) % 60);
-    const secs = secondsNum % 60;
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
 
   const openRecordingsModal = (call) => {
     setSelectedCall(call);
@@ -682,7 +680,7 @@ const VIPCallerDashboard = ({ excelData, handleCallerUploadSuccess }) => {
                         </div>
                         <div>
                           <span className={modalStyles.infoLabel}>Duration</span>
-                          <span className={modalStyles.infoValue}>{formatCallDuration(recording.duration)}</span>
+                          <span className={modalStyles.infoValue}>{recording.formattedDuration}</span>
                         </div>
                         <div>
                           <span className={modalStyles.infoLabel}>Receiver</span>
