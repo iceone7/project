@@ -4,11 +4,10 @@
           left:0;
           width:264px;
           height:100vh;
-          transition:left .5s ease;
           z-index:1000;
         }
         .dashboard-content{
-          transition:width .5s ease,margin-left .5s ease;
+          transition:width .3s cubic-bezier(0.25, 0.8, 0.25, 1),margin-left .3s cubic-bezier(0.25, 0.8, 0.25, 1);
           width:100%;
           max-width:none!important;
           margin-left:0;

@@ -35,7 +35,6 @@ const Sidebar = () => {
       setWorkerOpen(true);
     }
   }, []);
-
   // Toggle mobile sidebar
   const toggleMobileSidebar = () => {
     const sidebar = document.querySelector('.nav-left-sidebar');
@@ -49,14 +48,16 @@ const Sidebar = () => {
       if (isOpen) {
         // Close sidebar
         sidebar.classList.remove('mobile-open');
-        sidebar.style.left = '-264px';
+        sidebar.classList.remove('sidebar-open');
+        sidebar.classList.add('sidebar-closed');
         container.classList.remove('sidebar-open');
         container.classList.add('sidebar-closed');
         if (overlay) overlay.classList.remove('active');
       } else {
         // Open sidebar
         sidebar.classList.add('mobile-open');
-        sidebar.style.left = '0';
+        sidebar.classList.add('sidebar-open');
+        sidebar.classList.remove('sidebar-closed');
         container.classList.add('sidebar-open');
         container.classList.remove('sidebar-closed');
         if (overlay) overlay.classList.add('active');
