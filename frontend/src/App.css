@@ -103,21 +103,70 @@ h1, h2, h3, h4, h5, h6 {
     border: none;
 }
 
+/* Global sidebar styles */
+.nav-left-sidebar {
+  position: fixed;
+  top: 0;
+  left: -264px;
+  width: 260px;
+  height: 100%;
+  z-index: 1050;
+  background-color: #fff;
+  box-shadow: 3px 0 10px rgba(0, 0, 0, 0.2);
+  transition: left 0.3s ease-in-out;
+  overflow-y: auto;
+}
+
+.nav-left-sidebar.mobile-open {
+  left: 0;
+}
+
+/* Desktop styles */
+@media only screen and (min-width: 769px) {
+  .nav-left-sidebar {
+    left: 0;
+  }
+}
+
 /* Mobile Responsive Styles */
 @media only screen and (max-width: 768px) {
-  .nav-left-sidebar {
+
+  .sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1040;
     display: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
   }
 
-  .close-sidebar-btn {
-    display: none;
+  .sidebar-overlay.active {
+    display: block;
+    opacity: 1;
+  }
+
+
+  .dashboard-content {
+    transition: margin-left 0.3s ease-in-out;
+    position: relative;
+  }
+  
+  .dashboard-content.sidebar-open {
+    margin-left: 260px;
+  }
+  
+  .dashboard-content.sidebar-closed {
+    margin-left: 0;
   }
 
   .button-container {
     width: 100%;
     text-align: center;
     text-justify: center;
-
   }
 
   .buttons-panel {
@@ -278,5 +327,48 @@ h1, h2, h3, h4, h5, h6 {
   select,
   textarea {
     font-size: 16px !important;
+  }
+  
+  /* Additional sidebar mobile fixes */
+  .nav-left-sidebar button {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 10px;
+    margin-bottom: 5px;
+    border-radius: 6px;
+    visibility: visible;
+  }
+  
+  /* Ensure language buttons are visible */
+  .nav-left-sidebar div[style*="marginTop: 38"] {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+  
+  /* Make dropdown items more tappable */
+  .nav-left-sidebar [class*="dropdown"] {
+    width: 100%;
+    visibility: visible;
+  }
+  
+  /* Special fixes for sidebar links */
+  .nav-left-sidebar .nav-link,
+  .nav-left-sidebar .navbar-nav,
+  .nav-left-sidebar .navbar-collapse,
+  .nav-left-sidebar .navbar,
+  .nav-left-sidebar ul,
+  .nav-left-sidebar li {
+    display: block;
+    visibility: visible;
+    opacity: 1;
+  }
+  
+  
+  /* Ensure overlay is above content but below sidebar */
+  .sidebar-overlay {
+    z-index: 1045;
   }
 }

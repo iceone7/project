@@ -544,7 +544,7 @@ const ButtonsPanel = ({
   };
 
   return (
-    <div className="buttons" style={{ marginBottom: '20px' }}>
+    <div className="buttons" style={{ marginBottom: '20px', position: 'relative', zIndex: 1020 }}>
       {/* Full-screen download animation overlay */}
       {showFullscreenAnimation && (
         <div className={`${animationStyles.downloadAnimationOverlay} ${animationStyles[animationState]}`}>

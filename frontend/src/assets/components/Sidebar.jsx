@@ -36,6 +36,41 @@ const Sidebar = () => {
     }
   }, []);
 
+  // Toggle mobile sidebar
+  const toggleMobileSidebar = () => {
+    const sidebar = document.querySelector('.nav-left-sidebar');
+    const container = document.querySelector('.dashboard-content');
+    const overlay = document.querySelector('.sidebar-overlay');
+    
+    if (sidebar && container) {
+      // Check if sidebar is currently open
+      const isOpen = sidebar.classList.contains('mobile-open');
+        // Toggle sidebar state
+      if (isOpen) {
+        // Close sidebar
+        sidebar.classList.remove('mobile-open');
+        sidebar.style.left = '-264px';
+        container.classList.remove('sidebar-open');
+        container.classList.add('sidebar-closed');
+        if (overlay) overlay.classList.remove('active');
+      } else {
+        // Open sidebar
+        sidebar.classList.add('mobile-open');
+        sidebar.style.left = '0';
+        container.classList.add('sidebar-open');
+        container.classList.remove('sidebar-closed');
+        if (overlay) overlay.classList.add('active');
+      }
+    }
+  };
+  
+  // Close sidebar when clicking a link on mobile
+  const handleMobileLinkClick = () => {
+    if (window.innerWidth <= 768) {
+      toggleMobileSidebar();
+    }
+  };
+
   const handleLogout = async () => {
     try {
       console.log('Attempting logout with token:', localStorage.getItem('authToken'));
@@ -80,23 +115,6 @@ const Sidebar = () => {
     width: '100%'
   });
 
-  // Close sidebar when clicking a link on mobile
-  const handleMobileLinkClick = () => {
-    if (window.innerWidth <= 768) {
-      const sidebar = document.querySelector('.nav-left-sidebar');
-      const container = document.querySelector('.dashboard-content');
-      const overlay = document.querySelector('.sidebar-overlay');
-      
-      if (sidebar && container) {
-        sidebar.style.left = '-264px';
-        sidebar.classList.remove('mobile-open');
-        container.classList.remove('sidebar-open');
-        container.classList.add('sidebar-closed');
-        if (overlay) overlay.classList.remove('active');
-      }
-    }
-  };
-
   // Enhanced styles for dropdown items
   const dropdownItemStyle = (isActive) => ({
     borderRadius: '8px',
@@ -133,15 +151,11 @@ const Sidebar = () => {
     }
     
     // Force a hard refresh when switching between major dashboard types
-    // This is a more aggressive solution but ensures proper data loading
     if (activeDashboard && activeDashboard !== dashboardType && 
         (activeDashboard.includes('company') && dashboardType.includes('caller') || 
          activeDashboard.includes('caller') && dashboardType.includes('company'))) {
       console.log('Major dashboard change detected, forcing refresh');
-      // Use React Router's navigate with replace option to prevent back navigation issues
       navigate(`/${dashboardType}`, { replace: true });
-      // Optionally force a reload if the above doesn't resolve all cases
-      // setTimeout(() => window.location.reload(), 100);
       return;
     }
     
@@ -150,205 +164,212 @@ const Sidebar = () => {
   };
 
   return (
-    <div className="nav-left-sidebar sidebar-dark">
-      <div className="menu-list">
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 16 }}>
-          <div className="logo-gorgia">
+    <>
+      {/* Overlay for mobile */}
+      <div 
+        className="sidebar-overlay"
+        onClick={toggleMobileSidebar}
+      ></div>
+      
+      <div className="nav-left-sidebar sidebar-dark">
+        <div className="menu-list">
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 16 }}>
+            <div className="logo-gorgia">
+              <button
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  margin: 0,
+                  cursor: 'pointer',
+                  display: 'block'
+                }}
+                onClick={() => window.location.reload()}
+                aria-label={t('reload')}
+              >
+                <img src={logo} className="logo bottom-fade-in" alt="Logo" />
+              </button>
+            </div>
+          </div>
+          <hr />
+          <div style={{ marginTop: 38, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px' }} className="fade-in">
             <button
-              style={{
-                background: 'none',
-                border: 'none',
-                padding: 0,
-                margin: 0,
-                cursor: 'pointer',
-                display: 'block'
-              }}
-              onClick={() => window.location.reload()}
-              aria-label={t('reload')}
+              style={langBtnStyle(language === 'en')}
+              onClick={() => setLanguage('en')}
+              aria-label="Switch to English"            
             >
-              <img src={logo} className="logo bottom-fade-in" alt="Logo" />
+              <img src="https://flagcdn.com/w40/gb.png" alt="EN" style={{ width: 24, height: 16, display: 'block'}} />
+            </button>
+            <button
+              style={langBtnStyle(language === 'ru')}
+              onClick={() => setLanguage('ru')}
+              aria-label="Switch to Russian"
+            >
+              <img src="https://flagcdn.com/w40/ru.png" alt="RU" style={{ width: 24, height: 16, display: 'block' }} />
+            </button>
+            <button
+              style={langBtnStyle(language === 'ka')}
+              onClick={() => setLanguage('ka')}
+              aria-label="Switch to Georgian"
+            >
+              <img src="https://flagcdn.com/w40/ge.png" alt="KA" style={{ width: 24, height: 16, display: 'block' }} />
             </button>
           </div>
-        </div>
-        <hr />
-        <div style={{ marginTop: 38, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px' }} className="fade-in">
-          <button
-            style={langBtnStyle(language === 'en')}
-            onClick={() => setLanguage('en')}
-            aria-label="Switch to English"            
-          >
-            <img src="https://flagcdn.com/w40/gb.png" alt="EN" style={{ width: 24, height: 16, display: 'block'}} />
-          </button>
-          <button
-            style={langBtnStyle(language === 'ru')}
-            onClick={() => setLanguage('ru')}
-            aria-label="Switch to Russian"
-          >
-            <img src="https://flagcdn.com/w40/ru.png" alt="RU" style={{ width: 24, height: 16, display: 'block' }} />
-          </button>
-          <button
-            style={langBtnStyle(language === 'ka')}
-            onClick={() => setLanguage('ka')}
-            aria-label="Switch to Georgian"
-          >
-            <img src="https://flagcdn.com/w40/ge.png" alt="KA" style={{ width: 24, height: 16, display: 'block' }} />
-          </button>
-        </div>
 
-
-        <nav className="navbar navbar-expand-lg navbar-light">
-          <div className="collapse navbar-collapse" id="navbarNav">
-            <ul className="navbar-nav flex-column">
-              <li className="nav-item">
-                {!isSuperAdmin && (
-                  <NavLink
-                    to="/company-dashboard"
-                    className={({ isActive }) => `fade-in nav-link ${isActive ? 'my-active' : ''}`}
-                    onClick={() => {
-                      handleMobileLinkClick();
-                      handleDashboardClick('company-dashboard');
-                    }}
-                  >
-                    <i className="fa fa-fw fa-user-circle"></i>{t('companyDashboard')}
-                  </NavLink>
+          <nav className="navbar navbar-expand-lg navbar-light">
+            <div className="collapse navbar-collapse" id="navbarNav">
+              <ul className="navbar-nav flex-column">
+                <li className="nav-item">
+                  {!isSuperAdmin && (
+                    <NavLink
+                      to="/company-dashboard"
+                      className={({ isActive }) => `fade-in nav-link ${isActive ? 'my-active' : ''}`}
+                      onClick={() => {
+                        handleMobileLinkClick();
+                        handleDashboardClick('company-dashboard');
+                      }}
+                    >
+                      <i className="fa fa-fw fa-user-circle"></i>{t('companyDashboard')}
+                    </NavLink>
+                  )}
+                </li>
+                {isAdmin && (
+                  <li className="nav-item">
+                    <NavLink
+                      to="/caller-dashboard"
+                      className={({ isActive }) => `fade-in nav-link ${isActive ? 'my-active' : ''}`}
+                      style={{ marginTop: '20px' }}
+                      onClick={() => {
+                        handleMobileLinkClick();
+                        setActiveDashboard('caller-dashboard');
+                        localStorage.setItem('activeDashboard', 'caller-dashboard');
+                      }}
+                    >
+                      <i className="fa fa-fw fa-user-circle"></i>{t('callerDashboard')}
+                    </NavLink>
+                  </li>
                 )}
-              </li>
-              {isAdmin && (
-                <li className="nav-item">
-                  <NavLink
-                    to="/caller-dashboard"
-                    className={({ isActive }) => `fade-in nav-link ${isActive ? 'my-active' : ''}`}
-                    style={{ marginTop: '20px' }}
-                    onClick={() => {
-                      handleMobileLinkClick();
-                      setActiveDashboard('caller-dashboard');
-                      localStorage.setItem('activeDashboard', 'caller-dashboard');
-                    }}
-                  >
-                    <i className="fa fa-fw fa-user-circle"></i>{t('callerDashboard')}
-                  </NavLink>
-                </li>
-              )}
-              {isSuperAdmin && (
-                <li className="nav-item">
-                  <div
-                    className={`${sidebarStyles.dropdownToggle} fade-in nav-link`}
-                    onClick={() => setVipOpen((open) => !open)}
-                    tabIndex={0}
-                    role="button"
-                    style={{ 
-                      borderRadius: '8px',
-                      transition: 'all 0.3s ease'
-                    }}
-                  >
-                    <div className={sidebarStyles.vip}>
-                      <i className="fa fa-fw fa-star"></i>{t('vipDepartment')}
+                {isSuperAdmin && (
+                  <li className="nav-item">
+                    <div
+                      className={`${sidebarStyles.dropdownToggle} fade-in nav-link`}
+                      onClick={() => setVipOpen((open) => !open)}
+                      tabIndex={0}
+                      role="button"
+                      style={{ 
+                        borderRadius: '8px',
+                        transition: 'all 0.3s ease'
+                      }}
+                    >
+                      <div className={sidebarStyles.vip}>
+                        <i className="fa fa-fw fa-star"></i>{t('vipDepartment')}
+                      </div>
+                      <span className={sidebarStyles.arrow + (vipOpen ? ` ${sidebarStyles.open}` : '')}></span>
                     </div>
-                    <span className={sidebarStyles.arrow + (vipOpen ? ` ${sidebarStyles.open}` : '')}></span>
-                  </div>
-                  <div
-                    className={`${sidebarStyles.dropdownPanel} ${vipOpen ? sidebarStyles.open : ''}`}
-                    style={{ 
-                      borderRadius: '10px',
-                      margin: '8px 0'
-                    }}
-                  >
-                    <ul className={`${sidebarStyles.dropdownList} fade-in`}>
-                      <li
-                        className={`${sidebarStyles.dropdownItem} ${isActiveItem('company-dashboard', '1') ? sidebarStyles.dropdownItemActive : ''}`}
-                        style={dropdownItemStyle(isActiveItem('company-dashboard', '1'))}
-                        onClick={(e) => {
-                          e.stopPropagation(); // Prevent dropdown from closing
-                          handleDashboardClick('company-dashboard', '1');
-                        }}
-                      >
-                        <i className="fa fa-fw fa-building" style={{ color: isActiveItem('company-dashboard', '1') ? '#fff' : '#017cbf', marginRight: '10px' }}></i>
-                        <span style={{ fontWeight: '500' }}>{t('companyDashboard')}</span>
-                      </li>
-                      <li
-                        className={`${sidebarStyles.dropdownItem} ${isActiveItem('caller-dashboard', '1') ? sidebarStyles.dropdownItemActive : ''}`}
-                        style={dropdownItemStyle(isActiveItem('caller-dashboard', '1'))}
-                        onClick={(e) => {
-                          e.stopPropagation(); // Prevent dropdown from closing
-                          handleDashboardClick('caller-dashboard', '1');
-                        }}
-                      >
-                        <i className="fa fa-fw fa-phone" style={{ color: isActiveItem('caller-dashboard', '1') ? '#fff' : '#017cbf', marginRight: '10px' }}></i>
-                        <span style={{ fontWeight: '500' }}>{t('callerDashboard')}</span>
-                      </li>
-                    </ul>
-                  </div>
-                </li>
-              )}
-              {isSuperAdmin && (
-                <li className="nav-item">
-                  <div
-                    className={`${sidebarStyles.dropdownToggle} fade-in nav-link`}
-                    onClick={() => setWorkerOpen((open) => !open)}
-                    tabIndex={0}
-                    role="button"
-                    style={{ 
-                      borderRadius: '8px',
-                      transition: 'all 0.3s ease'
-                    }}
-                  >
-                    <div className={sidebarStyles.worker}>
-                      <i className="fa fa-fw fa-user-circle"></i>{t('workerDepartment')}
+                    <div
+                      className={`${sidebarStyles.dropdownPanel} ${vipOpen ? sidebarStyles.open : ''}`}
+                      style={{ 
+                        borderRadius: '10px',
+                        margin: '8px 0'
+                      }}
+                    >
+                      <ul className={`${sidebarStyles.dropdownList} fade-in`}>
+                        <li
+                          className={`${sidebarStyles.dropdownItem} ${isActiveItem('company-dashboard', '1') ? sidebarStyles.dropdownItemActive : ''}`}
+                          style={dropdownItemStyle(isActiveItem('company-dashboard', '1'))}
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent dropdown from closing
+                            handleDashboardClick('company-dashboard', '1');
+                          }}
+                        >
+                          <i className="fa fa-fw fa-building" style={{ color: isActiveItem('company-dashboard', '1') ? '#fff' : '#017cbf', marginRight: '10px' }}></i>
+                          <span style={{ fontWeight: '500' }}>{t('companyDashboard')}</span>
+                        </li>
+                        <li
+                          className={`${sidebarStyles.dropdownItem} ${isActiveItem('caller-dashboard', '1') ? sidebarStyles.dropdownItemActive : ''}`}
+                          style={dropdownItemStyle(isActiveItem('caller-dashboard', '1'))}
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent dropdown from closing
+                            handleDashboardClick('caller-dashboard', '1');
+                          }}
+                        >
+                          <i className="fa fa-fw fa-phone" style={{ color: isActiveItem('caller-dashboard', '1') ? '#fff' : '#017cbf', marginRight: '10px' }}></i>
+                          <span style={{ fontWeight: '500' }}>{t('callerDashboard')}</span>
+                        </li>
+                      </ul>
                     </div>
-                    <span className={sidebarStyles.arrow + (workerOpen ? ` ${sidebarStyles.open}` : '')}></span>
-                  </div>
-                  <div
-                    className={`${sidebarStyles.dropdownPanel} ${workerOpen ? sidebarStyles.open : ''}`}
-                    style={{ 
-                      borderRadius: '10px',
-                      margin: '8px 0'
-                    }}
-                  >
-                    <ul className={`${sidebarStyles.dropdownList} fade-in`}>
-                      <li
-                        className={`${sidebarStyles.dropdownItem} ${isActiveItem('worker-dashboard', '2') ? sidebarStyles.dropdownItemActive : ''}`}
-                        style={dropdownItemStyle(isActiveItem('worker-dashboard', '2'))}
-                        onClick={(e) => {
-                          e.stopPropagation(); // Prevent dropdown from closing
-                          handleDashboardClick('worker-dashboard', '2');
-                        }}
-                      >
-                        <i className="fa fa-fw fa-building" style={{ color: isActiveItem('worker-dashboard', '2') ? '#fff' : '#0173b1', marginRight: '10px' }}></i>
-                        <span style={{ fontWeight: '500' }}>{t('companyDashboard')}</span>
-                      </li>
-                    </ul>
-                  </div>
+                  </li>
+                )}
+                {isSuperAdmin && (
+                  <li className="nav-item">
+                    <div
+                      className={`${sidebarStyles.dropdownToggle} fade-in nav-link`}
+                      onClick={() => setWorkerOpen((open) => !open)}
+                      tabIndex={0}
+                      role="button"
+                      style={{ 
+                        borderRadius: '8px',
+                        transition: 'all 0.3s ease'
+                      }}
+                    >
+                      <div className={sidebarStyles.worker}>
+                        <i className="fa fa-fw fa-user-circle"></i>{t('workerDepartment')}
+                      </div>
+                      <span className={sidebarStyles.arrow + (workerOpen ? ` ${sidebarStyles.open}` : '')}></span>
+                    </div>
+                    <div
+                      className={`${sidebarStyles.dropdownPanel} ${workerOpen ? sidebarStyles.open : ''}`}
+                      style={{ 
+                        borderRadius: '10px',
+                        margin: '8px 0'
+                      }}
+                    >
+                      <ul className={`${sidebarStyles.dropdownList} fade-in`}>
+                        <li
+                          className={`${sidebarStyles.dropdownItem} ${isActiveItem('worker-dashboard', '2') ? sidebarStyles.dropdownItemActive : ''}`}
+                          style={dropdownItemStyle(isActiveItem('worker-dashboard', '2'))}
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent dropdown from closing
+                            handleDashboardClick('worker-dashboard', '2');
+                          }}
+                        >
+                          <i className="fa fa-fw fa-building" style={{ color: isActiveItem('worker-dashboard', '2') ? '#fff' : '#0173b1', marginRight: '10px' }}></i>
+                          <span style={{ fontWeight: '500' }}>{t('companyDashboard')}</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </li>
+                )}
+                {(isAdmin || isSuperAdmin) && (
+                  <li className="nav-item">
+                    <NavLink
+                      to="/admin-dashboard"
+                      className={({ isActive }) => `fade-in nav-link ${isActive ? 'my-active' : ''}`}
+                      onClick={() => {
+                        handleMobileLinkClick();
+                        handleDashboardClick('admin-dashboard');
+                      }}
+                    >
+                      <i className="fa fa-fw fa-user-circle"></i>{t('adminDashboard')}
+                    </NavLink>
+                  </li>
+                )}
+                <li className="nav-item fade-in" style={{ marginTop: '20px' }}>
+                  <button className={styles.Btn} onClick={handleLogout}>
+                    <div className={styles.sign}>
+                      <svg viewBox="0 0 512 512">
+                        <path d="M377.9 105.9L500.7 228.7c7.2 7.2 11.3 17.1 11.3 27.3s-4.1 20.1-11.3 27.3L377.9 406.1c-6.4 6.4-15 9.9-24 9.9c-18.7 0-33.9-15.2-33.9-33.9l0-62.1-128 0c-17.7 0-32-14.3-32-32l0-64c0-17.7 14.3-32 32-32l128 0 0-62.1c0-18.7 15.2-33.9 33.9-33.9c9 0 17.6 3.6 24 9.9zM160 96L96 96c-17.7 0-32 14.3-32 32l0 256c0 17.7 14.3 32 32 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-64 0c-53 0-96-43-96-96L0 128C0 75 43 32 96 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32z"></path>
+                      </svg>
+                    </div>
+                    <div className={styles.text}>{t('logout')}</div>
+                  </button>
                 </li>
-              )}
-              {(isAdmin || isSuperAdmin) && (
-                <li className="nav-item">
-                  <NavLink
-                    to="/admin-dashboard"
-                    className={({ isActive }) => `fade-in nav-link ${isActive ? 'my-active' : ''}`}
-                    onClick={() => {
-                      handleMobileLinkClick();
-                      handleDashboardClick('admin-dashboard');
-                    }}
-                  >
-                    <i className="fa fa-fw fa-user-circle"></i>{t('adminDashboard')}
-                  </NavLink>
-                </li>
-              )}
-              <li className="nav-item fade-in" style={{ marginTop: '20px' }}>
-                <button className={styles.Btn} onClick={handleLogout}>
-                  <div className={styles.sign}>
-                    <svg viewBox="0 0 512 512">
-                      <path d="M377.9 105.9L500.7 228.7c7.2 7.2 11.3 17.1 11.3 27.3s-4.1 20.1-11.3 27.3L377.9 406.1c-6.4 6.4-15 9.9-24 9.9c-18.7 0-33.9-15.2-33.9-33.9l0-62.1-128 0c-17.7 0-32-14.3-32-32l0-64c0-17.7 14.3-32 32-32l128 0 0-62.1c0-18.7 15.2-33.9 33.9-33.9c9 0 17.6 3.6 24 9.9zM160 96L96 96c-17.7 0-32 14.3-32 32l0 256c0 17.7 14.3 32 32 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-64 0c-53 0-96-43-96-96L0 128C0 75 43 32 96 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32z"></path>
-                    </svg>
-                  </div>
-                  <div className={styles.text}>{t('logout')}</div>
-                </button>
-              </li>
-            </ul>
-          </div>
-        </nav>
+              </ul>
+            </div>
+          </nav>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
