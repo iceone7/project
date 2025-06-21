@@ -23,22 +23,42 @@ body {
   background-color: var(--card-bg);
   border-color: var(--border-color);
   box-shadow: 0 1px 3px var(--shadow-color);
+  transition: background-color 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
 }
 
+body.dark-theme .card {
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* Form control improvements */
 .form-control {
   background-color: var(--input-bg);
   border-color: var(--input-border);
   color: var(--text-primary);
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
 }
 
+body.dark-theme .form-control:focus {
+  background-color: var(--input-bg);
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+  color: var(--text-primary);
+}
+
+/* Table improvements */
 .table {
   color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .table thead th {
   background-color: var(--table-header-bg);
   border-color: var(--border-color);
   color: var(--text-primary);
+}
+
+body.dark-theme .table thead th {
+  color: var(--accent-color);
 }
 
 .table-striped tbody tr:nth-of-type(odd) {
@@ -51,6 +71,15 @@ body {
 
 .table-hover tbody tr:hover {
   background-color: var(--hover-bg);
+}
+
+body.dark-theme .table-hover tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Button improvements */
+.btn {
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .btn-primary {
@@ -73,17 +102,23 @@ body {
 
 /* Sidebar styling */
 .nav-left-sidebar {
-  background-color: var(--sidebar-bg);
+  background-color: var(--bg-primary);
+  transition: background-color 0.3s ease;
 }
 
 .nav-left-sidebar .navbar-nav .nav-link {
   color: var(--text-primary);
 }
 
+body.dark-theme .nav-left-sidebar .navbar-nav .nav-link:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
 /* Modal styling */
 .modal-content {
   background-color: var(--card-bg);
   color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .modal-header {
@@ -92,6 +127,10 @@ body {
 
 .modal-footer {
   border-color: var(--border-color);
+}
+
+body.dark-theme .modal-content {
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
 }
 
 .card-header {
@@ -105,4 +144,9 @@ body {
 
 hr {
   border-color: var(--border-color);
+}
+
+/* Theme transition for all elements */
+*, *::before, *::after {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
