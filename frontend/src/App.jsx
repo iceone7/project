@@ -12,6 +12,10 @@ import defaultInstance from './api/defaultInstance';
 import AdminDashboard from './assets/components/AdminDashboard';
 import deleteModalStyles from './assets/css/DeleteModal.module.css';
 import { LanguageProvider, useLanguage } from './assets/i18n/LanguageContext';
+import { ThemeProvider } from './assets/i18n/ThemeContext';
+import ThemeToggle from './assets/components/ThemeToggle';
+import './assets/css/theme.css';
+import './assets/css/theme-globals.css';
 
 // ConfirmModal componentt
 function ConfirmModal({ open, onCancel, onConfirm, text }) {
@@ -483,22 +487,25 @@ function App({ dashboardType = 'company' }) {
   const handleCompanyFilterApply = (filtered) => {
     setFilteredCompanies(filtered);
   };
-
   return (
     <LanguageProvider>
-      <div className="dashboard-main-wrapper">
-        {dashboardType === 'admin' ? (
-          <AdminDashboard />
-        ) : (
-          <>
-            <Sidebar activeDashboard={dashboardType} setActiveDashboard={() => {}} />
-            <div className="dashboard-wrapper">
-              <div className="dashboard-ecommerce">
-                <div className="container-fluid dashboard-content">
-                  <div className="row">
-                    <div className="col-12">
-                      <Header activeDashboard={dashboardType} />                      
-                      <ButtonsPanel
+      <ThemeProvider>
+        <div className="dashboard-main-wrapper">
+          {dashboardType === 'admin' ? (
+            <AdminDashboard />
+          ) : (
+            <>
+              <Sidebar activeDashboard={dashboardType} setActiveDashboard={() => {}} />
+              <div className="dashboard-wrapper">
+                <div className="dashboard-ecommerce">
+                  <div className="container-fluid dashboard-content">
+                    <div className="row">
+                      <div className="col-12">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Header activeDashboard={dashboardType} />
+                          <ThemeToggle />
+                        </div>
+                        <ButtonsPanel
                         activeDashboard={dashboardType}
                         handleOpenModal={() => setShowCompanyModal(true)}
                         handleDownloadExcel={handleDownloadExcel}
@@ -566,8 +573,8 @@ function App({ dashboardType = 'company' }) {
               text="Are you sure you want to delete this company?"
             />
           </>
-        )}
-      </div>
+        )}      </div>
+    </ThemeProvider>
     </LanguageProvider>
   );
 }

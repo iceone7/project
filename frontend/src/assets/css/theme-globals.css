@@ -1,0 +1,108 @@
+/* Apply theme variables to global elements */
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.dashboard-main-wrapper {
+  background-color: var(--bg-primary);
+  color: #000;
+}
+
+.dashboard-wrapper {
+  background-color: var(--bg-primary);
+}
+
+.dashboard-content {
+  background-color: var(--bg-primary);
+}
+
+.card {
+  background-color: var(--card-bg);
+  border-color: var(--border-color);
+  box-shadow: 0 1px 3px var(--shadow-color);
+}
+
+.form-control {
+  background-color: var(--input-bg);
+  border-color: var(--input-border);
+  color: var(--text-primary);
+}
+
+.table {
+  color: var(--text-primary);
+}
+
+.table thead th {
+  background-color: var(--table-header-bg);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+  background-color: var(--table-stripe-bg);
+}
+
+.table td, .table th {
+  border-color: var(--border-color);
+}
+
+.table-hover tbody tr:hover {
+  background-color: var(--hover-bg);
+}
+
+.btn-primary {
+  background-color: var(--button-primary-bg);
+  border-color: var(--button-primary-bg);
+  color: var(--button-primary-text);
+}
+
+.btn-secondary {
+  background-color: var(--button-secondary-bg);
+  border-color: var(--button-secondary-bg);
+  color: var(--button-secondary-text);
+}
+
+/* Header styling */
+.page-header {
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+/* Sidebar styling */
+.nav-left-sidebar {
+  background-color: var(--sidebar-bg);
+}
+
+.nav-left-sidebar .navbar-nav .nav-link {
+  color: var(--text-primary);
+}
+
+/* Modal styling */
+.modal-content {
+  background-color: var(--card-bg);
+  color: var(--text-primary);
+}
+
+.modal-header {
+  border-color: var(--border-color);
+}
+
+.modal-footer {
+  border-color: var(--border-color);
+}
+
+.card-header {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.pageheader-title, .close-sidebar-btn {
+  color: var(--text-primary);
+}
+
+hr {
+  border-color: var(--border-color);
+}

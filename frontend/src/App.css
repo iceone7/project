@@ -110,7 +110,6 @@ h1, h2, h3, h4, h5, h6 {
   left: -264px;
   width: 260px;
   height: 100%;
-  z-index: 1050;
   background-color: #fff;
   box-shadow: 3px 0 10px rgba(0, 0, 0, 0.2);
   transition: left 0.3s ease-in-out;
@@ -130,7 +129,17 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Mobile Responsive Styles */
 @media only screen and (max-width: 768px) {
-
+  .nav-left-sidebar {
+    position: fixed;
+    top: 0;
+    left: -264px; /* Hide sidebar off-screen */
+    width: 260px;
+    height: 100%;
+    background-color: #fff;
+    box-shadow: 3px 0 10px rgba(0, 0, 0, 0.2);
+    transition: left 0.3s ease-in-out;
+    overflow-y: auto;
+  }
   .sidebar-overlay {
     position: fixed;
     top: 0;
@@ -138,7 +147,6 @@ h1, h2, h3, h4, h5, h6 {
     right: 0;
     bottom: 0;
     background-color: rgba(0, 0, 0, 0.5);
-    z-index: 1040;
     display: none;
     opacity: 0;
     transition: opacity 0.3s ease;
@@ -369,6 +377,5 @@ h1, h2, h3, h4, h5, h6 {
   
   /* Ensure overlay is above content but below sidebar */
   .sidebar-overlay {
-    z-index: 1045;
   }
 }
