@@ -38,6 +38,27 @@ const AdminDashboard = () => {
   const [searchFocused, setSearchFocused] = useState(false);
 
   useEffect(() => {
+    // Add keyboard shortcut for search focus - this is an alternative to filter toggling
+    // that makes more sense in an admin context
+    const handleKeyDown = (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === 'f') {
+        event.preventDefault();
+        // Focus on the search input when Ctrl+F is pressed
+        const searchInput = document.querySelector('input[type="text"][placeholder*="search" i]');
+        if (searchInput) {
+          searchInput.focus();
+          console.log('Search focused in AdminDashboard via Ctrl+F');
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
+  useEffect(() => {
     if (role === 'super_admin' || role === 'admin') {
       fetchUsers();
     }

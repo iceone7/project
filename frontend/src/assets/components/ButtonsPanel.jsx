@@ -221,7 +221,7 @@ const ButtonsPanel = ({
       const todayFormatted = `${yyyy}-${mm}-${dd}`;
       
       // Create the date range string
-      const dateRangeString = `2025-01-01 - ${todayFormatted}`;
+      const dateRangeString = `2024-01-01 - ${todayFormatted}`;
       
       // Map data according to the specified field mapping
       const exportData = companies.map(company => {

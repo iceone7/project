@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Outlet } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import AddCallerModal from './assets/components/AddCallerModal';
@@ -52,6 +52,33 @@ function App({ dashboardType = 'company' }) {
   const [deleteTargetId, setDeleteTargetId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isProcessingCDR, setIsProcessingCDR] = useState(false);
+
+  // Add event listener for Ctrl+F keyboard shortcut
+  const handleKeyDown = useCallback((event) => {
+    // Check if Ctrl+F is pressed (or Cmd+F for Mac)
+    if ((event.ctrlKey || event.metaKey) && event.key === 'f') {
+      // Prevent default browser search
+      event.preventDefault();
+      // Toggle filter visibility
+      setShowFilters(prevState => !prevState);
+      console.log('Keyboard shortcut: Ctrl+F - Toggling filters');
+    }
+  }, []);
+
+  // Set up the keyboard event listener
+  useEffect(() => {
+    // Only add listener if not on admin dashboard
+    if (dashboardType !== 'admin') {
+      console.log('Adding Ctrl+F keyboard shortcut listener');
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    
+    // Cleanup function to remove listener
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      console.log('Removed Ctrl+F keyboard shortcut listener');
+    };
+  }, [handleKeyDown, dashboardType]);
 
   // Log when dashboardType changes for debugging
   useEffect(() => {
