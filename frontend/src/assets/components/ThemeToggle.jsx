@@ -10,7 +10,6 @@ function ThemeToggle() {
     setIsAnimating(true);
     toggleDarkMode();
     
-    // Reset animation state after animation completes
     setTimeout(() => {
       setIsAnimating(false);
     }, 600);

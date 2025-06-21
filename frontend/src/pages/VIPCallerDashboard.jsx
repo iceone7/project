@@ -7,6 +7,15 @@ import { useLanguage } from '../assets/i18n/LanguageContext';
 
 const isSuperAdmin = localStorage.getItem('role') === 'super_admin';
 
+// Function to format seconds into HH:MM:SS
+const formatCallDuration = (seconds) => {
+  if (!seconds) return '00:00:00';
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+};
+
 const VIPCallerDashboard = ({ excelData, handleCallerUploadSuccess }) => {
   const getDefaultStartDate = () => {
     const date = new Date();
@@ -141,9 +150,7 @@ const VIPCallerDashboard = ({ excelData, handleCallerUploadSuccess }) => {
         isProcessingCDR.current = false;
       }, 1000);
     }
-  };
-
-  const processCdrDataWithExcel = (excelData, cdrData) => {
+  };    const processCdrDataWithExcel = (excelData, cdrData) => {
     const result = [...excelData];
     const phoneToRowsMap = {};
     excelData.forEach((row, index) => {
@@ -153,27 +160,59 @@ const VIPCallerDashboard = ({ excelData, handleCallerUploadSuccess }) => {
         phoneToRowsMap[callerNumber].push(index);
       }
     });
-    const callerToCDRMap = {};
+    
+    // Create map from caller number to all relevant calls
+    const callerToCallsMap = {};
     cdrData.forEach(cdr => {
       const callerNumber = normalizePhoneForMatching(cdr.callerNumber);
-      const callStatus = cdr.callStatus || 'UNKNOWN';
-      if (!callerToCDRMap[callerNumber]) {
-        callerToCDRMap[callerNumber] = {
-          count: 0,
-          answeredCalls: 0,
-          noAnswerCalls: 0,
-          busyCalls: 0,
-          data: cdr
-        };
+      if (!callerToCallsMap[callerNumber]) {
+        callerToCallsMap[callerNumber] = [];
       }
-      callerToCDRMap[callerNumber].count++;
-      if (callStatus === 'ANSWERED') callerToCDRMap[callerNumber].answeredCalls++;
-      else if (callStatus === 'NO ANSWER') callerToCDRMap[callerNumber].noAnswerCalls++;
-      else if (callStatus === 'BUSY') callerToCDRMap[callerNumber].busyCalls++;
-      if (new Date(cdr.callDate) > new Date(callerToCDRMap[callerNumber].data.callDate)) {
-        callerToCDRMap[callerNumber].data = cdr;
-      }
+      callerToCallsMap[callerNumber].push(cdr);
     });
+    
+    // Process all calls for each caller to get metrics
+    const callerToCDRMap = {};
+    Object.entries(callerToCallsMap).forEach(([callerNumber, calls]) => {
+      // Sort calls by date descending
+      const sortedCalls = [...calls].sort(
+        (a, b) => new Date(b.callDate) - new Date(a.callDate)
+      );
+      
+      // Calculate metrics
+      let totalAnsweredDuration = 0;
+      let answeredCalls = 0;
+      let noAnswerCalls = 0;
+      let busyCalls = 0;
+      
+      calls.forEach(call => {
+        if (call.callStatus === 'ANSWERED') {
+          answeredCalls++;
+          // Use billsec if available, otherwise use duration
+          const callDuration = call.billsec ? parseInt(call.billsec) : 
+                             (call.rawDuration ? parseInt(call.rawDuration) : 0);
+          totalAnsweredDuration += callDuration;
+        } else if (call.callStatus === 'NO ANSWER') {
+          noAnswerCalls++;
+        } else if (call.callStatus === 'BUSY') {
+          busyCalls++;
+        }
+      });
+      
+      // Format the total duration
+      const totalDurationFormatted = formatCallDuration(totalAnsweredDuration);
+      
+      callerToCDRMap[callerNumber] = {
+        count: calls.length,
+        answeredCalls,
+        noAnswerCalls,
+        busyCalls,
+        totalDuration: totalAnsweredDuration,
+        totalDurationFormatted,
+        data: sortedCalls[0], // Latest call
+      };
+    });
+    
     const rowCallerMatches = {};
     Object.entries(callerToCDRMap).forEach(([callerNumber, cdrInfo]) => {
       const callerRowIndices = phoneToRowsMap[callerNumber] || [];
@@ -189,7 +228,8 @@ const VIPCallerDashboard = ({ excelData, handleCallerUploadSuccess }) => {
           noAnswerCalls: cdrInfo.noAnswerCalls,
           busyCalls: cdrInfo.busyCalls,
           callDate: cdrInfo.data.callDate,
-          callDuration: cdrInfo.data.formattedDuration,
+          callDuration: cdrInfo.totalDurationFormatted,
+          totalDuration: cdrInfo.totalDuration,
           callStatus: cdrInfo.data.callStatus
         });
       });
@@ -199,8 +239,7 @@ const VIPCallerDashboard = ({ excelData, handleCallerUploadSuccess }) => {
       matches.sort((a, b) => b.callCount - a.callCount);
       const primaryMatch = matches[0];
       const originalCallDate = result[rowIndex].callDate || result[rowIndex].call_date || '';
-      
-      // Format duration considering call status
+        // Format duration considering call status and billsec for actual talk time
       let callDuration = primaryMatch.callDuration || '';
       if (primaryMatch.callStatus === 'NO ANSWER' || primaryMatch.callStatus === 'BUSY') {
         callDuration = '00:00:00';

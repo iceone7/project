@@ -56,8 +56,8 @@ const UploadCompanyExcel = ({ onPreviewSuccess }) => {
           phone1: item.phone1 || item.phone_1 || '',
           contact2: item.contact2 || item.contact_2 || '',
           phone2: item.phone2 || item.phone_2 || '',
-          contact3: item.contact3 || item.contact_3 || '', // Ensure we check both formats
-          phone3: item.phone3 || item.phone_3 || '',      // Ensure we check both formats
+          contact3: item.contact3 || item.contact_3 || '',
+          phone3: item.phone3 || item.phone_3 || '',
           email: item.email || '',
           executor: item.executor || '',
           idCode: item.id_code || item.idCode || '',
@@ -71,10 +71,7 @@ const UploadCompanyExcel = ({ onPreviewSuccess }) => {
           status: item.status || '',
         }));
         
-        // Debug log the first row to verify data
-        console.log('Normalized data first row:', normalizedData[0]);
-        
-        if (onPreviewSuccess) await onPreviewSuccess(normalizedData); // Pass the normalized data
+        if (onPreviewSuccess) await onPreviewSuccess(normalizedData);
       } else if (json.data && Array.isArray(json.data) && json.data.length === 0) {
         setError('Excel parsed but no rows found.');
       } else {

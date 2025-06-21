@@ -629,6 +629,12 @@ class CallerExcelUploadController extends Controller
                         $noAnswerCount = $specificCalls->where('disposition', 'NO ANSWER')->count();
                         $busyCount = $specificCalls->where('disposition', 'BUSY')->count();
                         
+                        // Calculate total call duration by summing up billsec values for all ANSWERED calls
+                        $totalDuration = 0;
+                        foreach ($specificCalls->where('disposition', 'ANSWERED') as $call) {
+                            $totalDuration += isset($call->billsec) ? $call->billsec : $call->duration;
+                        }
+                        
                         $row['call_count'] = $callCount;
                         $row['callCount'] = $callCount;
                         $row['answered_calls'] = $answeredCount;
@@ -637,6 +643,8 @@ class CallerExcelUploadController extends Controller
                         $row['noAnswerCalls'] = $noAnswerCount;
                         $row['busy_calls'] = $busyCount;
                         $row['busyCalls'] = $busyCount;
+                        $row['total_duration'] = $totalDuration;
+                        $row['totalDuration'] = $totalDuration;
                         
                         // Find matching contact person for this receiver number
                         $receiverName = '';
@@ -682,8 +690,11 @@ class CallerExcelUploadController extends Controller
                         $row['callDate'] = $latestCall->calldate;
                     }
                     
-                    $row['call_duration'] = $latestCall->disposition === 'ANSWERED' ? 
-                                            $this->formatCallDuration($latestCall->duration) : 
+                    // Format the total call duration
+                    $row['call_duration'] = $this->formatCallDuration($row['total_duration'] ?? 0);
+                    // Also keep the last call duration for reference
+                    $row['last_call_duration'] = $latestCall->disposition === 'ANSWERED' ? 
+                                            $this->formatCallDuration($latestCall->billsec ?? $latestCall->duration) : 
                                             '00:00:00';
                     $row['callDuration'] = $row['call_duration'];
                     $row['call_status'] = $latestCall->disposition;

@@ -57,7 +57,6 @@ const DataTable = ({ activeDashboard, excelData, handleDeleteCompany }) => {
 
   const saveEdit = async (updatedData) => {
     try {
-      // Update local table data
       setCompanyRows(prevRows =>
         prevRows.map(row =>
           row.id === editRowId ? { ...row, ...updatedData } : row

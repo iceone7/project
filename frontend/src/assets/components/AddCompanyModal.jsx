@@ -93,7 +93,7 @@ function AddCompanyModal({ onClose, editingItem, editMode }) {
             setShowSaved(false);
             onClose();
           }, 2000);
-        }, 400); // match modal fade-out duration
+        }, 400);
       } else {
         showToast('Error: ' + JSON.stringify(response.message || response), 'error');
         setIsSaving(false);

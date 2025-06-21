@@ -12,7 +12,6 @@ const CompanyToCallerTransform = () => {
   const [progress, setProgress] = useState(0);
   const { t } = useLanguage();
 
-  // Georgian to English field mapping
   const fieldMapping = {
     'ტენდერის N': 'tender_number',
     'შემსყიდველი': 'companyName',
@@ -46,21 +45,17 @@ const CompanyToCallerTransform = () => {
     setProcessingStep('Reading Georgian company Excel file...');
 
     try {
-      // Read the Excel file
       const data = await readExcelFile(file);
       setProgress(30);
       
-      // Transform data to caller format
       setProcessingStep('Transforming from Georgian to caller format...');
       const transformedData = transformCompanyToCaller(data);
       setProgress(50);
       
-      // Enrich with PBX data
       setProcessingStep('Enriching with PBX call data...');
       const enrichedData = await enrichWithPbxData(transformedData);
       setProgress(80);
       
-      // Generate and download the Excel file
       setProcessingStep('Generating caller dashboard Excel...');
       generateCallerExcel(enrichedData);
       setProgress(100);
@@ -76,7 +71,6 @@ const CompanyToCallerTransform = () => {
     }
   };
 
-  // Read the Excel file and parse data
   const readExcelFile = (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -88,13 +82,11 @@ const CompanyToCallerTransform = () => {
           const worksheet = workbook.Sheets[workbook.SheetNames[0]];
           const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
           
-          // Ensure we have data
           if (!jsonData || jsonData.length < 2) {
             reject(new Error('Excel file is empty or contains no data rows'));
             return;
           }
           
-          // Extract headers and data rows
           const headers = jsonData[0];
           const rows = jsonData.slice(1);
           
@@ -112,13 +104,10 @@ const CompanyToCallerTransform = () => {
     });
   };
 
-  // Transform company data to caller format
   const transformCompanyToCaller = ({ headers, rows }) => {
-    // Map the headers from Georgian to English fields
     const mappedHeaders = headers.map(header => fieldMapping[header] || header);
     console.log('Mapped headers:', mappedHeaders);
     
-    // Transform rows to objects with mapped field names
     const transformedData = rows
       .filter(row => row.length > 0 && row.some(cell => cell && String(cell).trim() !== ''))
       .map(row => {
@@ -131,42 +120,36 @@ const CompanyToCallerTransform = () => {
           tel2: '',
           contactPerson3: '',
           tel3: '',
-          callerName: '', // Manager name
-          callerNumber: '', // Manager number
-          receiverName: '', // Will be populated from PBX
-          receiverNumber: '', // Will be populated from PBX
-          callCount: 0,     // Will be populated from PBX
-          callDuration: '', // Will be populated from PBX
-          callStatus: ''    // Will be populated from PBX
+          callerName: '', 
+          callerNumber: '', 
+          receiverName: '', 
+          receiverNumber: '', 
+          callCount: 0,     
+          callDuration: '', 
+          callStatus: ''    
         };
         
-        // Map values from the row using the mapped headers
         mappedHeaders.forEach((mappedHeader, index) => {
           if (mappedHeader && row[index] !== undefined && row[index] !== null) {
             transformedRow[mappedHeader] = row[index];
           }
         });
         
-        // Special mappings according to your example:
-        // შემსყიდველი -> Company Name
         const buyerIndex = headers.findIndex(h => h === 'შემსყიდველი');
         if (buyerIndex !== -1 && row[buyerIndex]) {
           transformedRow.companyName = row[buyerIndex];
         }
         
-        // ს/კ -ID -> ID Code 
         const idCodeIndex = headers.findIndex(h => h === 'ს/კ -ID');
         if (idCodeIndex !== -1 && row[idCodeIndex]) {
           transformedRow.identificationCode = row[idCodeIndex];
         }
         
-        // მენეჯერი -> Caller Name
         const managerIndex = headers.findIndex(h => h === 'მენეჯერი');
         if (managerIndex !== -1 && row[managerIndex]) {
           transformedRow.callerName = row[managerIndex];
         }
         
-        // მენეჯერის ნომერი -> Caller Number
         const managerNumberIndex = headers.findIndex(h => h === 'მენეჯერის ნომერი');
         if (managerNumberIndex !== -1 && row[managerNumberIndex]) {
           transformedRow.callerNumber = row[managerNumberIndex];
@@ -179,15 +162,13 @@ const CompanyToCallerTransform = () => {
     return transformedData;
   };
 
-  // Enrich data with PBX info
   const enrichWithPbxData = async (transformedData) => {
-    // Extract all caller numbers for PBX lookup
     const callerNumbers = transformedData
       .map(row => row.callerNumber)
       .filter(number => number && number.trim() !== '');
     
     if (callerNumbers.length === 0) {
-      return transformedData; // No numbers to look up
+      return transformedData;
     }
     
     try {
@@ -195,7 +176,6 @@ const CompanyToCallerTransform = () => {
       const response = await defaultInstance.post('/caller-data', { callerNumbers });
       const pbxData = response.data.data;
       
-      // Enrich each row with PBX data
       return transformedData.map(row => {
         if (row.callerNumber && pbxData[row.callerNumber]) {
           const callData = pbxData[row.callerNumber];
@@ -212,12 +192,10 @@ const CompanyToCallerTransform = () => {
       });
     } catch (error) {
       console.error('Error fetching PBX data:', error);
-      // Return original data if PBX fetch fails
       return transformedData;
     }
   };
 
-  // Generate and download caller Excel file
   const generateCallerExcel = (data) => {
     const headers = [
       'Company Name', 
@@ -238,7 +216,6 @@ const CompanyToCallerTransform = () => {
       'Call Status'
     ];
     
-    // Format data for Excel
     const excelData = data.map(row => [
       row.companyName || '',
       row.identificationCode || '',
@@ -253,15 +230,13 @@ const CompanyToCallerTransform = () => {
       row.receiverName || '',
       row.receiverNumber || '',
       row.callCount || 0,
-      '', // Call date - not provided by current data structure
+      '', 
       row.callDuration || '',
       row.callStatus || ''
     ]);
     
-    // Create worksheet
     const worksheet = XLSX.utils.aoa_to_sheet([headers, ...excelData]);
     
-    // Set column widths
     const colWidths = headers.map((h, colIndex) => {
       const maxLength = Math.max(
         h.length,
@@ -271,16 +246,13 @@ const CompanyToCallerTransform = () => {
     });
     worksheet['!cols'] = colWidths;
     
-    // Create workbook
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Caller Dashboard');
     
-    // Generate filename with date
     const today = new Date();
     const dateStr = today.toISOString().split('T')[0];
     const fileName = `caller_dashboard_${dateStr}.xlsx`;
     
-    // Download file
     XLSX.writeFile(workbook, fileName);
   };
 

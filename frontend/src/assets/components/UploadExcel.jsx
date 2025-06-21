@@ -70,13 +70,11 @@ const UploadExcel = ({ onUploadSuccess }) => {
         
         setPreviewData(normalizedData);
         
-        // Save the data to the database
         await saveToDatabase(normalizedData);
         
-        // Debug log the first row to verify data
         console.log('Normalized caller data first row:', normalizedData[0]);
         
-        if (onUploadSuccess) onUploadSuccess(normalizedData); // Pass the normalized data
+        if (onUploadSuccess) onUploadSuccess(normalizedData);
       } else if (json.data && Array.isArray(json.data) && json.data.length === 0) {
         setError('Excel parsed but no rows found.');
       } else {
@@ -90,7 +88,6 @@ const UploadExcel = ({ onUploadSuccess }) => {
     }
   };
 
-  // New function to save data to the database
   const saveToDatabase = async (data) => {
     try {
       const response = await defaultInstance.post('/caller-excel-uploads', { data });

@@ -3,7 +3,6 @@ import styles from '../css/ConfirmModal.module.css';
 const ConfirmModal = ({ open, onCancel, onConfirm, text = "Are you sure?" }) => {
   if (!open) return null;
 
-  // Close on overlay click
   const handleOverlayClick = (e) => {
     if (e.target === e.currentTarget) onCancel();
   };

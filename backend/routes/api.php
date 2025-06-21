@@ -142,6 +142,77 @@ Route::middleware('auth:sanctum')->group(function () {
 
 // Temporary debugging endpoint - remove in production
 Route::middleware('auth:sanctum')->group(function () {
+    // Debug call duration calculation
+    Route::get('/debug/call-duration', function(Request $request) {
+        $callerNumber = $request->input('caller');
+        $receiverNumber = $request->input('receiver');
+        $startDate = $request->input('start_date', now()->subDays(30)->format('Y-m-d'));
+        $endDate = $request->input('end_date', now()->format('Y-m-d'));
+        
+        if (!$callerNumber) {
+            return response()->json(['error' => 'Caller number required'], 400);
+        }
+        
+        $query = DB::connection('asterisk')->table('cdr')
+            ->whereDate('calldate', '>=', $startDate)
+            ->whereDate('calldate', '<=', $endDate)
+            ->where('src', $callerNumber);
+            
+        if ($receiverNumber) {
+            $query->where('dst', $receiverNumber);
+        }
+        
+        $calls = $query->get();
+        $totalCalls = $calls->count();
+        $answeredCalls = $calls->where('disposition', 'ANSWERED')->count();
+        
+        // Calculate total talk time (billsec)
+        $totalDuration = 0;
+        $totalBillsec = 0;
+        
+        foreach ($calls as $call) {
+            if ($call->disposition === 'ANSWERED') {
+                $totalDuration += $call->duration;
+                $totalBillsec += $call->billsec;
+            }
+        }
+        
+        // Format durations
+        $formatDuration = function($seconds) {
+            return sprintf('%02d:%02d:%02d', 
+                floor($seconds / 3600),
+                floor(($seconds / 60) % 60),
+                $seconds % 60
+            );
+        };
+        
+        return response()->json([
+            'caller' => $callerNumber,
+            'receiver' => $receiverNumber,
+            'date_range' => [
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+            ],
+            'stats' => [
+                'total_calls' => $totalCalls,
+                'answered_calls' => $answeredCalls,
+                'total_duration_seconds' => $totalDuration,
+                'total_duration' => $formatDuration($totalDuration),
+                'total_billsec_seconds' => $totalBillsec,
+                'total_billsec' => $formatDuration($totalBillsec),
+            ],
+            'call_details' => $calls->map(function($call) {
+                return [
+                    'date' => $call->calldate,
+                    'status' => $call->disposition,
+                    'duration' => $call->duration,
+                    'billsec' => $call->billsec,
+                    'recording' => $call->recordingfile,
+                ];
+            })
+        ]);
+    });
+    
     Route::get('/debug/company-tables', function() {
         // Only allow for admin users
         if (auth()->user()->role !== 'admin' && auth()->user()->role !== 'super_admin') {

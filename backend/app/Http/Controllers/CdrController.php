@@ -65,8 +65,8 @@ class CdrController extends Controller
                     // Get the latest call
                     $latestCall = $calls[0]; // Assuming calls are already sorted by date desc
                     
-                    // Format the duration
-                    $formattedDuration = $this->formatCallDuration($latestCall->duration, $latestCall->disposition);
+                    // Format the duration - use billsec (actual talk time) if available
+                    $formattedDuration = $this->formatCallDuration($latestCall->duration, $latestCall->disposition, $latestCall->billsec ?? null);
                     
                     // Store the call data for this caller
                     $response[$callerNumber] = [
@@ -247,6 +247,15 @@ class CdrController extends Controller
             $lastCall = $stats['lastCall'];
             
             if ($lastCall) {
+                // Calculate total duration of all answered calls
+                $totalDuration = 0;
+                foreach ($stats['calls'] as $call) {
+                    if ($call->disposition === 'ANSWERED') {
+                        // Use billsec (actual talk time) if available, otherwise fall back to duration
+                        $totalDuration += isset($call->billsec) ? $call->billsec : $call->duration;
+                    }
+                }
+                
                 $result[$caller] = [
                     'callerNumber' => $caller,
                     'receiverNumber' => $lastCall->dst,
@@ -255,7 +264,8 @@ class CdrController extends Controller
                     'noAnswerCalls' => $stats['noAnswerCalls'],
                     'busyCalls' => $stats['busyCalls'],
                     'callDate' => $lastCall->calldate,
-                    'callDuration' => $this->formatCallDuration($lastCall->duration, $lastCall->disposition),
+                    'callDuration' => $this->formatCallDuration($totalDuration, 'ANSWERED'),
+                    'totalDuration' => $totalDuration,
                     'callStatus' => $lastCall->disposition
                 ];
             }
@@ -312,7 +322,8 @@ class CdrController extends Controller
                     'receiverNumber' => $record->dst,
                     'callDate' => $formattedCallDate, // Standardized format with time
                     'rawDuration' => $record->duration,
-                    'formattedDuration' => $this->formatCallDuration($record->duration, $record->disposition),
+                    'billsec' => $record->billsec,
+                    'formattedDuration' => $this->formatCallDuration($record->duration, $record->disposition, $record->billsec),
                     'callStatus' => $record->disposition,
                     'recordingfile' => $record->recordingfile ?? '',
                 ];
@@ -378,18 +389,21 @@ class CdrController extends Controller
      * Format call duration from seconds to HH:MM:SS
      * Returns empty string if disposition is not ANSWERED
      */
-    private function formatCallDuration($seconds, $disposition = null)
+    private function formatCallDuration($seconds, $disposition = null, $billsec = null)
     {
         // For NO ANSWER or BUSY calls, return empty duration string
         if ($disposition && ($disposition === 'NO ANSWER' || $disposition === 'BUSY')) {
             return '00:00:00';
         }
         
-        if (!$seconds) return '00:00:00';
+        // Use billsec (actual talk time) if available, otherwise fall back to duration
+        $actualSeconds = ($disposition === 'ANSWERED' && $billsec !== null) ? $billsec : $seconds;
+        
+        if (!$actualSeconds) return '00:00:00';
         return sprintf('%02d:%02d:%02d', 
-            floor($seconds / 3600),
-            floor(($seconds / 60) % 60),
-            $seconds % 60
+            floor($actualSeconds / 3600),
+            floor(($actualSeconds / 60) % 60),
+            $actualSeconds % 60
         );
     }
     
@@ -535,7 +549,7 @@ class CdrController extends Controller
                     return [
                         'calldate' => $recording->calldate,
                         'duration' => $recording->duration,
-                        'formattedDuration' => $this->formatCallDuration($recording->duration, $recording->disposition),
+                        'formattedDuration' => $this->formatCallDuration($recording->duration, $recording->disposition, $recording->billsec ?? null),
                         'disposition' => $recording->disposition,
                         'recordingfile' => $recording->recordingfile,
                         'dst' => $recording->dst,
@@ -678,7 +692,7 @@ class CdrController extends Controller
                     return [
                         'calldate' => $recording->calldate,
                         'duration' => $recording->duration,
-                        'formattedDuration' => $this->formatCallDuration($recording->duration, $recording->disposition),
+                        'formattedDuration' => $this->formatCallDuration($recording->duration, $recording->disposition, $recording->billsec ?? null),
                         'disposition' => $recording->disposition,
                         'recordingfile' => $recording->recordingfile,
                         'dst' => $recording->dst,

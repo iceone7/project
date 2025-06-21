@@ -4,7 +4,6 @@ import axios from 'axios';
 
 const processExcelData = (data) => {
   return data.map(row => {
-    // Make sure all fields are properly extracted from Excel
     return {
       companyName: row['Company Name'] || '',
       identificationCode: row['Identification Code'] || '',
@@ -16,7 +15,7 @@ const processExcelData = (data) => {
       tel3: row['Phone 3'] || '',
       callerName: row['Caller Name'] || '',
       callerNumber: row['Caller Number'] || '',
-      receiverName: row['Receiver Name'] || '', // Ensure this field is extracted
+      receiverName: row['Receiver Name'] || '',
       receiverNumber: row['Receiver Number'] || '',
       callCount: row['Call Count'] || 0,
       callDate: row['Call Date'] || '',
@@ -54,5 +53,3 @@ const handleFileUpload = async (e) => {
   
   reader.readAsBinaryString(file);
 };
-
-// ...existing component code...

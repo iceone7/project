@@ -30,7 +30,6 @@ function EditModal({ isOpen, onClose, onSave, editData }) {
   });
   const [isSaving, setIsSaving] = useState(false);
 
-  // Populate form when editing
   useEffect(() => {
     if (editData) {
       setFormData({
@@ -60,7 +59,6 @@ function EditModal({ isOpen, onClose, onSave, editData }) {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  // Map camelCase to snake_case for backend
   const normalizeForBackend = (data) => ({
     tender_number: data.tenderNumber,
     buyer: data.buyer,
@@ -80,7 +78,7 @@ function EditModal({ isOpen, onClose, onSave, editData }) {
     foundation_date: data.foundationDate,
     manager: data.manager,
     status: data.status,
-    id: editData.id, // always include id
+    id: editData.id,
   });
 
   const handleSubmit = async () => {
@@ -88,7 +86,7 @@ function EditModal({ isOpen, onClose, onSave, editData }) {
     try {
       const payload = normalizeForBackend(formData);
       await defaultInstance.put(`/company-excel-uploads/${editData.id}`, payload);
-      onSave({ ...formData, id: editData.id }); // Pass id back up
+      onSave({ ...formData, id: editData.id });
       setIsClosing(true);
       setTimeout(() => {
         setIsClosing(false);
@@ -96,8 +94,8 @@ function EditModal({ isOpen, onClose, onSave, editData }) {
         setTimeout(() => {
           setShowSaved(false);
           onClose();
-        }, 2000); // Animation duration
-      }, 400); // Modal fade-out duration
+        }, 2000);
+      }, 400);
     } catch (error) {
       let msg = error?.response?.data?.error || error.message;
       alert('Failed to update company: ' + msg);
